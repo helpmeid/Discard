@@ -88,8 +88,9 @@ function cookieValue(request, name) {
   return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
 }
 
-function getSession(request) {
-  const token = cookieValue(request, "discard_session");
+function getSession(request, url) {
+  const bearer = (request.headers.authorization || "").match(/^Bearer (\S+)$/);
+  const token = bearer?.[1] || url?.searchParams.get("t") || cookieValue(request, "discard_session");
   if (!token) return null;
   const session = data.sessions.find(item => item.token === token && item.expiresAt > Date.now());
   return session ? data.users.find(user => user.id === session.userId) || null : null;
@@ -98,8 +99,8 @@ function getSession(request) {
 const lastSeen = new Map();
 const onlineWindow = 20000;
 
-function requireUser(request) {
-  const user = getSession(request);
+function requireUser(request, url) {
+  const user = getSession(request, url);
   if (!user) throw new HttpError(401, "Please sign in again.");
   lastSeen.set(user.id, Date.now());
   return user;
@@ -120,6 +121,7 @@ function setSession(response, user) {
   data.sessions.push({ token, userId: user.id, expiresAt });
   saveData();
   const secure = process.env.COOKIE_SECURE === "true" ? "; Secure" : "";
+  response.discardToken = token;
   response.setHeader("Set-Cookie", `discard_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(sessionLifetime / 1000)}${secure}`);
 }
 
@@ -260,7 +262,7 @@ async function handleApi(request, response, url) {
     const user = { id: crypto.randomUUID(), username, usernameKey, salt: salt.toString("hex"), passwordHash, friends: [], preferences: { ...defaultPreferences } };
     data.users.push(user);
     setSession(response, user);
-    return sendJson(response, 201, { user: accountUser(user) });
+    return sendJson(response, 201, { user: accountUser(user), token: response.discardToken });
   }
 
   if (method === "POST" && pathname === "/api/login") {
@@ -270,11 +272,12 @@ async function handleApi(request, response, url) {
     const expected = Buffer.from(user.passwordHash, "hex");
     if (candidate.length !== expected.length || !crypto.timingSafeEqual(candidate, expected)) throw new HttpError(401, "Username or password is incorrect.");
     setSession(response, user);
-    return sendJson(response, 200, { user: accountUser(user) });
+    return sendJson(response, 200, { user: accountUser(user), token: response.discardToken });
   }
 
   if (method === "POST" && pathname === "/api/logout") {
-    const token = cookieValue(request, "discard_session");
+    const bearer = (request.headers.authorization || "").match(/^Bearer (\S+)$/);
+    const token = bearer?.[1] || cookieValue(request, "discard_session");
     data.sessions = data.sessions.filter(session => session.token !== token);
     saveData();
     return sendJson(response, 200, { ok: true }, { "Set-Cookie": "discard_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0" });
@@ -282,7 +285,7 @@ async function handleApi(request, response, url) {
 
   if (method === "GET" && pathname === "/api/version") return sendJson(response, 200, { version: appVersion });
 
-  const user = requireUser(request);
+  const user = requireUser(request, url);
   if (method === "GET" && pathname === "/api/me") return sendJson(response, 200, { user: accountUser(user) });
   if (method === "GET" && pathname === "/api/snapshot") return sendJson(response, 200, snapshotFor(user));
   if (method === "PATCH" && pathname === "/api/profile") {
@@ -440,7 +443,7 @@ function serveFile(request, response, pathname) {
   const relativePath = decodedPath === "/" ? "index.html" : decodedPath.replace(/^\/+/, "");
   const filePath = path.resolve(root, relativePath);
   if (!filePath.startsWith(`${root}${path.sep}`)) throw new HttpError(403, "Forbidden.");
-  if (!new Set(["index.html", "app.js", "assets/image.png"]).has(path.relative(root, filePath))) throw new HttpError(404, "File not found.");
+  if (!new Set(["index.html", "assets/image.png"]).has(path.relative(root, filePath))) throw new HttpError(404, "File not found.");
   let stats;
   try {
     stats = fs.statSync(filePath);
@@ -457,6 +460,13 @@ const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
     if (url.pathname.startsWith("/api/")) {
+      response.setHeader("Access-Control-Allow-Origin", "*");
+      response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      response.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
+      if (request.method === "OPTIONS") {
+        response.writeHead(204);
+        return response.end();
+      }
       if (request.method !== "GET" && request.method !== "POST" && request.method !== "PATCH") throw new HttpError(405, "Method not allowed.");
       await handleApi(request, response, url);
       return;
