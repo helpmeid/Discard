@@ -10,6 +10,16 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 2. Unzip it.
 3. Open `index.html` to load into Discard. Keep `app.js` and `assets.js` in the same folder as `index.html`; it loads them.
 
+## Run a local test server
+
+To test the app over HTTP, open a terminal in the project folder and run:
+
+```sh
+python3 -m http.server 8000 --bind 0.0.0.0
+```
+
+Then open [http://localhost:8000](http://localhost:8000). Stop the server with `Ctrl+C`.
+
 ## Using it
 
 1. Open `index.html`. Choose **Create account** (username + password, optional display name) or **Sign in**. Accounts and passwords live only on your computer, and you can have several on one computer.
