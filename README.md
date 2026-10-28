@@ -12,7 +12,7 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 
 ## Using it
 
-1. Open `index.html` and create a profile (username + optional display name). No password or account.
+1. Open `index.html`. Choose **Create account** (username + password, optional display name) or **Sign in**. Accounts and passwords live only on your computer, and you can have several on one computer.
 2. Open **Friends** and copy your **friend code**. Send it to a friend, and paste theirs into "Paste a friend code".
 3. They accept the request, then you can message, send images/GIFs, and make group chats.
 
@@ -29,7 +29,7 @@ The account is verified with a digital signature, so nobody else can pretend to 
 Everything is saved on your own computer (IndexedDB): profile, friends, messages, images, GIFs.
 
 - If storage runs low, or messages exceed a size cap (about 40% of the browser's quota, 20-300 MB), the **oldest messages are deleted automatically**.
-- Settings has **Export backup** / **Import backup**. Clearing browser data erases your profile, so export a backup first.
+- Settings has **Export backup**; restore it from **Create account** (Restore from a backup file). Clearing browser data erases your profile, so export a backup first.
 - Keep one tab open per profile.
 
 ## GIFs

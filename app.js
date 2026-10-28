@@ -72,10 +72,15 @@ const maxWireImageChars = 4.5 * 1024 * 1024;
 
 const idb = {
   handle: null,
+  name: "discard-p2p-none",
+  use(name) {
+    this.name = name;
+    this.handle = null;
+  },
   open() {
     if (!this.handle) {
       this.handle = new Promise((resolve, reject) => {
-        const request = indexedDB.open("discard-p2p", 1);
+        const request = indexedDB.open(this.name, 1);
         request.onupgradeneeded = () => request.result.createObjectStore("kv");
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
@@ -865,21 +870,94 @@ async function api(path, options = {}) {
 }
 
 // ---------- profile lifecycle, backup, storage info ----------
-async function createProfile(username, displayName) {
-  if (looksOfficial(username) || looksOfficial(displayName)) throw new Error("That name is reserved.");
-  state = defaultState({
-    id: `dsc-${randomId(16)}`,
-    username,
-    displayName: displayName || username,
-    avatar: null,
-    preferences: { ...defaultPreferences },
-    createdAt: Date.now()
+const accountsKey = "discard-accounts";
+const officialDb = "discard-p2p-official";
+const badLogin = () => new Error("Incorrect username or password.");
+
+function readAccounts() {
+  try {
+    const list = JSON.parse(localStorage.getItem(accountsKey) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAccounts(list) {
+  localStorage.setItem(accountsKey, JSON.stringify(list));
+}
+
+async function hashPassword(password, salt) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  return toBase64(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 200000, hash: "SHA-256" }, base, 256));
+}
+
+function lockAccount(db) {
+  if (!navigator.locks) return Promise.resolve(true);
+  return new Promise(resolve => {
+    navigator.locks.request(`discard-${db}`, { ifAvailable: true }, lock => {
+      resolve(Boolean(lock));
+      return lock ? new Promise(() => {}) : undefined;
+    });
   });
-  touchMeta();
-  await flushSave();
+}
+
+async function enterApp() {
+  currentUser = accountUser();
   refreshStorageLimit();
   startPeer();
-  return accountUser();
+  applyPreferences({ ...defaultPreferences, ...currentUser.preferences });
+  await openChatView();
+}
+
+async function signIn(username, password) {
+  const key = username.toLowerCase();
+  const official = key === OFFICIAL_USERNAME.toLowerCase();
+  let db = officialDb;
+  if (official) {
+    try { await unlockOfficial(password); } catch { throw badLogin(); }
+  } else {
+    const account = readAccounts().find(item => item.key === key);
+    if (!account || await hashPassword(password, fromBase64(account.salt)) !== account.hash) throw badLogin();
+    db = account.db;
+  }
+  if (!await lockAccount(db)) throw new Error("This account is already open in another tab.");
+  idb.use(db);
+  state = await loadState();
+  if (!state) {
+    if (!official) throw new Error("This account's saved data was not found on this computer.");
+    state = defaultState({ id: OFFICIAL_ID, username: OFFICIAL_USERNAME, displayName: "Discard Official", avatar: BRAND_IMAGE, official: true, preferences: { ...defaultPreferences }, createdAt: Date.now() });
+    touchMeta();
+    await flushSave();
+  }
+  await enterApp();
+}
+
+async function signUp(username, password, displayName, backupFile) {
+  const imported = backupFile ? cleanImported(JSON.parse(await backupFile.text())) : null;
+  if (imported) username = imported.me.username;
+  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) throw new Error("Use 3 to 24 letters, numbers, or underscores for your username.");
+  if (looksOfficial(username) || looksOfficial(displayName)) throw new Error("That name is reserved.");
+  const key = username.toLowerCase();
+  if (readAccounts().some(item => item.key === key)) throw new Error("That username is already taken on this computer.");
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await hashPassword(password, salt);
+  const db = `discard-p2p-${randomId(12)}`;
+  idb.use(db);
+  await lockAccount(db);
+  if (imported) {
+    const { chats, ...meta } = imported;
+    const puts = { meta };
+    chats.forEach(chat => { puts[`chat:${chat.id}`] = chat; });
+    await idb.write(puts, []);
+    state = await loadState();
+  } else {
+    state = defaultState({ id: `dsc-${randomId(16)}`, username, displayName: displayName || username, avatar: null, preferences: { ...defaultPreferences }, createdAt: Date.now() });
+    touchMeta();
+    await flushSave();
+  }
+  writeAccounts([...readAccounts(), { key, username, db, salt: toBase64(salt), hash }]);
+  await enterApp();
 }
 
 function formatBytes(bytes) {
@@ -943,19 +1021,6 @@ function cleanImported(raw) {
   return imported;
 }
 
-async function importBackup(file) {
-  const imported = cleanImported(JSON.parse(await file.text()));
-  await idb.clear();
-  const { chats, ...meta } = imported;
-  const puts = { meta };
-  chats.forEach(chat => { puts[`chat:${chat.id}`] = chat; });
-  await idb.write(puts, []);
-}
-
-async function resetEverything() {
-  await idb.clear();
-}
-
 function setAvatar(element, name, url) {
   element.querySelectorAll(":scope > :not(.status-dot)").forEach(child => child.remove());
   element.classList.toggle("has-img", Boolean(url));
@@ -983,36 +1048,57 @@ function renderProfile() {
   setAvatar(document.querySelector("#profileAvatar"), name, currentUser.avatar);
 }
 
+let authMode = "signin";
+
+function setAuthMode(next) {
+  authMode = next;
+  const creating = next === "signup";
+  document.querySelectorAll("[data-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === next)));
+  document.querySelectorAll(".signup-only").forEach(field => field.classList.toggle("hidden", !creating));
+  authTitle.textContent = creating ? "Create your account" : "Welcome back";
+  authSubtitle.textContent = creating ? "Choose a username and password. They are saved on this computer only." : "Sign in to your Discard account.";
+  authSubmit.textContent = creating ? "Create account" : "Sign in";
+  document.querySelector("#password").autocomplete = creating ? "new-password" : "current-password";
+  authMessage.textContent = "";
+}
+
+document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.mode)));
+
 authForm.addEventListener("submit", async event => {
   event.preventDefault();
   authMessage.textContent = "";
   const username = usernameInput.value.trim();
-  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
-    authMessage.textContent = "Use 3 to 24 letters, numbers, or underscores for your username.";
+  const password = document.querySelector("#password").value;
+  const backupFile = document.querySelector("#importFile").files[0] || null;
+  if (authMode === "signup") {
+    if (!backupFile && !/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+      authMessage.textContent = "Use 3 to 24 letters, numbers, or underscores for your username.";
+      return;
+    }
+    if (password.length < 8) {
+      authMessage.textContent = "Your password must be at least 8 characters.";
+      return;
+    }
+    if (password !== document.querySelector("#confirmPassword").value) {
+      authMessage.textContent = "The two passwords do not match.";
+      return;
+    }
+  } else if (!username || !password) {
+    authMessage.textContent = "Enter your username and password.";
     return;
   }
-  const displayName = document.querySelector("#displayName").value.trim().slice(0, 32);
   authSubmit.disabled = true;
+  authMessage.textContent = authMode === "signup" ? "Creating your account..." : "Signing in...";
   try {
-    currentUser = await createProfile(username, displayName);
+    if (authMode === "signup") await signUp(username, password, document.querySelector("#displayName").value.trim().slice(0, 32), backupFile);
+    else await signIn(username, password);
     authForm.reset();
-    await openChatView();
+    authMessage.textContent = "";
   } catch (error) {
-    authMessage.textContent = error.message.startsWith("That name") ? error.message : "Could not save your profile on this computer. Is private browsing on?";
+    state = null;
+    authMessage.textContent = error.message || "Could not open your account on this computer.";
   } finally {
     authSubmit.disabled = false;
-  }
-});
-
-document.querySelector("#importFile").addEventListener("change", async event => {
-  const file = event.target.files[0];
-  event.target.value = "";
-  if (!file) return;
-  try {
-    await importBackup(file);
-    location.reload();
-  } catch (error) {
-    authMessage.textContent = error.message;
   }
 });
 
@@ -1459,11 +1545,19 @@ messageForm.addEventListener("submit", async event => {
 
 document.querySelector("#chatSearch").addEventListener("input", renderChatList);
 document.querySelector("#signOutButton").addEventListener("click", async () => {
-  if (!confirm("Delete your profile, friends and all messages from this computer? Export a backup first if you want to keep them.")) return;
+  window.clearTimeout(saveTimer);
+  await flushSave();
+  location.reload();
+});
+
+document.querySelector("#deleteAccount").addEventListener("click", async () => {
+  if (!confirm("Delete this account, its friends and all its messages from this computer? This cannot be undone. Export a backup first if you want to keep them.")) return;
   window.clearTimeout(saveTimer);
   dirty.clear();
+  const db = idb.name;
   state = null;
-  await resetEverything();
+  await idb.clear();
+  writeAccounts(readAccounts().filter(account => account.db !== db));
   location.reload();
 });
 
@@ -1479,62 +1573,8 @@ document.querySelector("#copyCode").addEventListener("click", async () => {
 });
 
 document.querySelector("#exportButton").addEventListener("click", exportBackup);
-document.querySelector("#backupImport").addEventListener("change", async event => {
-  const file = event.target.files[0];
-  event.target.value = "";
-  if (!file || !confirm("Importing replaces everything saved on this computer. Continue?")) return;
-  try {
-    await importBackup(file);
-    location.reload();
-  } catch (error) {
-    settingsStatus.textContent = error.message;
-  }
-});
-
 document.querySelector("#settingsToggle").addEventListener("click", () => {
   document.querySelector("#storageInfo").textContent = state ? storageSummary() : "";
-});
-
-async function enterApp() {
-  currentUser = accountUser();
-  refreshStorageLimit();
-  startPeer();
-  applyPreferences({ ...defaultPreferences, ...currentUser.preferences });
-  await openChatView();
-}
-
-function showOfficialForm(message) {
-  authView.classList.remove("hidden");
-  authForm.classList.add("hidden");
-  document.querySelector("#officialForm").classList.remove("hidden");
-  document.querySelector("#officialMessage").textContent = message || "";
-  document.querySelector("#officialPass").focus();
-}
-
-document.querySelector("#officialLink").addEventListener("click", () => showOfficialForm(""));
-
-document.querySelector("#officialForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  const message = document.querySelector("#officialMessage");
-  const input = document.querySelector("#officialPass");
-  message.textContent = "Unlocking...";
-  try {
-    await unlockOfficial(input.value);
-  } catch {
-    message.textContent = "That passcode is not correct.";
-    return;
-  }
-  input.value = "";
-  try {
-    if (!state) {
-      state = defaultState({ id: OFFICIAL_ID, username: OFFICIAL_USERNAME, displayName: "Discard Official", avatar: BRAND_IMAGE, official: true, preferences: { ...defaultPreferences }, createdAt: Date.now() });
-      touchMeta();
-      await flushSave();
-    }
-    await enterApp();
-  } catch {
-    message.textContent = "Could not save the official account on this computer.";
-  }
 });
 
 document.querySelector("#addOfficial").addEventListener("click", async () => {
@@ -1547,37 +1587,10 @@ document.querySelector("#addOfficial").addEventListener("click", async () => {
   }
 });
 
-async function restoreSession() {
-  try {
-    if (navigator.locks) {
-      const got = await new Promise(resolve => {
-        navigator.locks.request("discard-profile", { ifAvailable: true }, lock => {
-          resolve(Boolean(lock));
-          return lock ? new Promise(() => {}) : undefined;
-        });
-      });
-      if (!got) {
-        authMessage.textContent = "Discard is already open in another tab. Close it and reload this page.";
-        return;
-      }
-    }
-    state = await loadState();
-    if (!state) return;
-    if (state.me.official) {
-      showOfficialForm("Enter the official account passcode to unlock it.");
-      return;
-    }
-    await enterApp();
-  } catch {
-    authMessage.textContent = "Could not open your saved data on this computer.";
-  }
-}
-
 window.setInterval(() => {
   if (!document.hidden) refreshSnapshot();
 }, 2500);
 
-restoreSession();
 
 async function saveProfile(changes, doneMessage) {
   try {

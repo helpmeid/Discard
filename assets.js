@@ -5,5 +5,5 @@ const builtinGifs = [{"id": "b-lol", "url": "data:image/gif;base64,R0lGODlhgACAA
 // Discard Official account: public key and passcode-locked private key. Only the owner knows the passcode.
 const OFFICIAL_ID = "dsc-discardofficial1";
 const OFFICIAL_USERNAME = "DiscardOfficial1423";
-const OFFICIAL_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"eK1OVKsQgNVQcUIRgBee2YYCG7644JsoPiyUh-o7yMg","y":"x79-z_MpupNejw91IEKj-fCamI_eANnFebRRfDGE_-E"};
-const OFFICIAL_LOCKED_KEY = {"salt":"bxrIxc1mLN/Hx3sVtYZD4Q==","iv":"pc/R4BwhmISu3Dqa","data":"/tFkN+p30adLYSKJy8bDkK7NqylxhGJNVZDp3oRqsXxp3OnUF5o8nUfGQffjBUenzWiFX0N7Jp29r7B1cXd9vJKMoO2VD6TZqqoJDzjPH/GXI8zOv2Pe57WVuAYbs2B8dpynCLYsXQ1m2lhD8ISZv/+NUhsflrDfHsIbMbhtp9AS+lhDPnIiwrnMWQbbAz7ia7RBrsfy79o5VQ==","iterations":600000};
+const OFFICIAL_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"2Zzd5l8OhyFFYCB0pv3EzXS5Vb4NTW0aQobXQvFQ5Xs","y":"SLCSy7dt1-pUx7FBaYmEz2my7voWHAGpmHxoYHYA2V0"};
+const OFFICIAL_LOCKED_KEY = {"salt":"rsM0h/P8Z8Oyr07KIdwjqw==","iv":"wEBBrgMwURakta1b","data":"WM8PxUaNLp7E250LF3tGY2UWWihjjlsNnlQutAxBHUMHxwrCjbopghUT4IB+pk+XUlae+FjQ97qMOJ8AnfpAx4Hj9spNWJCOnagcvqYVIe6fn3LMixAwDLwJRsYeaIt2pMY4eZleABkbmWyrZzjdhsVLjNxy9p14QxujMjBD6B3Aon5Rajzk01bDoTeMELmGgMeJIWEvxUjUGw==","iterations":600000};

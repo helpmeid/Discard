@@ -251,20 +251,19 @@
     <section class="auth-main">
       <div class="auth-card">
         <div class="brand mobile-brand"><img class="brand-mark" alt=""><span>Discard</span></div>
-        <h2 id="authTitle">Create your profile</h2>
-        <p class="auth-subtitle" id="authSubtitle">No server and no password. Everything stays on this computer.</p>
+        <h2 id="authTitle">Welcome back</h2>
+        <p class="auth-subtitle" id="authSubtitle">Sign in to your Discard account.</p>
+        <div class="mode-switch" role="group" aria-label="Account mode"><button type="button" data-mode="signin" aria-pressed="true">Sign in</button><button type="button" data-mode="signup" aria-pressed="false">Create account</button></div>
         <form id="authForm" novalidate>
-          <div class="field"><label for="username">Username</label><input id="username" name="username" autocomplete="off" minlength="3" maxlength="24" required placeholder="Your username"></div>
-          <div class="field"><label for="displayName">Display name (optional)</label><input id="displayName" maxlength="32" autocomplete="off" placeholder="What friends see"></div>
-          <button class="primary-button" id="authSubmit" type="submit">Create profile</button>
+          <div class="field"><label for="username">Username</label><input id="username" name="username" autocomplete="username" maxlength="24" required placeholder="Your username"></div>
+          <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Your password"></div>
+          <div class="field signup-only hidden"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Type it again"></div>
+          <div class="field signup-only hidden"><label for="displayName">Display name (optional)</label><input id="displayName" maxlength="32" autocomplete="off" placeholder="What friends see"></div>
+          <div class="field signup-only hidden"><label for="importFile">Restore from a backup file (optional)</label><input id="importFile" type="file" accept="application/json,.json"></div>
+          <button class="primary-button" id="authSubmit" type="submit">Sign in</button>
           <p class="auth-message" id="authMessage" role="alert" aria-live="polite"></p>
         </form>
-        <form class="hidden" id="officialForm" novalidate>
-          <div class="field"><label for="officialPass">Official account passcode</label><input id="officialPass" type="password" autocomplete="off" placeholder="Passcode"></div>
-          <button class="primary-button" type="submit">Unlock official account</button>
-          <p class="auth-message" id="officialMessage" role="alert" aria-live="polite"></p>
-        </form>
-        <div class="local-note">Discard is peer to peer: messages go straight between you and your friends. Both of you need to be online for a message to arrive; otherwise it waits and sends when you are both online.<br><label class="link-label" id="officialLink">Official account login</label><br><label class="link-label">Restore from a backup file<input id="importFile" type="file" accept="application/json,.json" hidden></label></div>
+        <div class="local-note">Discard is peer to peer: messages go straight between you and your friends. Both of you need to be online for a message to arrive; otherwise it waits and sends when you are both online. Your account and password are stored only on this computer. The password keeps others out of the app but does not encrypt your saved data, and it cannot be reset if you forget it.</div>
       </div>
     </section>
   </main>
@@ -287,7 +286,7 @@
         <label class="setting-row">Message size<select id="fontSizePreference"><option value="small">Small</option><option value="regular">Regular</option><option value="large">Large</option></select></label>
         <label class="setting-row">Bubble shape<select id="bubblePreference"><option value="soft">Soft</option><option value="square">Square</option></select></label>
         <label class="setting-row"><span>Compact chat list</span><span class="setting-check"><input id="compactPreference" type="checkbox"></span></label>
-        <div class="backup-row"><button class="profile-btn" id="exportButton" type="button">Export backup</button><label class="profile-btn">Import backup<input id="backupImport" type="file" accept="application/json,.json" hidden></label></div>
+        <div class="backup-row"><button class="profile-btn" id="exportButton" type="button">Export backup</button><button class="profile-btn" id="deleteAccount" type="button">Delete account</button></div>
         <p class="settings-note" id="storageInfo"></p>
         <p class="settings-status" id="settingsStatus" aria-live="polite"></p>
       </section>
@@ -306,7 +305,7 @@
       <form class="new-chat-form hidden" id="newChatForm"><input id="newChatName" maxlength="40" aria-label="Group name" placeholder="Group name"><div class="member-choices" id="memberChoices"></div><button class="create-group-button" type="submit">Create group</button></form>
       <label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="chatSearch" type="search" placeholder="Find a chat" aria-label="Find a chat"></label>
       <div class="chat-list" id="chatList" aria-label="Your chats"></div>
-      <div class="sidebar-bottom"><div class="storage-note"><span class="storage-dot" id="netDot"></span><span id="netText">Starting...</span></div><div class="version-note" id="versionNote">Version …</div><button class="logout-button" id="signOutButton" type="button" aria-label="Reset profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Reset profile</span></button></div>
+      <div class="sidebar-bottom"><div class="storage-note"><span class="storage-dot" id="netDot"></span><span id="netText">Starting...</span></div><div class="version-note" id="versionNote">Version …</div><button class="logout-button" id="signOutButton" type="button" aria-label="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Sign out</span></button></div>
     </aside>
     <section class="conversation" aria-label="Conversation">
       <header class="conversation-header hidden" id="conversationHeader"><div class="avatar" id="conversationAvatar">C</div><div><div class="conversation-title" id="conversationTitle"></div><div class="conversation-status" id="conversationStatus">Saved on this device</div></div></header>
