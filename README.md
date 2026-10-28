@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 2.0.4**
+**Version 2.0.5**
 
 ## How to play
 
@@ -48,7 +48,7 @@ Everything is saved on your own computer (IndexedDB): profile, friends, messages
 
 ## GIFs
 
-Built-in GIFs, your uploads and favorites work out of the box. For Tenor search, paste a free Tenor API key in the GIF panel (stored only on your computer).
+Built-in GIFs, your uploads and favorites work out of the box. GIF search uses GIPHY with a shared API key set by `GIPHY_API_KEY` at the top of `app.js`, so everyone can search without setup. Replace it with your own key from developers.giphy.com if needed.
 
 ## Limits
 

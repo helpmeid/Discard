@@ -264,10 +264,18 @@
     .settings-note { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
     .lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000c; cursor: zoom-out; }
     .lightbox.hidden { display: none; }
+    .profile-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #0008; }
+    .profile-card { width: min(320px, 92vw); padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel, var(--field)); color: var(--ink); text-align: center; display: grid; gap: 8px; justify-items: center; }
+    .profile-card .avatar { width: 72px; height: 72px; font-size: 28px; }
+    .profile-card h3 { margin: 4px 0 0; font-size: 18px; }
+    .profile-card .profile-sub { color: var(--muted, inherit); font-size: 13px; opacity: .8; word-break: break-all; }
+    .profile-card .profile-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+    .clickable { cursor: pointer; }
     .lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 8px; }
   </style>
 </head>
 <body>
+  <div class="profile-modal hidden" id="profileModal"><div class="profile-card" role="dialog" aria-modal="true" aria-label="Profile" id="profileCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
   <main id="authView" class="auth-view">
     <section class="auth-main">
@@ -336,15 +344,14 @@
       <div class="message-area hidden" id="messageArea" aria-live="polite"></div>
       <div class="composer-wrap hidden" id="composerWrap"><section class="gif-panel hidden" id="gifPanel" aria-label="GIFs">
         <div class="gif-head"><div class="gif-tabs"><button type="button" class="gif-tab" data-gif-tab="trending" aria-pressed="true">Trending</button><button type="button" class="gif-tab" data-gif-tab="favorites" aria-pressed="false">★ Favorites</button><button type="button" class="gif-tab" data-gif-tab="library" aria-pressed="false">My GIFs</button></div><label class="profile-btn">Add GIF<input id="gifUpload" type="file" accept="image/gif" hidden></label></div>
-        <div class="tenor-row hidden" id="tenorRow"><input id="tenorKey" placeholder="Tenor API key" autocomplete="off"><button type="button" class="profile-btn primary" id="tenorSave">Save</button></div>
-        <input class="gif-search" id="gifSearch" type="search" placeholder="Search Tenor" aria-label="Search GIFs" autocomplete="off">
+        <input class="gif-search" id="gifSearch" type="search" placeholder="Search GIPHY" aria-label="Search GIFs" autocomplete="off">
         <div class="gif-grid" id="gifGrid"></div>
         <p class="settings-status" id="gifStatus" aria-live="polite"></p>
       </section><form class="composer" id="messageForm"><label class="attach-button" title="Send an image or GIF" aria-label="Attach image or GIF"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
     </section>
   </main>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=2.0.4"></script>
-  <script src="app.js?v=2.0.4"></script>
+  <script src="assets.js?v=2.0.5"></script>
+  <script src="app.js?v=2.0.5"></script>
 </body>
 </html>

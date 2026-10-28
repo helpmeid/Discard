@@ -59,7 +59,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.4";
+const APP_VERSION = "2.0.5";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -70,7 +70,9 @@ const idPattern = /^dsc-[a-z0-9]{16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;
 const avatarPattern = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const imageUrlPattern = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
-const tenorUrlPattern = /^https:\/\/media\d*\.tenor\.com\/[\w\-/.%~]+$/;
+const tenorUrlPattern = /^https:\/\/(?:media\d*\.tenor\.com|media\d*\.giphy\.com)\/[\w\-/.%~]+$/;
+// Public GIPHY browser key shared by everyone using this app.
+const GIPHY_API_KEY = "8tdFAXlnlUWwcCjTd8Njko0kNQozvdc";
 const maxWireImageChars = 4.5 * 1024 * 1024;
 
 const idb = {
@@ -873,16 +875,15 @@ function gifItem(image) {
   };
 }
 
-async function tenorGifs(query) {
-  if (!state.tenorKey) return { configured: false, gifs: [] };
-  const params = new URLSearchParams({ key: state.tenorKey, client_key: "discard", limit: "30", media_filter: "gif,tinygif", contentfilter: "medium" });
+async function giphyGifs(query) {
+  const params = new URLSearchParams({ api_key: GIPHY_API_KEY, limit: "30", rating: "g" });
   if (query) params.set("q", query);
-  const response = await fetch(`https://tenor.googleapis.com/v2/${query ? "search" : "featured"}?${params}`).catch(() => null);
-  if (!response?.ok) fail("Could not reach Tenor. Check your API key and internet connection.");
+  const response = await fetch(`https://api.giphy.com/v1/gifs/${query ? "search" : "trending"}?${params}`).catch(() => null);
+  if (!response?.ok) fail("Could not reach GIPHY. Check the API key and your internet connection.");
   const result = await response.json().catch(() => ({}));
-  const gifs = (result.results || []).map(item => {
-    const full = item.media_formats?.gif?.url;
-    const preview = item.media_formats?.tinygif?.url || full;
+  const gifs = (result.data || []).map(item => {
+    const full = item.images?.fixed_height?.url || item.images?.original?.url;
+    const preview = item.images?.fixed_height_downsampled?.url || full;
     return tenorUrlPattern.test(full || "") && tenorUrlPattern.test(preview || "")
       ? { key: full, src: preview, send: { gifUrl: full }, favorite: state.favoriteGifs.includes(full) }
       : null;
@@ -1091,14 +1092,14 @@ async function api(path, options = {}) {
     if (tab === "favorites") {
       const library = new Map(libraryGifs().map(image => [image.id, image]));
       return {
-        configured: Boolean(state.tenorKey),
+        configured: true,
         gifs: state.favoriteGifs.map(key => tenorUrlPattern.test(key)
           ? { key, src: key, send: { gifUrl: key }, favorite: true }
           : (library.has(key) ? gifItem(library.get(key)) : null)).filter(Boolean)
       };
     }
-    if (tab === "library") return { configured: Boolean(state.tenorKey), gifs: libraryGifs().map(gifItem) };
-    return tenorGifs((url.searchParams.get("q") || "").trim().slice(0, 60));
+    if (tab === "library") return { configured: true, gifs: libraryGifs().map(gifItem) };
+    return giphyGifs((url.searchParams.get("q") || "").trim().slice(0, 60));
   }
 
   if (method === "POST" && route === "/api/gifs") {
@@ -1115,14 +1116,6 @@ async function api(path, options = {}) {
     if (!tenorUrlPattern.test(key) && !libraryGifs().some(image => image.id === key)) fail("GIF not found.");
     state.favoriteGifs = state.favoriteGifs.filter(item => item !== key);
     if (body.favorite === true) state.favoriteGifs.push(key);
-    touchMeta();
-    return { ok: true };
-  }
-
-  if (method === "POST" && route === "/api/gifs/key") {
-    const key = typeof body.key === "string" ? body.key.trim() : "";
-    if (!/^[\w-]{10,80}$/.test(key)) fail("That does not look like a Tenor API key.");
-    state.tenorKey = key;
     touchMeta();
     return { ok: true };
   }
@@ -1433,6 +1426,78 @@ function chatLastMessage(chat) {
   return chat.messages[chat.messages.length - 1];
 }
 
+const profileModal = document.querySelector("#profileModal");
+profileModal.addEventListener("click", event => {
+  if (event.target === profileModal) profileModal.classList.add("hidden");
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") profileModal.classList.add("hidden");
+});
+
+function openProfile(person) {
+  if (!person || !person.id) return;
+  const card = document.querySelector("#profileCard");
+  const friend = snapshot.friends.find(item => item.id === person.id);
+  const info = friend || person;
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  setAvatar(avatar, info.displayName, info.avatar);
+  const name = document.createElement("h3");
+  name.textContent = info.displayName + (person.id === currentUser.id ? " (you)" : "");
+  const handle = document.createElement("div");
+  handle.className = "profile-sub";
+  handle.textContent = info.username && info.username !== "unknown" ? `@${info.username}` : "";
+  const status = document.createElement("div");
+  status.className = "profile-sub";
+  status.textContent = person.id === currentUser.id ? "This is you" : friend ? (friend.online ? "Friend · Online" : "Friend · Offline") : "Not in your friends list";
+  const actions = document.createElement("div");
+  actions.className = "profile-actions";
+  if (friend) {
+    const message = document.createElement("button");
+    message.type = "button";
+    message.className = "profile-btn primary";
+    message.textContent = "Message";
+    message.addEventListener("click", async () => {
+      try {
+        const result = await api("/api/chats/direct", { method: "POST", body: { friendId: friend.id } });
+        activeChatId = result.chat.id;
+        profileModal.classList.add("hidden");
+        friendsPanel.classList.add("hidden");
+        await refreshSnapshot();
+      } catch (error) {
+        friendMessage.textContent = error.message;
+      }
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "profile-btn";
+    remove.textContent = "Unadd";
+    remove.addEventListener("click", async () => {
+      if (!confirm(`Remove ${friend.displayName} from both friends lists? This deletes your direct chat history here and on their device when both of you are online again.`)) return;
+      try {
+        await api("/api/friends/remove", { method: "POST", body: { friendId: friend.id } });
+        profileModal.classList.add("hidden");
+        await refreshSnapshot();
+      } catch (error) {
+        friendMessage.textContent = error.message;
+      }
+    });
+    actions.append(message, remove);
+  }
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "profile-btn";
+  close.textContent = "Close";
+  close.addEventListener("click", () => profileModal.classList.add("hidden"));
+  actions.append(close);
+  card.replaceChildren(avatar, name, handle, status, actions);
+  profileModal.classList.remove("hidden");
+}
+
+function directPerson(chat) {
+  return chat && !chat.isGroup ? chat.members.find(member => member.id !== currentUser.id) : null;
+}
+
 function renderChatList() {
   const filter = document.querySelector("#chatSearch").value.trim().toLowerCase();
   const chats = snapshot.chats
@@ -1497,6 +1562,14 @@ function renderChatList() {
     titleRow.append(title, time);
     summary.append(titleRow, preview);
     button.append(avatar, summary);
+    if (!chat.isGroup) {
+      avatar.classList.add("clickable");
+      avatar.title = "View profile";
+      avatar.addEventListener("click", event => {
+        event.stopPropagation();
+        openProfile(directPerson(chat));
+      });
+    }
     button.addEventListener("click", () => {
       activeChatId = chat.id;
       renderChatList();
@@ -1528,6 +1601,11 @@ function renderConversation() {
   composer.classList.remove("hidden");
   document.querySelector("#conversationTitle").textContent = chat.name;
   setAvatar(document.querySelector("#conversationAvatar"), chat.name, chat.avatar);
+  const headerTargets = [document.querySelector("#conversationAvatar"), document.querySelector("#conversationTitle")];
+  headerTargets.forEach(element => {
+    element.classList.toggle("clickable", !chat.isGroup);
+    element.onclick = chat.isGroup ? null : () => openProfile(directPerson(chat));
+  });
   document.querySelector("#conversationStatus").textContent = chat.isGroup ? `${chat.members.length} members` : `@${chat.username} · ${chat.online ? "Online" : "Offline"}`;
   conversationActions.replaceChildren();
   if (chat.isGroup) {
@@ -1615,7 +1693,9 @@ function renderGroupManagement(chat) {
     const row = document.createElement("div");
     row.className = "group-member";
     const label = document.createElement("span");
-    label.className = "group-member-name";
+    label.className = "group-member-name clickable";
+    label.title = "View profile";
+    label.addEventListener("click", () => openProfile(member));
     label.textContent = `${member.displayName}${member.id === currentUser.id ? " (you)" : ""}${member.id === ownerId ? " · Owner" : ""}`;
     row.append(label);
     if (isOwner && member.id !== currentUser.id) {
@@ -1735,6 +1815,8 @@ function renderFriends() {
     const label = document.createElement("span");
     label.className = "social-label";
     label.title = friend.online ? "Online" : "Offline";
+    label.classList.add("clickable");
+    label.addEventListener("click", () => openProfile(friend));
     label.append(dot, name);
     const button = document.createElement("button");
     button.type = "button";
@@ -2210,11 +2292,6 @@ async function loadGifs() {
     const url = gifTab === "trending" ? `/api/gifs?tab=trending&q=${encodeURIComponent(query)}` : `/api/gifs?tab=${gifTab}`;
     const result = await api(url);
     if (request !== gifRequest) return;
-    if (gifTab === "trending" && !result.configured) {
-      gifMessage("Tenor search needs a free API key. Paste it below, or use the built-in GIFs in My GIFs.");
-      document.querySelector("#tenorRow").classList.remove("hidden");
-      return;
-    }
     if (!result.gifs.length) gifMessage(gifTab === "favorites" ? "No favorites yet. Star a GIF to save it here." : "No GIFs found.");
     else renderGifs(result.gifs);
   } catch (error) {
@@ -2222,21 +2299,10 @@ async function loadGifs() {
   }
 }
 
-document.querySelector("#tenorSave").addEventListener("click", async () => {
-  try {
-    await api("/api/gifs/key", { method: "POST", body: { key: document.querySelector("#tenorKey").value } });
-    document.querySelector("#tenorRow").classList.add("hidden");
-    document.querySelector("#tenorKey").value = "";
-    loadGifs();
-  } catch (error) {
-    gifStatus.textContent = error.message;
-  }
-});
-
 function setGifTab(tab) {
   gifTab = tab;
   document.querySelectorAll("[data-gif-tab]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.gifTab === tab)));
-  gifSearch.placeholder = tab === "trending" ? "Search Tenor" : "Search is for the Trending tab";
+  gifSearch.placeholder = tab === "trending" ? "Search GIPHY" : "Search is for the Trending tab";
   gifSearch.disabled = tab !== "trending";
   loadGifs();
 }
