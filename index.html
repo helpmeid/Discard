@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f3ed">
+  <link rel="icon" type="image/png" href="assets/image.png">
+  <title>Discard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --hover: #ecefe8;
+      --bubble: #f0f2ec;
+      --bubble-ink: #34413a;
+      --field: #fff;
+      color-scheme: light;
+      --ink: #202b28;
+      --muted: #74807a;
+      --paper: #f2f3ed;
+      --white: #fffefa;
+      --line: #e5e8df;
+      --green: #245c48;
+      --green-dark: #194533;
+      --lime: #d7ed9f;
+      --accent: #245c48;
+      font-family: "DM Sans", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    html[data-theme="dark"], html[data-theme="midnight"] { --hover: #2a2a2a; --bubble: #2b2b2b; --bubble-ink: #e8eaed; --field: #262626; }
+    html[data-theme="dark"] { color-scheme: dark; --ink: #e8eaed; --muted: #9aa0a6; --paper: #121212; --white: #1e1e1e; --line: #333333; --green: #4f9d7f; --green-dark: #7fc4a8; --lime: #2d3a2a; --accent: #4f9d7f; }
+    html[data-theme="midnight"] { color-scheme: dark; --ink: #eef4ed; --muted: #a4b0a7; --paper: #141c1a; --white: #1d2824; --line: #334139; --green: #83c9a3; --green-dark: #6bb88e; --lime: #d7ed9f; --accent: #83c9a3; }
+    html[data-theme="rose"] { --ink: #36272f; --muted: #89737d; --paper: #f7eef2; --white: #fffafd; --line: #ead9e0; --green: #9c506f; --green-dark: #783950; --lime: #f4cfde; --accent: #9c506f; }
+    html[data-theme="ocean"] { --ink: #203239; --muted: #6d858b; --paper: #eaf3f3; --white: #faffff; --line: #d5e5e6; --green: #277985; --green-dark: #1d6069; --lime: #c4e8d9; --accent: #277985; }
+    html[data-theme="contrast"] { color-scheme: light; --ink: #101010; --muted: #373737; --paper: #ffffff; --white: #ffffff; --line: #555555; --green: #111111; --green-dark: #333333; --lime: #f4e849; --accent: #111111; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .auth-view { min-height: 100vh; display: grid; grid-template-columns: 1fr; background: var(--paper); }
+    .brand { display: flex; align-items: center; gap: 11px; font: 800 21px Manrope, sans-serif; letter-spacing: 0; }
+    .brand-mark { width: 36px; height: 36px; display: block; border-radius: 10px; object-fit: cover; }
+    .auth-main { display: grid; place-items: center; padding: 48px 24px; }
+    .auth-card { width: min(100%, 410px); animation: rise .5s .08s ease both; }
+    .mobile-brand { display: flex; margin-bottom: 32px; }
+    .auth-card h2 { margin: 0; font: 700 31px Manrope, sans-serif; letter-spacing: 0; }
+    .auth-subtitle { margin: 9px 0 29px; color: var(--muted); font-size: 14px; }
+    .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 24px; border-radius: 10px; background: #e8ebe3; }
+    .mode-switch button { min-height: 40px; border: 0; border-radius: 7px; color: #66716b; background: transparent; font-size: 13px; font-weight: 600; }
+    .mode-switch button[aria-pressed="true"] { color: var(--ink); background: var(--white); box-shadow: 0 1px 3px #16221917; }
+    .field { display: grid; gap: 7px; margin: 16px 0; }
+    .field label { font-size: 13px; font-weight: 600; }
+    .field input, .new-chat-form input, .composer input, .search-box input { min-width: 0; border: 1px solid var(--line); border-radius: 8px; outline: none; background: var(--white); color: var(--ink); transition: border-color .16s, box-shadow .16s; }
+    .field input { height: 47px; padding: 0 13px; }
+    .field input:focus, .new-chat-form input:focus, .composer input:focus, .search-box input:focus { border-color: #609179; box-shadow: 0 0 0 3px #245c4819; }
+    .primary-button { width: 100%; height: 48px; margin-top: 8px; border: 0; border-radius: 8px; color: white; background: var(--accent); font-weight: 700; transition: background .16s, transform .16s; }
+    .primary-button:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .auth-message { min-height: 20px; margin: 12px 0 0; color: #a34535; font-size: 12px; line-height: 1.5; }
+    .local-note { padding-top: 17px; margin-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .chat-view { height: 100vh; height: 100dvh; overflow: hidden; display: grid; grid-template-columns: 290px minmax(0, 1fr); background: var(--white); }
+    .sidebar { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; padding: 26px 18px 18px; border-right: 1px solid var(--line); background: var(--paper); }
+    .sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 0 7px; }
+    .sidebar .brand { font-size: 18px; }
+    .account-row { display: flex; align-items: center; gap: 11px; padding: 22px 7px 19px; margin-top: 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .avatar { flex: 0 0 39px; width: 39px; height: 39px; display: grid; place-items: center; border-radius: 13px; color: var(--green-dark); background: #d7ed9f; font-weight: 700; }
+    .account-name { min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+    .account-caption { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .section-label { margin: 22px 7px 10px; color: #87918a; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .sidebar-actions { display: flex; align-items: center; justify-content: space-between; margin: 0 5px 10px 7px; }
+    .sidebar-actions .section-label { margin: 0; }
+    .sidebar-action-buttons { display: flex; gap: 5px; }
+    .icon-button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; color: #52635a; background: var(--white); }
+    .icon-button:hover { border-color: #b6c8b9; color: var(--green); }
+    .icon-button svg { width: 16px; height: 16px; }
+    .settings-panel { position: absolute; z-index: 5; top: 70px; left: 12px; width: min(330px, calc(100vw - 32px)); max-height: calc(100vh - 100px); overflow-y: auto; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); box-shadow: 0 14px 40px #18231e2b; }
+    .settings-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .profile-edit { display: flex; gap: 10px; align-items: center; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .profile-fields { flex: 1; min-width: 0; display: grid; gap: 6px; }
+    .profile-fields input[type="text"] { height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--field); font: inherit; font-size: 12px; }
+    .profile-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+    .profile-btn { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--field); font-size: 11px; font-weight: 600; cursor: pointer; }
+    .profile-btn.primary { color: #fff; border-color: var(--accent); background: var(--accent); }
+    .avatar.has-img { background-size: cover; background-position: center; color: transparent; }
+    .settings-heading h3 { margin: 0; font: 700 15px Manrope, sans-serif; }
+    .settings-close { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; font-size: 19px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); color: var(--ink); font-size: 12px; }
+    .setting-row select { max-width: 150px; min-height: 33px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--white); font: inherit; }
+    .setting-row input[type="color"] { width: 38px; height: 30px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); }
+    .setting-check { display: flex; align-items: center; gap: 8px; }
+    .setting-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .settings-status { min-height: 16px; margin: 7px 0 0; color: var(--muted); font-size: 10px; }
+    .search-box { position: relative; margin: 0 4px 12px; }
+    .search-box svg { position: absolute; top: 11px; left: 11px; width: 15px; color: #8a948d; }
+    .search-box input { width: 100%; height: 38px; padding: 0 10px 0 34px; font-size: 12px; background: var(--field); }
+    .chat-list { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+    .chat-item { min-width: 0; }
+    .chat-preview { display: block; max-width: 100%; }
+    .chat-title { min-width: 0; }
+    .social-panel, .social-list, .social-item { min-width: 0; max-width: 100%; }
+    .social-panel { overflow-x: hidden; }
+    .chat-item { display: flex; width: 100%; gap: 10px; align-items: center; padding: 10px 8px; border: 0; border-radius: 8px; text-align: left; background: transparent; }
+    .chat-item:hover { background: var(--hover); }
+    .chat-item.active { background: var(--hover); }
+    html[data-theme="dark"] .chat-item .avatar, html[data-theme="midnight"] .chat-item .avatar { color: #1e1e1e; }
+    .chat-item .avatar { position: relative; }
+    .avatar .status-dot { position: absolute; right: -3px; bottom: -3px; margin: 0; border: 2px solid var(--white); box-sizing: content-box; }
+    .chat-item .avatar { width: 38px; height: 38px; flex-basis: 38px; border-radius: 12px; background: #e9c2a8; font-size: 13px; }
+    .chat-item:nth-child(3n) .avatar { color: #4a4b70; background: #d8d6ed; }
+    .chat-item:nth-child(3n + 1) .avatar { color: #5c5140; background: #f1dfab; }
+    .chat-summary { min-width: 0; flex: 1; }
+    .chat-title-row { display: flex; justify-content: space-between; gap: 5px; }
+    .chat-title { overflow: hidden; color: var(--ink); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-time { flex: none; color: var(--muted); font-size: 10px; }
+    .chat-preview { overflow: hidden; margin-top: 4px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .empty-list { padding: 14px 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .sidebar-bottom { padding: 14px 7px 0; border-top: 1px solid var(--line); }
+    .version-note { margin: -6px 0 10px; color: var(--muted); font-size: 10px; }
+    .storage-note { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #738078; font-size: 11px; }
+    .storage-dot { width: 7px; height: 7px; border-radius: 50%; background: #62a77b; }
+    .logout-button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 0; border-radius: 7px; color: #65716a; text-align: left; background: transparent; font-size: 12px; font-weight: 600; }
+    .logout-button svg { width: 16px; height: 16px; flex: none; }
+    .logout-button:hover { color: #a34535; background: #f4e9e5; }
+    .conversation { min-width: 0; height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--white); }
+    .conversation-header { min-height: 77px; display: flex; align-items: center; gap: 12px; padding: 14px 28px; border-bottom: 1px solid var(--line); }
+    .conversation-header .avatar { width: 39px; height: 39px; flex-basis: 39px; }
+    .conversation-title { font: 700 15px Manrope, sans-serif; }
+    .conversation-status { margin-top: 3px; color: #89938c; font-size: 11px; }
+    .message-area { flex: 1; min-height: 0; overflow-x: hidden; display: flex; flex-direction: column; gap: 13px; overflow-y: auto; padding: 26px clamp(18px, 5vw, 78px); }
+    .date-divider { align-self: center; margin: 5px 0 10px; color: #96a098; font-size: 10px; font-weight: 600; letter-spacing: .3px; }
+    .message-area > :first-child { margin-top: auto; }
+    .message-bubble { width: fit-content; max-width: 100%; }
+    .message { max-width: min(75%, 510px); display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; gap: 5px; animation: rise .2s ease both; }
+    .message.mine { align-self: flex-end; align-items: flex-end; }
+    .message-bubble { padding: 11px 14px; border-radius: 4px 14px 14px 14px; color: var(--bubble-ink); background: var(--bubble); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .message.mine .message-bubble { border-radius: 14px 4px 14px 14px; color: #fff; background: var(--accent); }
+    .message-meta { color: #99a19b; font-size: 10px; }
+    .welcome-empty { flex: 1; display: grid; place-content: center; justify-items: center; padding: 28px; text-align: center; }
+    .welcome-icon { width: 56px; height: 56px; display: grid; place-items: center; margin-bottom: 16px; border-radius: 18px; color: var(--green); background: #eaf0e4; }
+    .welcome-icon svg { width: 25px; height: 25px; }
+    .welcome-empty h2 { margin: 0; font: 700 19px Manrope, sans-serif; }
+    .welcome-empty p { max-width: 320px; margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .composer-wrap { padding: 14px clamp(16px, 4vw, 58px) 20px; }
+    .composer { display: flex; align-items: center; gap: 9px; max-width: 850px; padding: 6px; margin: auto; border: 1px solid var(--line); border-radius: 11px; background: var(--field); }
+    .attach-button { width: 39px; height: 39px; display: grid; flex: none; place-items: center; border-radius: 8px; color: var(--muted); cursor: pointer; }
+    .attach-button:hover { color: var(--accent); background: var(--hover); }
+    .message-image { display: block; max-width: min(320px, 100%); max-height: 320px; border-radius: 10px; cursor: zoom-in; }
+    .message-bubble.has-image { display: grid; gap: 8px; }
+    .composer input::placeholder, .inline-form input::placeholder { color: var(--muted); }
+    .composer input { flex: 1; height: 42px; padding: 0 11px; border: 0; background: transparent; font-size: 13px; }
+    .composer input:focus { box-shadow: none; }
+    .send-button { width: 39px; height: 39px; display: grid; flex: none; place-items: center; border: 0; border-radius: 8px; color: white; background: var(--accent); }
+    .send-button:hover { background: var(--green-dark); }
+    .send-button svg { width: 17px; }
+    .new-chat-form { display: flex; gap: 7px; padding: 0 4px; }
+    .new-chat-form input { width: 100%; height: 37px; padding: 0 9px; font-size: 11px; }
+    .new-chat-form { flex-direction: column; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+    .new-chat-form button, .inline-form button { min-height: 36px; border: 0; border-radius: 7px; color: #fff; background: var(--green); font-size: 13px; font-weight: 700; }
+    .new-chat-form button { width: 100%; }
+    .social-panel { padding: 10px 6px; border-bottom: 1px solid var(--line); }
+    .social-panel h3 { margin: 4px 0 10px; font: 700 13px Manrope, sans-serif; }
+    .inline-form { display: flex; gap: 6px; }
+    .inline-form input { flex: 1; width: 0; height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; outline: none; font-size: 11px; color: var(--ink); background: var(--field); }
+    .inline-form button { width: 38px; flex: none; font-size: 18px; }
+    .panel-message { min-height: 16px; margin: 6px 0; color: #a34535; font-size: 10px; line-height: 1.4; }
+    .social-list { display: grid; gap: 3px; }
+    .social-item { display: flex; align-items: center; justify-content: space-between; gap: 5px; padding: 6px 5px; border-radius: 6px; }
+    .social-item:hover { background: var(--hover); }
+    .social-item button { padding: 4px; border: 0; color: var(--green); background: transparent; font-size: 11px; font-weight: 700; }
+    .status-dot { flex: none; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #9aa0a6; }
+    .status-dot.online { background: #2fb36a; }
+    .social-label { display: flex; align-items: center; min-width: 0; }
+    .handle { margin-left: 5px; color: var(--muted); font-size: 10px; font-weight: 400; }
+    .social-name { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .request-title { margin: 10px 0 4px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .request-actions { display: flex; gap: 3px; }
+    .request-actions button { padding: 4px 6px; border: 0; border-radius: 5px; color: var(--green); background: var(--hover); font-size: 10px; font-weight: 700; }
+    .member-choices { display: grid; gap: 5px; max-height: 120px; overflow-y: auto; }
+    .member-choice { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+    .member-choice input { accent-color: var(--green); }
+    html[data-compact="on"] .chat-item { padding-top: 5px; padding-bottom: 5px; }
+    html[data-font-size="small"] .message-bubble { font-size: 11px; }
+    html[data-font-size="large"] .message-bubble { font-size: 16px; }
+    html[data-bubbles="square"] .message-bubble, html[data-bubbles="square"] .message.mine .message-bubble { border-radius: 4px; }
+    .click-particle-layer { position: fixed; z-index: 20; inset: 0; overflow: hidden; pointer-events: none; }
+    .click-particle { position: absolute; left: var(--x); top: var(--y); color: var(--accent); font-size: 15px; line-height: 1; animation: particle-burst .65s ease-out forwards; }
+    @keyframes particle-burst { to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.25) rotate(100deg); } }
+    html[data-cursor="on"] button, html[data-cursor="on"] a, html[data-cursor="on"] [role="button"] { cursor: var(--custom-cursor, pointer); }
+    html[data-cursor="on"] body { cursor: var(--custom-cursor, pointer); }
+    html[data-cursor="on"] input, html[data-cursor="on"] textarea { cursor: text; }
+    .hidden { display: none !important; }
+    .gif-toggle { font-size: 11px; font-weight: 800; border: 0; background: transparent; }
+    .gif-panel { max-width: 850px; margin: 0 auto 8px; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: var(--white); }
+    .gif-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .gif-tabs { display: flex; gap: 4px; }
+    .gif-tab { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--field); font-size: 11px; font-weight: 600; }
+    .gif-tab[aria-pressed="true"] { color: #fff; border-color: var(--accent); background: var(--accent); }
+    .gif-search { width: 100%; height: 36px; padding: 0 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 8px; outline: none; color: var(--ink); background: var(--field); font: inherit; font-size: 12px; }
+    .gif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; }
+    .gif-cell { position: relative; height: 90px; border-radius: 8px; overflow: hidden; background: var(--hover); }
+    .gif-cell img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block; }
+    .gif-star { position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border: 0; border-radius: 50%; color: #fff; background: #0009; font-size: 14px; line-height: 1; }
+    .gif-star.on { color: #f2c94c; }
+    .gif-empty { grid-column: 1 / -1; padding: 16px 4px; color: var(--muted); font-size: 12px; text-align: center; }
+    .message-area.no-anim .message { animation: none; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 760px) {
+      .auth-main { min-height: 100vh; align-content: center; padding: 28px 22px; }
+      .mobile-brand { margin-bottom: 28px; }
+      .chat-view { grid-template-columns: 96px minmax(0, 1fr); }
+      .sidebar { align-items: center; padding: 18px 8px 12px; }
+      .sidebar-top { justify-content: center; padding: 0; }
+      .sidebar-top .brand { display: none; }
+      .sidebar .brand-name, .account-copy, .section-label, .search-box, .chat-summary, .storage-note, .version-note { display: none; }
+      .sidebar .brand { font-size: 0; }
+      .account-row { justify-content: center; padding: 16px 0; margin-top: 16px; border-bottom: 0; }
+      .account-row .avatar { width: 39px; }
+      .sidebar-actions { display: flex; justify-content: center; margin: 8px 0; }
+      .sidebar-actions .icon-button { width: 38px; height: 40px; }
+      .sidebar-action-buttons { gap: 4px; }
+      .social-panel, .new-chat-form { position: absolute; z-index: 4; left: 96px; top: 118px; width: min(320px, calc(100vw - 106px)); max-height: 65vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; background: var(--white); box-shadow: 0 12px 35px #273d3026; }
+      .chat-list { width: 100%; }
+      .chat-item { justify-content: center; padding: 8px 0; }
+      .chat-item .avatar { width: 42px; height: 42px; flex-basis: 42px; }
+      .sidebar-bottom { display: grid; place-items: center; padding: 12px 0 0; }
+      .sidebar-bottom { width: 100%; }
+      .logout-button { width: 40px; height: 40px; justify-content: center; padding: 0; margin: auto; }
+      .logout-button span { display: none; }
+      .conversation-header { min-height: 68px; padding: 12px 15px; }
+      .message-area { padding: 22px 14px; }
+      .message { max-width: 88%; }
+      .composer-wrap { padding: 11px 10px 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main id="authView" class="auth-view">
+    <section class="auth-main">
+      <div class="auth-card">
+        <div class="brand mobile-brand"><img class="brand-mark" src="assets/image.png" alt=""><span>Discard</span></div>
+        <h2 id="authTitle">Welcome back</h2>
+        <p class="auth-subtitle" id="authSubtitle">Sign in to pick up where you left off.</p>
+        <div class="mode-switch" role="group" aria-label="Account mode"><button type="button" data-mode="signin" aria-pressed="true">Sign in</button><button type="button" data-mode="signup" aria-pressed="false">Create account</button></div>
+        <form id="authForm" novalidate>
+          <div class="field"><label for="username">Username</label><input id="username" name="username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Your username"></div>
+          <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="At least 8 characters"></div>
+          <button class="primary-button" id="authSubmit" type="submit">Sign in</button>
+          <p class="auth-message" id="authMessage" role="alert" aria-live="polite"></p>
+        </form>
+        <div class="local-note">Your account and conversations are shared through this Discard server. You will stay signed in on this device for 30 days.</div>
+      </div>
+    </section>
+  </main>
+  <main id="chatView" class="chat-view hidden">
+    <aside class="sidebar">
+      <div class="sidebar-top"><div class="brand"><img class="brand-mark" src="assets/image.png" alt=""><span class="brand-name">Discard</span></div><button class="icon-button" id="settingsToggle" type="button" aria-label="Customize appearance" title="Customize appearance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 6h6"/></svg></button></div>
+      <section class="settings-panel hidden" id="settingsPanel" aria-label="Appearance settings">
+        <div class="settings-heading"><h3>Customize</h3><button class="settings-close" id="settingsClose" type="button" aria-label="Close settings">×</button></div>
+        <div class="profile-edit">
+          <div class="avatar" id="profileAvatar">U</div>
+          <div class="profile-fields">
+            <input id="displayNameInput" type="text" maxlength="32" placeholder="Display name" aria-label="Display name">
+            <div class="profile-buttons"><label class="profile-btn">Upload picture<input id="avatarFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="profile-btn" id="avatarRemove" type="button">Remove</button><button class="profile-btn primary" id="profileSave" type="button">Save name</button></div>
+          </div>
+        </div>
+        <label class="setting-row">Theme<select id="themePreference"><option value="meadow">Meadow</option><option value="dark">Dark</option><option value="midnight">Midnight</option><option value="rose">Rose</option><option value="ocean">Ocean</option><option value="contrast">High contrast</option></select></label>
+        <label class="setting-row">Accent color<input id="accentPreference" type="color" value="#245c48" aria-label="Accent color"></label>
+        <label class="setting-row"><span>Custom cursor</span><span class="setting-check"><input id="cursorEnabled" type="checkbox"><select id="cursorPreference" aria-label="Cursor style"><option value="sparkle">Sparkle</option><option value="heart">Heart</option><option value="diamond">Diamond</option></select></span></label>
+        <label class="setting-row"><span>Click particles</span><span class="setting-check"><input id="particlesEnabled" type="checkbox"><select id="particlePreference" aria-label="Particle style"><option value="sparkle">Sparkles</option><option value="heart">Hearts</option><option value="bubble">Bubbles</option><option value="leaf">Leaves</option></select></span></label>
+        <label class="setting-row">Message size<select id="fontSizePreference"><option value="small">Small</option><option value="regular">Regular</option><option value="large">Large</option></select></label>
+        <label class="setting-row">Bubble shape<select id="bubblePreference"><option value="soft">Soft</option><option value="square">Square</option></select></label>
+        <label class="setting-row"><span>Compact chat list</span><span class="setting-check"><input id="compactPreference" type="checkbox"></span></label>
+        <p class="settings-status" id="settingsStatus" aria-live="polite"></p>
+      </section>
+      <div class="account-row"><div class="avatar" id="userAvatar">U</div><div class="account-copy"><div class="account-name" id="userName">Username</div><div class="account-caption" id="userHandle">Your space</div></div></div>
+      <div class="section-label">Messages</div>
+      <div class="sidebar-actions"><div class="section-label">Your chats</div><div class="sidebar-action-buttons"><button class="icon-button" id="friendsToggle" type="button" aria-label="Friends" title="Friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></button><button class="icon-button" id="newChatButton" type="button" aria-label="New group chat" title="New group chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
+      <section class="social-panel hidden" id="friendsPanel" aria-label="Friends">
+        <h3>Friends</h3>
+        <form class="inline-form" id="friendForm"><input id="friendUsername" maxlength="24" aria-label="Friend username" placeholder="Add by username"><button type="submit" aria-label="Send friend request">+</button></form>
+        <p class="panel-message" id="friendMessage" aria-live="polite"></p>
+        <div id="requestList"></div>
+        <div class="social-list" id="friendsList"></div>
+      </section>
+      <form class="new-chat-form hidden" id="newChatForm"><input id="newChatName" maxlength="40" aria-label="Group name" placeholder="Group name"><div class="member-choices" id="memberChoices"></div><button class="create-group-button" type="submit">Create group</button></form>
+      <label class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="chatSearch" type="search" placeholder="Find a chat" aria-label="Find a chat"></label>
+      <div class="chat-list" id="chatList" aria-label="Your chats"></div>
+      <div class="sidebar-bottom"><div class="storage-note"><span class="storage-dot"></span>Saved on this Chromebook</div><div class="version-note" id="versionNote">Version …</div><button class="logout-button" id="signOutButton" type="button" aria-label="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Sign out</span></button></div>
+    </aside>
+    <section class="conversation" aria-label="Conversation">
+      <header class="conversation-header hidden" id="conversationHeader"><div class="avatar" id="conversationAvatar">C</div><div><div class="conversation-title" id="conversationTitle"></div><div class="conversation-status" id="conversationStatus">Saved on this device</div></div></header>
+      <div class="welcome-empty" id="welcomeEmpty"><div class="welcome-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6a7.5 7.5 0 1 1 17-3.5Z"/><path d="M8 11h8M8 14h5"/></svg></div><h2>Your conversations</h2><p>Add friends to start a direct message, or make a group chat together.</p></div>
+      <div class="message-area hidden" id="messageArea" aria-live="polite"></div>
+      <div class="composer-wrap hidden" id="composerWrap"><section class="gif-panel hidden" id="gifPanel" aria-label="GIFs">
+        <div class="gif-head"><div class="gif-tabs"><button type="button" class="gif-tab" data-gif-tab="trending" aria-pressed="true">Trending</button><button type="button" class="gif-tab" data-gif-tab="favorites" aria-pressed="false">★ Favorites</button><button type="button" class="gif-tab" data-gif-tab="library" aria-pressed="false">My GIFs</button></div><label class="profile-btn">Add GIF<input id="gifUpload" type="file" accept="image/gif" hidden></label></div>
+        <input class="gif-search" id="gifSearch" type="search" placeholder="Search Tenor" aria-label="Search GIFs" autocomplete="off">
+        <div class="gif-grid" id="gifGrid"></div>
+        <p class="settings-status" id="gifStatus" aria-live="polite"></p>
+      </section><form class="composer" id="messageForm"><label class="attach-button" title="Send an image or GIF" aria-label="Attach image or GIF"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
+    </section>
+  </main>
+  <script src="app.js" defer></script>
+</body>
+</html>
