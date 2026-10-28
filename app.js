@@ -59,7 +59,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.3";
+const APP_VERSION = "2.0.4";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -256,7 +256,7 @@ async function flushSave() {
 window.addEventListener("pagehide", () => { if (dirty.size) flushSave(); });
 
 function defaultState(me) {
-  return { me, friends: {}, people: {}, requests: [], gifs: [], favoriteGifs: [], tenorKey: "", pendingGroupDeletes: [], pendingGroupLeaves: [], chats: [] };
+  return { me, friends: {}, people: {}, requests: [], gifs: [], favoriteGifs: [], tenorKey: "", pendingFriendRemovals: [], pendingGroupDeletes: [], pendingGroupLeaves: [], chats: [] };
 }
 
 async function loadState() {
@@ -460,6 +460,7 @@ function connectTo(id) {
 function wantedPeers() {
   const ids = new Set(Object.keys(state.friends));
   state.requests.forEach(request => ids.add(request.id));
+  (state.pendingFriendRemovals || []).forEach(removal => ids.add(removal.id));
   state.chats.forEach(chat => {
     chat.members.forEach(id => ids.add(id));
     (chat.pendingGroupUpdateIds || []).forEach(id => ids.add(id));
@@ -536,6 +537,9 @@ function broadcastGroupUpdate(chat, previousMembers) {
 }
 
 function flushOutbox(id) {
+  (state.pendingFriendRemovals || []).filter(removal => removal.id === id).forEach(removal => {
+    sendTo(id, { t: "friend-remove", removalId: removal.removalId });
+  });
   (state.pendingGroupLeaves || []).filter(leave => leave.ownerId === id).forEach(leave => {
     sendTo(id, { t: "group-leave", chatId: leave.chatId });
   });
@@ -568,6 +572,7 @@ function chatForSender(from, chatId) {
 }
 
 function addFriend(id, profile) {
+  state.pendingFriendRemovals = (state.pendingFriendRemovals || []).filter(removal => removal.id !== id);
   state.friends[id] = profile;
   state.people[id] = profile;
   state.requests = state.requests.filter(request => request.id !== id);
@@ -629,6 +634,24 @@ function handleData(from, data) {
       state.requests = state.requests.filter(request => !(request.id === from && request.direction === "outgoing"));
       touchMeta();
       break;
+    case "friend-remove": {
+      if (!safeIdPattern.test(data.removalId || "")) return;
+      delete state.friends[from];
+      state.requests = state.requests.filter(request => request.id !== from);
+      state.chats.filter(chat => !chat.isGroup && chat.members.includes(from)).forEach(removeChatLocal);
+      touchMeta();
+      sendTo(from, { t: "friend-remove-ack", removalId: data.removalId });
+      notify();
+      return;
+    }
+    case "friend-remove-ack": {
+      if (!safeIdPattern.test(data.removalId || "")) return;
+      const removal = state.pendingFriendRemovals?.find(item => item.id === from && item.removalId === data.removalId);
+      if (!removal) return;
+      state.pendingFriendRemovals = state.pendingFriendRemovals.filter(item => item !== removal);
+      touchMeta();
+      return;
+    }
     case "group": {
       const info = data.chat;
       if (!state.friends[from] || !info || typeof info.id !== "string" || !safeIdPattern.test(info.id) || !info.id.startsWith("g-")) return;
@@ -952,10 +975,15 @@ async function api(path, options = {}) {
   if (method === "POST" && route === "/api/friends/remove") {
     const friendId = typeof body.friendId === "string" ? body.friendId : "";
     if (!state.friends[friendId]) fail("Friend not found.");
+    state.pendingFriendRemovals = (state.pendingFriendRemovals || []).filter(removal => removal.id !== friendId);
+    const removal = { id: friendId, removalId: randomId(20) };
+    state.pendingFriendRemovals.push(removal);
     delete state.friends[friendId];
     state.chats.filter(chat => !chat.isGroup && chat.members.includes(friendId)).forEach(removeChatLocal);
     state.requests = state.requests.filter(request => request.id !== friendId);
     touchMeta();
+    connectTo(friendId);
+    sendTo(friendId, { t: "friend-remove", removalId: removal.removalId });
     return { ok: true };
   }
 
@@ -1234,6 +1262,9 @@ function cleanImported(raw) {
     .filter(item => typeof item?.id === "string" && safeIdPattern.test(item.id) && Array.isArray(item.pending))
     .map(item => ({ id: item.id, pending: [...new Set(item.pending.filter(id => idPattern.test(id) && id !== me.id))].slice(0, 50) }))
     .filter(item => item.pending.length);
+  imported.pendingFriendRemovals = (Array.isArray(meta.pendingFriendRemovals) ? meta.pendingFriendRemovals : [])
+    .filter(item => idPattern.test(item?.id) && item.id !== me.id && safeIdPattern.test(item.removalId || ""))
+    .map(item => ({ id: item.id, removalId: item.removalId }));
   imported.pendingGroupLeaves = (Array.isArray(meta.pendingGroupLeaves) ? meta.pendingGroupLeaves : [])
     .filter(item => typeof item?.chatId === "string" && safeIdPattern.test(item.chatId) && idPattern.test(item.ownerId) && item.ownerId !== me.id)
     .map(item => ({ chatId: item.chatId, ownerId: item.ownerId }));
@@ -1722,7 +1753,7 @@ function renderFriends() {
     remove.type = "button";
     remove.textContent = "Unadd";
     remove.addEventListener("click", async () => {
-      if (!confirm(`Remove ${friend.displayName} from your friends? This also deletes your direct chat history on this device.`)) return;
+      if (!confirm(`Remove ${friend.displayName} from both friends lists? This deletes your direct chat history here and on their device when both of you are online again.`)) return;
       try {
         await api("/api/friends/remove", { method: "POST", body: { friendId: friend.id } });
         await refreshSnapshot();
