@@ -8,7 +8,7 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 
 1. Download the zip file of this repository (green **Code** button, then **Download ZIP**).
 2. Unzip it.
-3. Open `index.html` to load into Discard.
+3. Open `index.html` to load into Discard. Keep `app.js` and `assets.js` in the same folder as `index.html`; it loads them.
 
 ## Using it
 
