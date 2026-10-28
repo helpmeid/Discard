@@ -137,6 +137,28 @@
     .message-bubble { padding: 11px 14px; border-radius: 4px 14px 14px 14px; color: var(--bubble-ink); background: var(--bubble); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
     .message.mine .message-bubble { border-radius: 14px 4px 14px 14px; color: #fff; background: var(--accent); }
     .message-meta { color: #99a19b; font-size: 10px; }
+    .message-meta button { margin-left: 7px; padding: 2px 5px; border: 0; border-radius: 4px; color: var(--muted); background: transparent; font-size: 10px; }
+    .message-meta button:hover { color: #a34535; background: var(--hover); }
+    .conversation-heading { min-width: 0; }
+    .conversation-actions { display: flex; gap: 6px; margin-left: auto; }
+    .conversation-actions button, .group-management button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--white); font-size: 11px; font-weight: 600; }
+    .conversation-actions button:hover, .group-management button:hover { border-color: var(--accent); }
+    .group-management { max-height: 45vh; overflow-y: auto; padding: 12px 24px; border-bottom: 1px solid var(--line); background: var(--paper); }
+    .group-management.hidden { display: none; }
+    .group-management-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .group-management-heading h3 { margin: 0; font: 700 13px Manrope, sans-serif; }
+    .group-member { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 12px; }
+    .group-member-name { min-width: 0; overflow-wrap: anywhere; }
+    .group-member-actions { display: flex; flex: none; gap: 5px; }
+    .group-management .danger { color: #a34535; }
+    .group-management-footer { display: flex; justify-content: flex-end; gap: 6px; padding-top: 9px; }
+    .group-management-footer .danger { border-color: #dfb9ae; }
+    @media (max-width: 620px) {
+      .conversation-header { gap: 8px; }
+      .conversation-actions { gap: 4px; }
+      .conversation-actions button { padding: 6px; font-size: 10px; }
+      .group-management { padding: 10px 14px; }
+    }
     .welcome-empty { flex: 1; display: grid; place-content: center; justify-items: center; padding: 28px; text-align: center; }
     .welcome-icon { width: 56px; height: 56px; display: grid; place-items: center; margin-bottom: 16px; border-radius: 18px; color: var(--green); background: #eaf0e4; }
     .welcome-icon svg { width: 25px; height: 25px; }
@@ -308,7 +330,8 @@
       <div class="sidebar-bottom"><div class="storage-note"><span class="storage-dot" id="netDot"></span><span id="netText">Starting...</span></div><div class="version-note" id="versionNote">Version …</div><button class="logout-button" id="signOutButton" type="button" aria-label="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Sign out</span></button></div>
     </aside>
     <section class="conversation" aria-label="Conversation">
-      <header class="conversation-header hidden" id="conversationHeader"><div class="avatar" id="conversationAvatar">C</div><div><div class="conversation-title" id="conversationTitle"></div><div class="conversation-status" id="conversationStatus">Saved on this device</div></div></header>
+      <header class="conversation-header hidden" id="conversationHeader"><div class="avatar" id="conversationAvatar">C</div><div class="conversation-heading"><div class="conversation-title" id="conversationTitle"></div><div class="conversation-status" id="conversationStatus">Saved on this device</div></div><div class="conversation-actions" id="conversationActions"></div></header>
+      <section class="group-management hidden" id="groupManagement" aria-label="Group management"><div class="group-management-heading"><h3>Group members and ownership</h3><button type="button" id="groupManagementClose">Close</button></div><div id="groupMemberList"></div><div class="group-management-footer"><button type="button" class="danger" id="groupLeaveButton">Leave group</button><button type="button" class="danger" id="groupDeleteButton">Delete group</button></div></section>
       <div class="welcome-empty" id="welcomeEmpty"><div class="welcome-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6a7.5 7.5 0 1 1 17-3.5Z"/><path d="M8 11h8M8 14h5"/></svg></div><h2>Your conversations</h2><p>Add friends to start a direct message, or make a group chat together.</p></div>
       <div class="message-area hidden" id="messageArea" aria-live="polite"></div>
       <div class="composer-wrap hidden" id="composerWrap"><section class="gif-panel hidden" id="gifPanel" aria-label="GIFs">
@@ -321,7 +344,7 @@
     </section>
   </main>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=2.0.1"></script>
-  <script src="app.js?v=2.0.1"></script>
+  <script src="assets.js?v=2.0.2"></script>
+  <script src="app.js?v=2.0.2"></script>
 </body>
 </html>

@@ -21,6 +21,9 @@ const friendUsername = document.querySelector("#friendUsername");
 const requestList = document.querySelector("#requestList");
 const friendsList = document.querySelector("#friendsList");
 const memberChoices = document.querySelector("#memberChoices");
+const conversationActions = document.querySelector("#conversationActions");
+const groupManagement = document.querySelector("#groupManagement");
+const groupMemberList = document.querySelector("#groupMemberList");
 const settingsPanel = document.querySelector("#settingsPanel");
 const settingsStatus = document.querySelector("#settingsStatus");
 const displayNameInput = document.querySelector("#displayNameInput");
@@ -56,7 +59,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.0.2";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -253,7 +256,7 @@ async function flushSave() {
 window.addEventListener("pagehide", () => { if (dirty.size) flushSave(); });
 
 function defaultState(me) {
-  return { me, friends: {}, people: {}, requests: [], gifs: [], favoriteGifs: [], tenorKey: "", chats: [] };
+  return { me, friends: {}, people: {}, requests: [], gifs: [], favoriteGifs: [], tenorKey: "", pendingGroupDeletes: [], pendingGroupLeaves: [], chats: [] };
 }
 
 async function loadState() {
@@ -353,6 +356,7 @@ function chatToView(chat) {
     avatar: other?.avatar || null,
     username: other?.username || null,
     isGroup: chat.isGroup,
+    ownerId: chat.isGroup ? (chat.ownerId || chat.members[0]) : null,
     online: otherId ? isOnline(otherId) : null,
     members: chat.members.map(personOf),
     messages: chat.messages,
@@ -456,7 +460,12 @@ function connectTo(id) {
 function wantedPeers() {
   const ids = new Set(Object.keys(state.friends));
   state.requests.forEach(request => ids.add(request.id));
-  state.chats.forEach(chat => chat.members.forEach(id => ids.add(id)));
+  state.chats.forEach(chat => {
+    chat.members.forEach(id => ids.add(id));
+    (chat.pendingGroupUpdateIds || []).forEach(id => ids.add(id));
+  });
+  (state.pendingGroupDeletes || []).forEach(deletion => deletion.pending.forEach(id => ids.add(id)));
+  (state.pendingGroupLeaves || []).forEach(leave => ids.add(leave.ownerId));
   ids.delete(state.me.id);
   return ids;
 }
@@ -500,16 +509,55 @@ function attach(conn) {
 }
 
 function groupPayload(chat) {
-  return { id: chat.id, name: chat.name, members: chat.members.map(personOf) };
+  return { id: chat.id, name: chat.name, ownerId: chat.ownerId || chat.members[0], members: chat.members.map(personOf) };
+}
+
+function groupUpdatePayload(chat) {
+  return { ...groupPayload(chat), updateId: chat.pendingGroupUpdateId };
+}
+
+function removeChatLocal(chat) {
+  state.chats = state.chats.filter(item => item !== chat);
+  dirty.delete(`chat:${chat.id}`);
+  removedKeys.add(`chat:${chat.id}`);
+  touchMeta();
+}
+
+function broadcastGroupUpdate(chat, previousMembers) {
+  const recipients = new Set([...previousMembers, ...chat.members, ...(chat.invites || [])]);
+  recipients.delete(state.me.id);
+  chat.pendingGroupUpdateId = randomId(20);
+  chat.pendingGroupUpdateIds = [...new Set([...(chat.pendingGroupUpdateIds || []), ...recipients])];
+  touchChat(chat);
+  recipients.forEach(id => {
+    connectTo(id);
+    sendTo(id, { t: "group-update", chat: groupUpdatePayload(chat) });
+  });
 }
 
 function flushOutbox(id) {
-  state.chats.filter(chat => chat.members.includes(id)).forEach(chat => {
+  (state.pendingGroupLeaves || []).filter(leave => leave.ownerId === id).forEach(leave => {
+    sendTo(id, { t: "group-leave", chatId: leave.chatId });
+  });
+  (state.pendingGroupDeletes || []).filter(deletion => deletion.pending.includes(id)).forEach(deletion => {
+    sendTo(id, { t: "group-delete", chatId: deletion.id });
+  });
+  state.chats.filter(chat => chat.members.includes(id) || chat.pendingGroupUpdateIds?.includes(id)).forEach(chat => {
     if (chat.isGroup && chat.invites?.includes(id)) sendTo(id, { t: "group", chat: groupPayload(chat) });
-    chat.messages.filter(message => message.sender === state.me.id && message.pending?.includes(id)).forEach(message => {
+    if (chat.isGroup && chat.pendingGroupUpdateIds?.includes(id)) sendTo(id, { t: "group-update", chat: groupUpdatePayload(chat) });
+    chat.messages.filter(message => message.sender === state.me.id && message.pending?.includes(id)
+      && !chat.deletedMessageIds?.includes(message.id)).forEach(message => {
       sendTo(id, { t: "msg", chatId: chat.id, msg: { id: message.id, text: message.text, image: message.image, createdAt: message.createdAt } });
     });
   });
+}
+
+function rememberDeletedMessage(chat, messageId) {
+  chat.deletedMessageIds ||= [];
+  if (!chat.deletedMessageIds.includes(messageId)) {
+    chat.deletedMessageIds.push(messageId);
+    if (chat.deletedMessageIds.length > 2000) chat.deletedMessageIds.shift();
+  }
 }
 
 function chatForSender(from, chatId) {
@@ -590,8 +638,10 @@ function handleData(from, data) {
         const members = Array.isArray(info.members) ? info.members.slice(0, 50) : [];
         const profiles = members.map(member => idPattern.test(member?.id) ? sanitizeProfile(member, member.id) : null);
         if (!name || profiles.some(item => !item) || !profiles.some(item => item.id === state.me.id) || !profiles.some(item => item.id === from)) return;
+        const ownerId = idPattern.test(info.ownerId) ? info.ownerId : profiles[0]?.id;
+        if (!profiles.some(item => item.id === ownerId)) return;
         profiles.forEach(item => { if (item.id !== state.me.id && !state.people[item.id]) state.people[item.id] = item; });
-        const chat = { id: info.id, name, isGroup: true, members: profiles.map(item => item.id), messages: [], invites: [], createdAt: Date.now(), rev: 0 };
+        const chat = { id: info.id, name, isGroup: true, ownerId, members: profiles.map(item => item.id), messages: [], invites: [], createdAt: Date.now(), rev: 0 };
         state.chats.push(chat);
         touchChat(chat);
         touchMeta();
@@ -599,10 +649,113 @@ function handleData(from, data) {
       sendTo(from, { t: "ack", chatId: info.id });
       break;
     }
+    case "group-update": {
+      const info = data.chat;
+      const chat = state.chats.find(item => item.id === info?.id && item.isGroup);
+      if (!safeIdPattern.test(info?.updateId || "") || !Array.isArray(info.members)) return;
+      if (!chat) {
+        if (!info.members.some(member => member?.id === state.me.id)) {
+          sendTo(from, { t: "group-update-ack", chatId: info.id, updateId: info.updateId });
+        }
+        return;
+      }
+      if (chat.lastGroupUpdateId === info.updateId && chat.lastGroupUpdateSender === from) {
+        sendTo(from, { t: "group-update-ack", chatId: chat.id, updateId: info.updateId });
+        break;
+      }
+      if ((chat.ownerId || chat.members[0]) !== from) return;
+      const members = info.members.slice(0, 50);
+      const profiles = members.map(member => idPattern.test(member?.id) ? sanitizeProfile(member, member.id) : null);
+      const ownerId = typeof info.ownerId === "string" ? info.ownerId : from;
+      const name = typeof info.name === "string" ? info.name.trim().slice(0, 40) : "";
+      if (!name || profiles.length < 1 || profiles.some(item => !item) || new Set(profiles.map(item => item.id)).size !== profiles.length
+        || !profiles.some(item => item.id === ownerId) || !profiles.some(item => item.id === from)) return;
+      profiles.forEach(item => { if (item.id !== state.me.id) state.people[item.id] = item; });
+      chat.name = name;
+      chat.ownerId = ownerId;
+      chat.members = profiles.map(item => item.id);
+      chat.invites = (chat.invites || []).filter(id => chat.members.includes(id));
+      chat.lastGroupUpdateId = info.updateId;
+      chat.lastGroupUpdateSender = from;
+      if (ownerId !== state.me.id && chat.pendingGroupUpdateIds?.length) {
+        chat.pendingGroupUpdateIds = chat.pendingGroupUpdateIds.filter(id => !chat.members.includes(id));
+        if (!chat.pendingGroupUpdateIds.length) chat.pendingGroupUpdateId = null;
+      }
+      touchChat(chat);
+      sendTo(from, { t: "group-update-ack", chatId: chat.id, updateId: info.updateId });
+      if (!chat.members.includes(state.me.id)) removeChatLocal(chat);
+      notify();
+      break;
+    }
+    case "group-delete": {
+      const chat = state.chats.find(item => item.id === data.chatId && item.isGroup);
+      if (chat && (chat.ownerId || chat.members[0]) !== from) return;
+      if (chat) removeChatLocal(chat);
+      sendTo(from, { t: "group-delete-ack", chatId: data.chatId });
+      notify();
+      break;
+    }
+    case "group-update-ack": {
+      const chat = state.chats.find(item => item.id === data.chatId && item.isGroup);
+      if (!chat || !chat.pendingGroupUpdateIds?.includes(from) || data.updateId !== chat.pendingGroupUpdateId) return;
+      chat.pendingGroupUpdateIds = chat.pendingGroupUpdateIds.filter(id => id !== from);
+      if (!chat.pendingGroupUpdateIds.length) chat.pendingGroupUpdateId = null;
+      touchChat(chat);
+      break;
+    }
+    case "group-delete-ack": {
+      const deletion = state.pendingGroupDeletes?.find(item => item.id === data.chatId && item.pending.includes(from));
+      if (!deletion) return;
+      deletion.pending = deletion.pending.filter(id => id !== from);
+      state.pendingGroupDeletes = state.pendingGroupDeletes.filter(item => item.pending.length);
+      touchMeta();
+      break;
+    }
+    case "group-leave": {
+      const chat = state.chats.find(item => item.id === data.chatId && item.isGroup);
+      if (!chat) {
+        sendTo(from, { t: "group-leave-ack", chatId: data.chatId });
+      } else if ((chat.ownerId || chat.members[0]) === state.me.id) {
+        if (chat.members.includes(from) && from !== state.me.id) {
+          const previousMembers = [...chat.members];
+          chat.members = chat.members.filter(id => id !== from);
+          chat.invites = (chat.invites || []).filter(id => id !== from);
+          broadcastGroupUpdate(chat, previousMembers);
+        }
+        sendTo(from, { t: "group-leave-ack", chatId: data.chatId });
+      } else {
+        const ownerId = chat.ownerId || chat.members[0];
+        connectTo(ownerId);
+        sendTo(from, { t: "group-owner", chatId: data.chatId, ownerId });
+      }
+      notify();
+      break;
+    }
+    case "group-owner": {
+      const ownerId = typeof data.ownerId === "string" ? data.ownerId : "";
+      const leave = state.pendingGroupLeaves?.find(item => item.chatId === data.chatId && item.ownerId === from);
+      if (!leave || !idPattern.test(ownerId) || ownerId === state.me.id) return;
+      leave.ownerId = ownerId;
+      touchMeta();
+      connectTo(ownerId);
+      sendTo(ownerId, { t: "group-leave", chatId: data.chatId });
+      break;
+    }
+    case "group-leave-ack": {
+      const leave = state.pendingGroupLeaves?.find(item => item.chatId === data.chatId && item.ownerId === from);
+      if (!leave) return;
+      state.pendingGroupLeaves = state.pendingGroupLeaves.filter(item => item !== leave);
+      touchMeta();
+      break;
+    }
     case "msg": {
       const chat = chatForSender(from, data.chatId);
       const msg = data.msg;
       if (!chat || !msg || typeof msg.id !== "string" || !safeIdPattern.test(msg.id)) return;
+      if (chat.deletedMessageIds?.includes(msg.id)) {
+        sendTo(from, { t: "ack", chatId: chat.id, msgId: msg.id });
+        break;
+      }
       const text = typeof msg.text === "string" ? msg.text.slice(0, 4000) : "";
       const image = msg.image ? sanitizeImage(msg.image) : null;
       if (!text.trim() && !image) return;
@@ -618,6 +771,15 @@ function handleData(from, data) {
         }
       }
       sendTo(from, { t: "ack", chatId: chat.id, msgId: msg.id });
+      break;
+    }
+    case "msg-delete": {
+      const chat = chatForSender(from, data.chatId);
+      if (!chat || typeof data.msgId !== "string" || !safeIdPattern.test(data.msgId)) return;
+      const index = chat.messages.findIndex(message => message.id === data.msgId && message.sender === from);
+      if (index >= 0) chat.messages.splice(index, 1);
+      rememberDeletedMessage(chat, data.msgId);
+      touchChat(chat);
       break;
     }
     case "ack": {
@@ -787,6 +949,16 @@ async function api(path, options = {}) {
     return { ok: true };
   }
 
+  if (method === "POST" && route === "/api/friends/remove") {
+    const friendId = typeof body.friendId === "string" ? body.friendId : "";
+    if (!state.friends[friendId]) fail("Friend not found.");
+    delete state.friends[friendId];
+    state.chats.filter(chat => !chat.isGroup && chat.members.includes(friendId)).forEach(removeChatLocal);
+    state.requests = state.requests.filter(request => request.id !== friendId);
+    touchMeta();
+    return { ok: true };
+  }
+
   if (method === "POST" && route === "/api/chats/direct") {
     if (!state.friends[body.friendId]) fail("Friend not found.");
     return { chat: chatToView(ensureDirectChat(body.friendId)) };
@@ -798,7 +970,7 @@ async function api(path, options = {}) {
     if (name.length < 1 || name.length > 40) fail("Group name must be 1 to 40 characters.");
     if (memberIds.length < 1 || memberIds.length > 49) fail("Choose at least one friend for the group.");
     if (memberIds.some(id => !state.friends[id])) fail("Group chats can include your friends only.");
-    const chat = { id: `g-${randomId(20)}`, name, isGroup: true, members: [state.me.id, ...memberIds], messages: [], invites: [...memberIds], createdAt: Date.now(), rev: 0 };
+    const chat = { id: `g-${randomId(20)}`, name, isGroup: true, ownerId: state.me.id, members: [state.me.id, ...memberIds], messages: [], invites: [...memberIds], createdAt: Date.now(), rev: 0 };
     state.chats.push(chat);
     touchChat(chat);
     memberIds.forEach(id => {
@@ -806,6 +978,52 @@ async function api(path, options = {}) {
       sendTo(id, { t: "group", chat: groupPayload(chat) });
     });
     return { chat: chatToView(chat) };
+  }
+
+  const groupRoute = route.match(/^\/api\/chats\/([^/]+)\/group$/);
+  if (method === "POST" && groupRoute) {
+    const chat = state.chats.find(item => item.id === decodeURIComponent(groupRoute[1]) && item.isGroup);
+    if (!chat) fail("Group not found.");
+    const ownerId = chat.ownerId || chat.members[0];
+    const action = body.action;
+    if (action === "leave") {
+      if (ownerId === state.me.id) fail("Transfer ownership before leaving the group.");
+      if (!state.pendingGroupLeaves.some(leave => leave.chatId === chat.id && leave.ownerId === ownerId)) {
+        state.pendingGroupLeaves.push({ chatId: chat.id, ownerId });
+        touchMeta();
+      }
+      connectTo(ownerId);
+      sendTo(ownerId, { t: "group-leave", chatId: chat.id });
+      removeChatLocal(chat);
+      return { ok: true };
+    }
+    if (ownerId !== state.me.id) fail("Only the group owner can do that.");
+    const previousMembers = [...chat.members];
+    if (action === "delete") {
+      const pending = previousMembers.filter(id => id !== state.me.id);
+      if (pending.length) {
+        state.pendingGroupDeletes.push({ id: chat.id, pending });
+        touchMeta();
+      }
+      pending.forEach(id => {
+        connectTo(id);
+        sendTo(id, { t: "group-delete", chatId: chat.id });
+      });
+      removeChatLocal(chat);
+      return { ok: true };
+    }
+    const memberId = typeof body.memberId === "string" ? body.memberId : "";
+    if (!chat.members.includes(memberId) || memberId === state.me.id) fail("Choose another group member.");
+    if (action === "transfer") {
+      chat.ownerId = memberId;
+    } else if (action === "remove") {
+      chat.members = chat.members.filter(id => id !== memberId);
+      chat.invites = (chat.invites || []).filter(id => id !== memberId);
+    } else {
+      fail("That group action is not available.");
+    }
+    broadcastGroupUpdate(chat, previousMembers);
+    return { ok: true };
   }
 
   const messageRoute = route.match(/^\/api\/chats\/([^/]+)\/messages$/);
@@ -824,6 +1042,19 @@ async function api(path, options = {}) {
     }
     if (!text && !image) fail("Messages must be 1 to 4,000 characters.");
     sendMessageLocal(chat, text, image ? { id: image.id, url: image.url, type: image.type } : undefined);
+    return { ok: true };
+  }
+
+  const deleteMessageRoute = route.match(/^\/api\/chats\/([^/]+)\/messages\/([^/]+)$/);
+  if (method === "DELETE" && deleteMessageRoute) {
+    const chat = state.chats.find(item => item.id === decodeURIComponent(deleteMessageRoute[1]));
+    if (!chat) fail("Chat not found.");
+    const message = chat.messages.find(item => item.id === decodeURIComponent(deleteMessageRoute[2]));
+    if (!message || message.sender !== state.me.id) fail("You can only delete your own messages.");
+    chat.messages = chat.messages.filter(item => item !== message);
+    rememberDeletedMessage(chat, message.id);
+    touchChat(chat);
+    chat.members.filter(id => id !== state.me.id).forEach(id => sendTo(id, { t: "msg-delete", chatId: chat.id, msgId: message.id }));
     return { ok: true };
   }
 
@@ -999,15 +1230,34 @@ function cleanImported(raw) {
   imported.gifs = (Array.isArray(meta.gifs) ? meta.gifs : []).map(sanitizeImage).filter(image => image && image.type === "image/gif" && !tenorUrlPattern.test(image.url));
   imported.favoriteGifs = (Array.isArray(meta.favoriteGifs) ? meta.favoriteGifs : []).filter(key => typeof key === "string" && key.length < 300);
   imported.tenorKey = typeof meta.tenorKey === "string" && /^[\w-]{10,80}$/.test(meta.tenorKey) ? meta.tenorKey : "";
+  imported.pendingGroupDeletes = (Array.isArray(meta.pendingGroupDeletes) ? meta.pendingGroupDeletes : [])
+    .filter(item => typeof item?.id === "string" && safeIdPattern.test(item.id) && Array.isArray(item.pending))
+    .map(item => ({ id: item.id, pending: [...new Set(item.pending.filter(id => idPattern.test(id) && id !== me.id))].slice(0, 50) }))
+    .filter(item => item.pending.length);
+  imported.pendingGroupLeaves = (Array.isArray(meta.pendingGroupLeaves) ? meta.pendingGroupLeaves : [])
+    .filter(item => typeof item?.chatId === "string" && safeIdPattern.test(item.chatId) && idPattern.test(item.ownerId) && item.ownerId !== me.id)
+    .map(item => ({ chatId: item.chatId, ownerId: item.ownerId }));
   imported.chats = (Array.isArray(raw.chats) ? raw.chats : []).filter(chat => typeof chat?.id === "string" && safeIdPattern.test(chat.id.replace(/:/g, "-")) && Array.isArray(chat.members))
     .map(chat => ({
       id: chat.id,
       name: typeof chat.name === "string" ? chat.name.slice(0, 40) : "",
       isGroup: Boolean(chat.isGroup),
       members: chat.members.filter(id => idPattern.test(id)),
+      ...(chat.isGroup && idPattern.test(chat.ownerId) && chat.members.includes(chat.ownerId)
+        ? { ownerId: chat.ownerId }
+        : {}),
+      ...(Array.isArray(chat.pendingGroupUpdateIds)
+        ? { pendingGroupUpdateIds: [...new Set(chat.pendingGroupUpdateIds.filter(id => idPattern.test(id) && id !== me.id))].slice(0, 50) }
+        : {}),
+      ...(safeIdPattern.test(chat.pendingGroupUpdateId || "") ? { pendingGroupUpdateId: chat.pendingGroupUpdateId } : {}),
+      ...(safeIdPattern.test(chat.lastGroupUpdateId || "") ? { lastGroupUpdateId: chat.lastGroupUpdateId } : {}),
+      ...(idPattern.test(chat.lastGroupUpdateSender || "") ? { lastGroupUpdateSender: chat.lastGroupUpdateSender } : {}),
       invites: [],
       createdAt: Number(chat.createdAt) || Date.now(),
       rev: 0,
+      deletedMessageIds: Array.isArray(chat.deletedMessageIds)
+        ? chat.deletedMessageIds.filter(id => typeof id === "string" && safeIdPattern.test(id)).slice(-2000)
+        : [],
       messages: (Array.isArray(chat.messages) ? chat.messages : []).filter(message => typeof message?.id === "string" && safeIdPattern.test(message.id) && idPattern.test(message.sender)).map(message => {
         const image = message.image ? sanitizeImage(message.image) : null;
         return {
@@ -1127,7 +1377,7 @@ async function refreshSnapshot() {
     const activeChat = snapshot.chats.find(chat => chat.id === activeChatId);
     const next = {
       list: JSON.stringify(snapshot.chats.map(chat => [chat.id, chat.name, chat.avatar, chat.online, chat.rev, chat.messages.length])),
-      conversation: JSON.stringify([activeChatId, activeChat && [activeChat.rev, activeChat.name, activeChat.avatar, activeChat.online, activeChat.members.map(member => [member.displayName, member.username])]]),
+      conversation: JSON.stringify([activeChatId, activeChat && [activeChat.rev, activeChat.name, activeChat.avatar, activeChat.online, activeChat.ownerId, activeChat.members.map(member => [member.id, member.displayName, member.username])]]),
       friends: JSON.stringify([snapshot.friends, snapshot.requests, snapshot.user.id])
     };
     if (next.list !== renderedKeys.list) renderChatList();
@@ -1233,6 +1483,7 @@ function renderConversation() {
   messageArea.classList.toggle("no-anim", chat?.id === renderedChatId);
   renderedChatId = chat?.id || null;
   if (!chat) {
+    groupManagement.classList.add("hidden");
     header.classList.add("hidden");
     messageArea.classList.add("hidden");
     composer.classList.add("hidden");
@@ -1247,6 +1498,22 @@ function renderConversation() {
   document.querySelector("#conversationTitle").textContent = chat.name;
   setAvatar(document.querySelector("#conversationAvatar"), chat.name, chat.avatar);
   document.querySelector("#conversationStatus").textContent = chat.isGroup ? `${chat.members.length} members` : `@${chat.username} · ${chat.online ? "Online" : "Offline"}`;
+  conversationActions.replaceChildren();
+  if (chat.isGroup) {
+    const manage = document.createElement("button");
+    manage.type = "button";
+    manage.textContent = "Manage group";
+    manage.setAttribute("aria-expanded", String(!groupManagement.classList.contains("hidden")));
+    manage.addEventListener("click", () => {
+      groupManagement.classList.toggle("hidden");
+      manage.setAttribute("aria-expanded", String(!groupManagement.classList.contains("hidden")));
+      renderGroupManagement(chat);
+    });
+    conversationActions.append(manage);
+    renderGroupManagement(chat);
+  } else {
+    groupManagement.classList.add("hidden");
+  }
   messageArea.replaceChildren();
   const divider = document.createElement("div");
   divider.className = "date-divider";
@@ -1278,10 +1545,73 @@ function renderConversation() {
     meta.className = "message-meta";
     const senderHandle = chat.members.find(member => member.id === message.sender)?.username;
     meta.textContent = `${message.sender === currentUser.id ? "You" : sender}${message.sender !== currentUser.id && senderHandle ? ` (@${senderHandle})` : ""} · ${formatTime(message.createdAt)}${message.pending?.length ? " · sending..." : ""}`;
+    if (message.sender === currentUser.id) {
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.textContent = "Delete";
+      deleteButton.setAttribute("aria-label", "Delete your message");
+      deleteButton.addEventListener("click", async () => {
+        try {
+          await api(`/api/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(message.id)}`, { method: "DELETE" });
+          await refreshSnapshot();
+        } catch (error) {
+          friendMessage.textContent = error.message;
+        }
+      });
+      meta.append(deleteButton);
+    }
     row.append(bubble, meta);
     messageArea.append(row);
   });
   messageArea.scrollTop = messageArea.scrollHeight;
+}
+
+function renderGroupManagement(chat) {
+  groupMemberList.replaceChildren();
+  const ownerId = chat.ownerId || chat.members[0]?.id;
+  const isOwner = ownerId === currentUser.id;
+  chat.members.forEach(member => {
+    const row = document.createElement("div");
+    row.className = "group-member";
+    const label = document.createElement("span");
+    label.className = "group-member-name";
+    label.textContent = `${member.displayName}${member.id === currentUser.id ? " (you)" : ""}${member.id === ownerId ? " · Owner" : ""}`;
+    row.append(label);
+    if (isOwner && member.id !== currentUser.id) {
+      const actions = document.createElement("span");
+      actions.className = "group-member-actions";
+      const transfer = document.createElement("button");
+      transfer.type = "button";
+      transfer.textContent = "Make owner";
+      transfer.addEventListener("click", async () => {
+        if (!confirm(`Transfer group ownership to ${member.displayName}?`)) return;
+        try {
+          await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "transfer", memberId: member.id } });
+          await refreshSnapshot();
+        } catch (error) {
+          friendMessage.textContent = error.message;
+        }
+      });
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "danger";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", async () => {
+        if (!confirm(`Remove ${member.displayName} from ${chat.name}?`)) return;
+        try {
+          await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "remove", memberId: member.id } });
+          await refreshSnapshot();
+        } catch (error) {
+          friendMessage.textContent = error.message;
+        }
+      });
+      actions.append(transfer, remove);
+      row.append(actions);
+    }
+    groupMemberList.append(row);
+  });
+  document.querySelector("#groupDeleteButton").classList.toggle("hidden", !isOwner);
+  document.querySelector("#groupLeaveButton").classList.toggle("hidden", isOwner);
 }
 
 function openLightbox(url) {
@@ -1378,7 +1708,19 @@ function renderFriends() {
         friendMessage.textContent = error.message;
       }
     });
-    row.append(label, button);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Unadd";
+    remove.addEventListener("click", async () => {
+      if (!confirm(`Remove ${friend.displayName} from your friends? This also deletes your direct chat history on this device.`)) return;
+      try {
+        await api("/api/friends/remove", { method: "POST", body: { friendId: friend.id } });
+        await refreshSnapshot();
+      } catch (error) {
+        friendMessage.textContent = error.message;
+      }
+    });
+    row.append(label, button, remove);
     friendsList.append(row);
   });
 }
@@ -1518,6 +1860,35 @@ document.querySelector("#newChatButton").addEventListener("click", () => {
   if (opening) {
     renderMemberChoices();
     newChatName.focus();
+  }
+});
+
+document.querySelector("#groupManagementClose").addEventListener("click", () => {
+  groupManagement.classList.add("hidden");
+  conversationActions.querySelector("button")?.setAttribute("aria-expanded", "false");
+});
+document.querySelector("#groupDeleteButton").addEventListener("click", async () => {
+  const chat = snapshot.chats.find(item => item.id === activeChatId && item.isGroup);
+  if (!chat || !confirm(`Delete ${chat.name} for you and notify members who are online?`)) return;
+  try {
+    await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "delete" } });
+    groupManagement.classList.add("hidden");
+    activeChatId = null;
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
+});
+document.querySelector("#groupLeaveButton").addEventListener("click", async () => {
+  const chat = snapshot.chats.find(item => item.id === activeChatId && item.isGroup);
+  if (!chat || !confirm(`Leave ${chat.name}?`)) return;
+  try {
+    await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "leave" } });
+    groupManagement.classList.add("hidden");
+    activeChatId = null;
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
   }
 });
 
@@ -1861,4 +2232,3 @@ function loadVersion() {
     document.querySelector("#versionNote").textContent = `Version ${result.version}`;
   }).catch(() => {});
 }
-

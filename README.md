@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 2.0.1**
+**Version 2.0.2**
 
 ## How to play
 
@@ -26,7 +26,11 @@ Then open [http://localhost:8000](http://localhost:8000). Stop the server with `
 2. Open **Friends** and copy your **friend code**. Send it to a friend, and paste theirs into "Paste a friend code".
 3. They accept the request, then you can message, send images/GIFs, and make group chats.
 
+Group owners can use **Manage group** to remove members, transfer ownership, or delete the group. Other members can leave. Use **Unadd** in Friends to remove a friend and delete that direct chat history from your device. You can delete your own messages; deletion is sent to chat participants who are online.
+
 Messages travel directly between browsers (WebRTC via [PeerJS](https://peerjs.com), which uses a free public service only to introduce peers). Both people must be online at the same time for delivery. If your friend is offline, the message shows "sending..." and is delivered automatically once you are both online.
+
+Because there is no central server, offline members may retain an older copy until they reconnect. The group owner queues membership changes and group deletions locally and sends them when members reconnect; message deletions are sent only to online chat participants.
 
 ## Discard Official
 
