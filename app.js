@@ -59,7 +59,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.2";
+const APP_VERSION = "2.0.3";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -1544,7 +1544,17 @@ function renderConversation() {
     const meta = document.createElement("div");
     meta.className = "message-meta";
     const senderHandle = chat.members.find(member => member.id === message.sender)?.username;
-    meta.textContent = `${message.sender === currentUser.id ? "You" : sender}${message.sender !== currentUser.id && senderHandle ? ` (@${senderHandle})` : ""} · ${formatTime(message.createdAt)}${message.pending?.length ? " · sending..." : ""}`;
+    const senderLabel = `${message.sender === currentUser.id ? "You" : sender}${message.sender !== currentUser.id && senderHandle ? ` (@${senderHandle})` : ""}`;
+    const recipientIds = chat.members.filter(member => member.id !== currentUser.id).map(member => member.id);
+    const recipientCount = recipientIds.length;
+    const pendingIds = new Set(message.pending || []);
+    const pendingCount = recipientIds.filter(id => pendingIds.has(id)).length;
+    const deliveryStatus = message.sender !== currentUser.id || !recipientCount
+      ? ""
+      : pendingCount
+        ? ` · ${recipientCount - pendingCount}/${recipientCount} delivered · waiting for ${pendingCount}`
+        : " · sent to everyone";
+    meta.textContent = `${senderLabel} · ${formatTime(message.createdAt)}${deliveryStatus}`;
     if (message.sender === currentUser.id) {
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
