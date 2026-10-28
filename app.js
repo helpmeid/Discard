@@ -56,7 +56,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.0.1";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -361,6 +361,7 @@ function chatToView(chat) {
 }
 
 function snapshotLocal() {
+  Object.keys(state.friends).forEach(ensureDirectChat);
   return {
     user: accountUser(),
     friends: Object.values(state.friends).map(friend => ({ ...personOf(friend.id), online: isOnline(friend.id) })),
@@ -522,6 +523,7 @@ function addFriend(id, profile) {
   state.friends[id] = profile;
   state.people[id] = profile;
   state.requests = state.requests.filter(request => request.id !== id);
+  ensureDirectChat(id);
   touchMeta();
 }
 
@@ -1156,7 +1158,28 @@ function renderChatList() {
     .filter(chat => chat.name.toLowerCase().includes(filter))
     .sort((first, second) => (chatLastMessage(second)?.createdAt || 0) - (chatLastMessage(first)?.createdAt || 0));
   chatList.replaceChildren();
-  if (!chats.length) {
+  const pending = snapshot.requests.filter(request => request.direction === "outgoing"
+    && (request.user.displayName || request.user.username || "").toLowerCase().includes(filter));
+  pending.forEach(request => {
+    const item = document.createElement("div");
+    item.className = "chat-item";
+    const avatar = document.createElement("span");
+    avatar.className = "avatar";
+    const name = request.id === OFFICIAL_ID ? officialProfile.displayName : (request.user.displayName || "Friend request");
+    setAvatar(avatar, name, request.user.avatar);
+    const summary = document.createElement("span");
+    summary.className = "chat-summary";
+    const title = document.createElement("span");
+    title.className = "chat-title";
+    title.textContent = name;
+    const preview = document.createElement("span");
+    preview.className = "chat-preview";
+    preview.textContent = "Pending - waiting for them to come online";
+    summary.append(title, preview);
+    item.append(avatar, summary);
+    chatList.append(item);
+  });
+  if (!chats.length && !pending.length) {
     const empty = document.createElement("div");
     empty.className = "empty-list";
     empty.textContent = filter ? "No chats match your search." : "Add a friend or start a group chat.";
