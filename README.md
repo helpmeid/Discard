@@ -2,6 +2,12 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
+## How to play
+
+1. Download the zip file of this repository (green **Code** button, then **Download ZIP**).
+2. Unzip it.
+3. Open `index.html` to load into Discard.
+
 ## Using it
 
 1. Open `index.html` and create a profile (username + optional display name). No password or account.
