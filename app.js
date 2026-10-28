@@ -58,6 +58,10 @@ let preferenceSaveTimer = null;
 
 const APP_VERSION = "2.0.0";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
+const tabIcon = document.createElement("link");
+tabIcon.rel = "icon";
+tabIcon.href = BRAND_IMAGE;
+document.head.append(tabIcon);
 
 const idPattern = /^dsc-[a-z0-9]{16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;
