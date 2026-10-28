@@ -263,10 +263,45 @@ async function loadState() {
   return loaded;
 }
 
+const officialProfile = { id: OFFICIAL_ID, username: OFFICIAL_USERNAME, displayName: "Discard Official ✓", avatar: BRAND_IMAGE };
+const officialReply = "Message received! Thanks for contacting Discard.";
+const officialReplyAt = new Map();
+let officialKey = null;
+let officialPublic = null;
+
+const looksOfficial = value => String(value).toLowerCase().replace(/[^a-z0-9]/g, "").includes("discardofficial");
+const isOfficialSelf = () => Boolean(state?.me.official);
+const officialTrusted = id => id !== OFFICIAL_ID || isOfficialSelf() || conns.get(id)?.verified === true;
+const fromBase64 = text => Uint8Array.from(atob(text), char => char.charCodeAt(0));
+const toBase64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+
+async function unlockOfficial(passcode) {
+  const { salt, iv, data, iterations } = OFFICIAL_LOCKED_KEY;
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(passcode.trim()), "PBKDF2", false, ["deriveKey"]);
+  const aes = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: fromBase64(salt), iterations, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const pkcs8 = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(iv) }, aes, fromBase64(data));
+  officialKey = await crypto.subtle.importKey("pkcs8", pkcs8, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+}
+
+async function signOfficial(text) {
+  return toBase64(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, officialKey, new TextEncoder().encode(text)));
+}
+
+async function verifyOfficial(text, signature) {
+  try {
+    officialPublic ||= await crypto.subtle.importKey("jwk", OFFICIAL_PUBLIC_KEY, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    return await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, officialPublic, fromBase64(signature), new TextEncoder().encode(text));
+  } catch {
+    return false;
+  }
+}
+
 function sanitizeProfile(input, id) {
+  if (id === OFFICIAL_ID) return officialProfile;
   if (!input || typeof input !== "object" || typeof input.username !== "string" || !/^[a-zA-Z0-9_]{3,24}$/.test(input.username)) return null;
   const displayName = typeof input.displayName === "string" ? input.displayName.trim().slice(0, 32) : "";
   const avatar = typeof input.avatar === "string" && input.avatar.length <= 300000 && avatarPattern.test(input.avatar) ? input.avatar : null;
+  if (looksOfficial(input.username) || looksOfficial(displayName)) return null;
   return { id, username: input.username, displayName: displayName || input.username, avatar };
 }
 
@@ -284,6 +319,7 @@ function myProfile() {
 }
 
 function personOf(id) {
+  if (id === OFFICIAL_ID && !isOfficialSelf()) return officialProfile;
   if (id === state.me.id) return myProfile();
   return state.people[id] || { id, username: "unknown", displayName: "Former member", avatar: null };
 }
@@ -355,12 +391,12 @@ function notify() {
 
 function isOnline(id) {
   const entry = conns.get(id);
-  return Boolean(entry?.conn.open && Date.now() - entry.lastSeen < onlineWindow);
+  return Boolean(entry?.conn.open && officialTrusted(id) && Date.now() - entry.lastSeen < onlineWindow);
 }
 
 function sendTo(id, payload) {
   const entry = conns.get(id);
-  if (!entry?.conn.open) return false;
+  if (!entry?.conn.open || !officialTrusted(id)) return false;
   try {
     entry.conn.send(payload);
     return true;
@@ -423,16 +459,26 @@ function connectAll() {
   if (state) wantedPeers().forEach(connectTo);
 }
 
+function greet(id) {
+  sendTo(id, { t: "hello", profile: myProfile() });
+  if (state.requests.some(request => request.id === id && request.direction === "outgoing")) {
+    sendTo(id, { t: "friend-request", profile: myProfile() });
+  }
+  flushOutbox(id);
+  notify();
+}
+
 function attach(conn) {
   const id = conn.peer;
   conn.on("open", () => {
-    conns.set(id, { conn, lastSeen: Date.now() });
-    sendTo(id, { t: "hello", profile: myProfile() });
-    if (state.requests.some(request => request.id === id && request.direction === "outgoing")) {
-      sendTo(id, { t: "friend-request", profile: myProfile() });
+    const entry = { conn, lastSeen: Date.now(), verified: false, nonce: null };
+    conns.set(id, entry);
+    if (id === OFFICIAL_ID && !isOfficialSelf()) {
+      entry.nonce = randomId(32);
+      try { conn.send({ t: "challenge", nonce: entry.nonce }); } catch {}
+      return;
     }
-    flushOutbox(id);
-    notify();
+    greet(id);
   });
   conn.on("data", data => {
     try {
@@ -478,8 +524,24 @@ function handleData(from, data) {
   const entry = conns.get(from);
   if (entry) entry.lastSeen = Date.now();
   if (!data || typeof data !== "object" || typeof data.t !== "string") return;
+  if (!officialTrusted(from) && data.t !== "proof") return;
   const profile = data.profile ? sanitizeProfile(data.profile, from) : null;
   switch (data.t) {
+    case "challenge":
+      if (isOfficialSelf() && officialKey && typeof data.nonce === "string" && data.nonce.length <= 64) {
+        signOfficial(`${data.nonce}:${from}`).then(sig => sendTo(from, { t: "proof", sig })).catch(() => {});
+      }
+      return;
+    case "proof":
+      if (from === OFFICIAL_ID && !isOfficialSelf() && entry?.nonce && !entry.verified && typeof data.sig === "string") {
+        verifyOfficial(`${entry.nonce}:${state.me.id}`, data.sig).then(ok => {
+          if (ok && conns.get(from) === entry) {
+            entry.verified = true;
+            greet(from);
+          }
+        });
+      }
+      return;
     case "hello":
       if (!profile) return;
       state.people[from] = profile;
@@ -489,6 +551,11 @@ function handleData(from, data) {
       break;
     case "friend-request":
       if (!profile) return;
+      if (isOfficialSelf() && !state.friends[from] && Object.keys(state.friends).length < 5000) {
+        addFriend(from, profile);
+        sendTo(from, { t: "friend-accept", profile: myProfile() });
+        break;
+      }
       if (state.friends[from]) {
         sendTo(from, { t: "friend-accept", profile: myProfile() });
       } else if (state.requests.some(request => request.id === from && request.direction === "outgoing")) {
@@ -538,6 +605,10 @@ function handleData(from, data) {
         if (chat.messages.length > 1 && chat.messages.at(-2).createdAt > createdAt) chat.messages.sort((first, second) => first.createdAt - second.createdAt);
         touchChat(chat);
         enforceStorageLimit();
+        if (isOfficialSelf() && Date.now() - (officialReplyAt.get(from) || 0) > 20000) {
+          officialReplyAt.set(from, Date.now());
+          sendMessageLocal(chat, officialReply);
+        }
       }
       sendTo(from, { t: "ack", chatId: chat.id, msgId: msg.id });
       break;
@@ -688,7 +759,7 @@ async function api(path, options = {}) {
       connectTo(code);
       return { ok: true };
     }
-    state.requests.push({ id: code, direction: "outgoing", user: { id: code, username: "pending", displayName: "Waiting for friend to come online", avatar: null } });
+    state.requests.push({ id: code, direction: "outgoing", user: code === OFFICIAL_ID ? officialProfile : { id: code, username: "pending", displayName: "Waiting for friend to come online", avatar: null } });
     touchMeta();
     connectTo(code);
     return { ok: true };
@@ -795,6 +866,7 @@ async function api(path, options = {}) {
 
 // ---------- profile lifecycle, backup, storage info ----------
 async function createProfile(username, displayName) {
+  if (looksOfficial(username) || looksOfficial(displayName)) throw new Error("That name is reserved.");
   state = defaultState({
     id: `dsc-${randomId(16)}`,
     username,
@@ -834,7 +906,7 @@ function exportBackup() {
 function cleanImported(raw) {
   const meta = raw?.meta;
   const me = sanitizeProfile(meta?.me, meta?.me?.id);
-  if (raw?.format !== "discard-backup" || !me || !idPattern.test(me.id)) throw new Error("That is not a valid Discard backup file.");
+  if (raw?.format !== "discard-backup" || !me || me.id === OFFICIAL_ID || !idPattern.test(me.id)) throw new Error("That is not a valid Discard backup file.");
   const profiles = source => Object.fromEntries(Object.entries(source || {}).filter(([id]) => idPattern.test(id))
     .map(([id, value]) => [id, sanitizeProfile(value, id)]).filter(([, value]) => value));
   const friends = profiles(meta.friends);
@@ -926,7 +998,7 @@ authForm.addEventListener("submit", async event => {
     authForm.reset();
     await openChatView();
   } catch (error) {
-    authMessage.textContent = "Could not save your profile on this computer. Is private browsing on?";
+    authMessage.textContent = error.message.startsWith("That name") ? error.message : "Could not save your profile on this computer. Is private browsing on?";
   } finally {
     authSubmit.disabled = false;
   }
@@ -1423,6 +1495,58 @@ document.querySelector("#settingsToggle").addEventListener("click", () => {
   document.querySelector("#storageInfo").textContent = state ? storageSummary() : "";
 });
 
+async function enterApp() {
+  currentUser = accountUser();
+  refreshStorageLimit();
+  startPeer();
+  applyPreferences({ ...defaultPreferences, ...currentUser.preferences });
+  await openChatView();
+}
+
+function showOfficialForm(message) {
+  authView.classList.remove("hidden");
+  authForm.classList.add("hidden");
+  document.querySelector("#officialForm").classList.remove("hidden");
+  document.querySelector("#officialMessage").textContent = message || "";
+  document.querySelector("#officialPass").focus();
+}
+
+document.querySelector("#officialLink").addEventListener("click", () => showOfficialForm(""));
+
+document.querySelector("#officialForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const message = document.querySelector("#officialMessage");
+  const input = document.querySelector("#officialPass");
+  message.textContent = "Unlocking...";
+  try {
+    await unlockOfficial(input.value);
+  } catch {
+    message.textContent = "That passcode is not correct.";
+    return;
+  }
+  input.value = "";
+  try {
+    if (!state) {
+      state = defaultState({ id: OFFICIAL_ID, username: OFFICIAL_USERNAME, displayName: "Discard Official", avatar: BRAND_IMAGE, official: true, preferences: { ...defaultPreferences }, createdAt: Date.now() });
+      touchMeta();
+      await flushSave();
+    }
+    await enterApp();
+  } catch {
+    message.textContent = "Could not save the official account on this computer.";
+  }
+});
+
+document.querySelector("#addOfficial").addEventListener("click", async () => {
+  try {
+    await api("/api/friends/request", { method: "POST", body: { username: OFFICIAL_ID } });
+    friendMessage.textContent = "Request sent. Discard Official accepts when it is online.";
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
+});
+
 async function restoreSession() {
   try {
     if (navigator.locks) {
@@ -1439,11 +1563,11 @@ async function restoreSession() {
     }
     state = await loadState();
     if (!state) return;
-    currentUser = accountUser();
-    refreshStorageLimit();
-    startPeer();
-    applyPreferences({ ...defaultPreferences, ...currentUser.preferences });
-    await openChatView();
+    if (state.me.official) {
+      showOfficialForm("Enter the official account passcode to unlock it.");
+      return;
+    }
+    await enterApp();
   } catch {
     authMessage.textContent = "Could not open your saved data on this computer.";
   }

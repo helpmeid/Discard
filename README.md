@@ -18,6 +18,12 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 
 Messages travel directly between browsers (WebRTC via [PeerJS](https://peerjs.com), which uses a free public service only to introduce peers). Both people must be online at the same time for delivery. If your friend is offline, the message shows "sending..." and is delivered automatically once you are both online.
 
+## Discard Official
+
+Friends panel has **Add Discard Official ✓**. It accepts you automatically and replies "Message received! Thanks for contacting Discard." to your messages (once every 20 seconds per person). It only answers while the owner has it open and unlocked.
+
+The account is verified with a digital signature, so nobody else can pretend to be it. Reserved names like "DiscardOfficial" can't be used by normal profiles.
+
 ## Your data
 
 Everything is saved on your own computer (IndexedDB): profile, friends, messages, images, GIFs.

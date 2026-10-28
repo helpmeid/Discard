@@ -259,7 +259,12 @@
           <button class="primary-button" id="authSubmit" type="submit">Create profile</button>
           <p class="auth-message" id="authMessage" role="alert" aria-live="polite"></p>
         </form>
-        <div class="local-note">Discard is peer to peer: messages go straight between you and your friends. Both of you need to be online for a message to arrive; otherwise it waits and sends when you are both online.<br><label class="link-label">Restore from a backup file<input id="importFile" type="file" accept="application/json,.json" hidden></label></div>
+        <form class="hidden" id="officialForm" novalidate>
+          <div class="field"><label for="officialPass">Official account passcode</label><input id="officialPass" type="password" autocomplete="off" placeholder="Passcode"></div>
+          <button class="primary-button" type="submit">Unlock official account</button>
+          <p class="auth-message" id="officialMessage" role="alert" aria-live="polite"></p>
+        </form>
+        <div class="local-note">Discard is peer to peer: messages go straight between you and your friends. Both of you need to be online for a message to arrive; otherwise it waits and sends when you are both online.<br><label class="link-label" id="officialLink">Official account login</label><br><label class="link-label">Restore from a backup file<input id="importFile" type="file" accept="application/json,.json" hidden></label></div>
       </div>
     </section>
   </main>
@@ -293,6 +298,7 @@
         <h3>Friends</h3>
         <div class="code-row"><input id="myCode" readonly aria-label="Your friend code"><button type="button" id="copyCode">Copy</button></div><p class="panel-message">Your friend code. Share it so friends can add you.</p>
         <form class="inline-form" id="friendForm"><input id="friendUsername" maxlength="40" aria-label="Friend code" placeholder="Paste a friend code" autocomplete="off"><button type="submit" aria-label="Send friend request">+</button></form>
+        <button class="profile-btn" id="addOfficial" type="button">Add Discard Official ✓</button>
         <p class="panel-message" id="friendMessage" aria-live="polite"></p>
         <div id="requestList"></div>
         <div class="social-list" id="friendsList"></div>
