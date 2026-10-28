@@ -59,7 +59,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.6";
+const APP_VERSION = "2.0.7";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -1484,20 +1484,6 @@ function openProfile(person) {
     });
     actions.append(message, remove);
   }
-  const activeChat = snapshot.chats.find(item => item.id === activeChatId);
-  if (directPerson(activeChat)?.id === person.id) {
-    const closeChat = document.createElement("button");
-    closeChat.type = "button";
-    closeChat.className = "profile-btn";
-    closeChat.textContent = "Close chat";
-    closeChat.addEventListener("click", () => {
-      activeChatId = null;
-      profileModal.classList.add("hidden");
-      renderChatList();
-      renderConversation();
-    });
-    actions.append(closeChat);
-  }
   const close = document.createElement("button");
   close.type = "button";
   close.className = "profile-btn";
@@ -1637,6 +1623,18 @@ function renderConversation() {
   } else {
     groupManagement.classList.add("hidden");
   }
+  const closeChat = document.createElement("button");
+  closeChat.type = "button";
+  closeChat.className = "close-chat";
+  closeChat.textContent = "×";
+  closeChat.title = "Close chat";
+  closeChat.setAttribute("aria-label", "Close chat");
+  closeChat.addEventListener("click", () => {
+    activeChatId = null;
+    renderChatList();
+    renderConversation();
+  });
+  conversationActions.append(closeChat);
   messageArea.replaceChildren();
   const divider = document.createElement("div");
   divider.className = "date-divider";
