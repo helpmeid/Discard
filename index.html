@@ -348,6 +348,9 @@
     .game-swatch { width: 26px; height: 26px; border: 3px solid var(--line); border-radius: 50%; cursor: pointer; transition: transform .1s; }
     .game-swatch:hover { transform: scale(1.15); }
     .game-swatch.active { border-color: #8d6be8; transform: scale(1.2); }
+    .game-tools .game-color-picker { width: 34px; height: 30px; padding: 0; border: 2px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
+    .avatar, .message-avatar, .chat-item .avatar, .game-chip, .message-sender, .message-head .handle, .message-meta, .chat-title, .conversation-header .avatar { -webkit-user-select: none; user-select: none; }
+    .avatar *, .game-chip .avatar * { pointer-events: none; }
     .game-tools input[type=range] { width: 90px; accent-color: #8d6be8; }
     .game-tools .profile-btn.active { color: #fff; background: #8d6be8; }
     .game-drawing { display: block; max-width: 100%; margin: 8px auto; border-radius: 12px; background: #fff; box-shadow: 0 2px 10px #0002; }
@@ -471,6 +474,11 @@
     .field input:focus, .new-chat-form input:focus, .composer input:focus, .search-box input:focus, .inline-form input:focus, .code-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
     .search-box svg { color: var(--muted); }
     .member-choices { scrollbar-color: var(--line) transparent; }
+    #toastStack { position: fixed; right: 18px; bottom: 18px; z-index: 90; display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100vw - 36px)); }
+    .toast { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); box-shadow: 0 10px 30px #0003; cursor: pointer; animation: gamePop .2s ease both; }
+    .toast-text { display: grid; gap: 2px; min-width: 0; }
+    .toast strong { font-size: 14px; }
+    .toast span { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
@@ -555,6 +563,7 @@
         <label class="setting-row">Message size<select id="fontSizePreference"><option value="small">Small</option><option value="regular">Regular</option><option value="large">Large</option></select></label>
         <label class="setting-row">Bubble shape<select id="bubblePreference"><option value="soft">Soft</option><option value="square">Square</option></select></label>
         <label class="setting-row"><span>Compact chat list</span><span class="setting-check"><input id="compactPreference" type="checkbox"></span></label>
+        <label class="setting-row"><span>Message notifications</span><span class="setting-check"><input id="notifications" type="checkbox"></span></label>
         <label class="setting-row"><span>Disguise tab as Minga</span><span class="setting-check"><input id="tabDisguise" type="checkbox"></span></label>
         <div class="backup-row"><button class="profile-btn" id="exportButton" type="button">Export backup</button><button class="profile-btn" id="deleteAccount" type="button">Delete account</button></div>
         <p class="settings-note" id="storageInfo"></p>

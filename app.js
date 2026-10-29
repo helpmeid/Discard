@@ -46,6 +46,7 @@ const settingControls = {
   bubbleShape: document.querySelector("#bubblePreference"),
   compact: document.querySelector("#compactPreference"),
   tabDisguise: document.querySelector("#tabDisguise"),
+  notifications: document.querySelector("#notifications"),
   backgroundStyle: document.querySelector("#backgroundStyle"),
   backgroundColor: document.querySelector("#backgroundColor"),
   backgroundEndColor: document.querySelector("#backgroundEndColor"),
@@ -78,6 +79,8 @@ const defaultPreferences = {
   bubbleShape: "soft",
   compact: false,
   tabDisguise: false,
+  notifications: true,
+  mutedIds: [],
   backgroundStyle: "solid",
   backgroundColor: "#f2f3ed",
   backgroundEndColor: "#d7eddf",
@@ -961,6 +964,7 @@ function handleData(from, data) {
         if (chat.messages.length > 1 && chat.messages.at(-2).createdAt > createdAt) chat.messages.sort((first, second) => first.createdAt - second.createdAt);
         touchChat(chat);
         enforceStorageLimit();
+        showMessageNotification(chat, from, text, image, file);
         if (isOfficialSelf() && Date.now() - (officialReplyAt.get(from) || 0) > 20000) {
           officialReplyAt.set(from, Date.now());
           sendMessageLocal(chat, officialReply);
@@ -997,6 +1001,74 @@ function handleData(from, data) {
       return;
   }
   notify();
+}
+
+document.addEventListener("click", () => {
+  if (state?.me.preferences?.notifications && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+}, { once: true });
+
+function isMuted(id) {
+  return Boolean(state?.me.preferences?.mutedIds?.includes(id));
+}
+
+function showMessageNotification(chat, from, text, image, file) {
+  if (from === state.me.id || !state.me.preferences?.notifications) return;
+  if (isMuted(chat.id) || isMuted(from)) return;
+  const viewing = !document.hidden && document.hasFocus() && chat.id === activeChatId;
+  if (viewing) return;
+  const sender = viewPerson(from).displayName;
+  const body = text.trim() ? text.slice(0, 140) : image ? "Sent a photo" : `Sent ${file?.name || "a file"}`;
+  const title = chat.isGroup ? `${sender} in ${chat.name}` : sender;
+  const person = viewPerson(from);
+  showToast(title, body, chat.id, person.displayName, person.avatar);
+  if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+    try {
+      const popup = new Notification(title, { body, tag: chat.id, icon: BRAND_IMAGE });
+      popup.onclick = () => { window.focus(); popup.close(); };
+    } catch {}
+  }
+}
+
+function showToast(title, body, chatId, name, avatarUrl) {
+  let stack = document.querySelector("#toastStack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "toastStack";
+    stack.setAttribute("aria-live", "polite");
+    document.body.append(stack);
+  }
+  stack.querySelectorAll(`[data-chat="${CSS.escape(chatId)}"]`).forEach(item => item.remove());
+  while (stack.children.length >= 4) stack.firstElementChild.remove();
+  const toast = document.createElement("button");
+  toast.type = "button";
+  toast.className = "toast";
+  toast.dataset.chat = chatId;
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  setAvatar(avatar, name || title, avatarUrl);
+  const text = document.createElement("div");
+  text.className = "toast-text";
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const message = document.createElement("span");
+  message.textContent = body;
+  text.append(heading, message);
+  toast.append(avatar, text);
+  const dismiss = () => toast.remove();
+  toast.addEventListener("click", async () => {
+    dismiss();
+    if (!state.chats.some(chat => chat.id === chatId)) return;
+    activeChatId = chatId;
+    renderedKeys = {};
+    await refreshSnapshot();
+  });
+  stack.append(toast);
+  window.setTimeout(dismiss, 6000);
+}
+
+async function setMuted(id, muted) {
+  const result = await api("/api/mute", { method: "POST", body: { id, muted } });
+  currentUser.preferences = result.preferences;
 }
 
 window.setInterval(() => {
@@ -1073,6 +1145,8 @@ function applyPreferencesLocal(input) {
   if (["soft", "square"].includes(input.bubbleShape)) current.bubbleShape = input.bubbleShape;
   if (typeof input.compact === "boolean") current.compact = input.compact;
   if (typeof input.tabDisguise === "boolean") current.tabDisguise = input.tabDisguise;
+  if (typeof input.notifications === "boolean") current.notifications = input.notifications;
+  if (Array.isArray(input.mutedIds)) current.mutedIds = [...new Set(input.mutedIds.filter(id => typeof id === "string" && safeIdPattern.test(id)))].slice(0, 500);
   Object.assign(current, sanitizeBackgroundPreferences(input, current), sanitizeEffectPreferences(input, current));
   state.me.preferences = current;
   touchMeta();
@@ -1089,6 +1163,13 @@ async function api(path, options = {}) {
 
   if (method === "GET" && route === "/api/me") return { user: accountUser() };
   if (method === "GET" && route === "/api/snapshot") return snapshotLocal();
+
+  if (method === "POST" && route === "/api/mute") {
+    if (typeof body.id !== "string" || !safeIdPattern.test(body.id)) fail("Invalid mute target.");
+    const muted = new Set(state.me.preferences?.mutedIds || []);
+    if (body.muted) muted.add(body.id); else muted.delete(body.id);
+    return { preferences: applyPreferencesLocal({ mutedIds: [...muted] }) };
+  }
 
   if (method === "PATCH" && route === "/api/preferences") {
     return { preferences: applyPreferencesLocal(body.preferences && typeof body.preferences === "object" ? body.preferences : {}) };
@@ -1778,6 +1859,22 @@ function openProfile(person) {
     });
     actions.append(message, remove);
   }
+  if (person.id !== currentUser.id) {
+    const mute = document.createElement("button");
+    mute.type = "button";
+    mute.className = "profile-btn";
+    const muted = () => Boolean(currentUser.preferences?.mutedIds?.includes(person.id));
+    mute.textContent = muted() ? "Unmute notifications" : "Mute notifications";
+    mute.addEventListener("click", async () => {
+      try {
+        await setMuted(person.id, !muted());
+        mute.textContent = muted() ? "Unmute notifications" : "Mute notifications";
+      } catch (error) {
+        friendMessage.textContent = error.message;
+      }
+    });
+    actions.append(mute);
+  }
   const close = document.createElement("button");
   close.type = "button";
   close.className = "profile-btn";
@@ -1914,7 +2011,20 @@ function renderConversation() {
       manage.setAttribute("aria-expanded", String(!groupManagement.classList.contains("hidden")));
       renderGroupManagement(chat);
     });
-    conversationActions.append(manage);
+    const muteGroup = document.createElement("button");
+    muteGroup.type = "button";
+    const groupMuted = () => Boolean(currentUser.preferences?.mutedIds?.includes(chat.id));
+    muteGroup.textContent = groupMuted() ? "Unmute" : "Mute";
+    muteGroup.title = "Mute notifications for this group";
+    muteGroup.addEventListener("click", async () => {
+      try {
+        await setMuted(chat.id, !groupMuted());
+        muteGroup.textContent = groupMuted() ? "Unmute" : "Mute";
+      } catch (error) {
+        friendMessage.textContent = error.message;
+      }
+    });
+    conversationActions.append(muteGroup, manage);
     renderGroupManagement(chat);
   } else {
     groupManagement.classList.add("hidden");
@@ -2329,6 +2439,7 @@ function applyPreferences(input) {
   settingControls.particleTrail.checked = preferences.particleTrail;
   settingControls.compact.checked = preferences.compact;
   settingControls.tabDisguise.checked = preferences.tabDisguise;
+  settingControls.notifications.checked = preferences.notifications;
   document.querySelector("#customThemeControls").classList.toggle("hidden", !customBackground);
   const gradient = preferences.backgroundStyle !== "solid";
   document.querySelectorAll("#customThemeControls [data-gradient-row]").forEach(row => { row.hidden = !gradient; });
@@ -2365,6 +2476,7 @@ function currentPreferences() {
     bubbleShape: settingControls.bubbleShape.value,
     compact: settingControls.compact.checked,
     tabDisguise: settingControls.tabDisguise.checked,
+    notifications: settingControls.notifications.checked,
     backgroundStyle: settingControls.backgroundStyle.value,
     backgroundColor: settingControls.backgroundColor.value,
     backgroundEndColor: settingControls.backgroundEndColor.value,
@@ -2526,6 +2638,9 @@ document.querySelector("#themePaste").addEventListener("click", () => {
   settingControls[key].addEventListener("input", () => savePreferences());
 });
 
+settingControls.notifications.addEventListener("change", () => {
+  if (settingControls.notifications.checked && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+});
 Object.values(settingControls).forEach(control => control.addEventListener("change", event => {
   if (event.currentTarget === settingControls.theme) {
     settingControls.accent.value = themeAccents[settingControls.theme.value] || themeAccents.meadow;
