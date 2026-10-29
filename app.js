@@ -2603,7 +2603,7 @@ const themeCodeKeys = ["accent", "backgroundStyle", "backgroundColor", "backgrou
 const shortThemeKey = "dsc-short-themes";
 const builtInThemes = {
   "586500": { accent: "#5865f2", backgroundStyle: "linear", backgroundColor: "#0b0d2e", backgroundEndColor: "#2b2f8f", backgroundAngle: 160, backgroundTone: "dark", panelOpacity: 70, panelBlur: 14, borderStrength: 40 },
-  "10101": { accent: "#ffffff", backgroundStyle: "mesh", backgroundColor: "#000000", backgroundMidColor: "#5c5c5c", backgroundEndColor: "#f2f2f2", backgroundAnimated: true, backgroundSpeed: "slow", backgroundTone: "dark", panelOpacity: 60, panelBlur: 18, borderStrength: 50 }
+  "10101": { accent: "#ffffff", backgroundStyle: "mesh", backgroundColor: "#000000", backgroundMidColor: "#1c1c1c", backgroundEndColor: "#3a3a3a", backgroundAnimated: true, backgroundSpeed: "slow", backgroundTone: "dark", panelOpacity: 80, panelBlur: 18, borderStrength: 50 }
 };
 
 function shortThemes() {
