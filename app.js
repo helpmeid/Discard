@@ -186,18 +186,66 @@ tabIcon.rel = "icon";
 tabIcon.href = BRAND_IMAGE;
 document.head.append(tabIcon);
 
-const mingaIcon = `data:image/svg+xml;base64,${btoa("<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#6aa8ff'/><stop offset='1' stop-color='#3b4fd8'/></linearGradient></defs><path d='M4 54 26 10c1.2-2.3 4.4-2.3 5.6 0L36 18l6-8c1.3-1.8 4-1.8 5.300 0L60 54H46L32 32 18 54z' fill='url(#g)'/></svg>")}`;
 const disguiseKey = "discard-tab-disguise";
+const coverKeyStorage = "discard-cover-keybind";
+let tabDisguised = false;
+let coverOn = false;
 
 // The disguise is remembered outside the account so the sign-in screen is covered too.
-function applyTabDisguise(on, remember = true) {
+function renderDisguise() {
+  const on = tabDisguised || coverOn;
   document.title = on ? "Home · Home – Minga" : "Discard";
-  tabIcon.href = on ? mingaIcon : BRAND_IMAGE;
+  tabIcon.href = on ? "minga-icon.png" : BRAND_IMAGE;
+  document.querySelector("#mingaCover")?.classList.toggle("on", coverOn);
+}
+function applyTabDisguise(on, remember = true) {
+  tabDisguised = on;
+  renderDisguise();
   if (remember) {
     try { localStorage.setItem(disguiseKey, on ? "1" : ""); } catch {}
   }
 }
 try { if (localStorage.getItem(disguiseKey)) applyTabDisguise(true, false); } catch {}
+
+function comboFromEvent(event) {
+  if (["Control", "Shift", "Alt", "Meta"].includes(event.key)) return "";
+  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+  return [event.ctrlKey && "Ctrl", event.altKey && "Alt", event.shiftKey && "Shift", event.metaKey && "Meta", key].filter(Boolean).join("+");
+}
+function storedKeybind() {
+  try { return localStorage.getItem(coverKeyStorage) || ""; } catch { return ""; }
+}
+function setupDisguiseKeybind() {
+  const button = document.querySelector("#disguiseKeybind");
+  let recording = false;
+  const label = () => { button.textContent = recording ? "Press keys…" : storedKeybind() || "Not set"; };
+  label();
+  button.addEventListener("click", () => { recording = !recording; label(); });
+  document.addEventListener("keydown", event => {
+    if (recording) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Escape") { recording = false; label(); return; }
+      if (event.key === "Backspace" || event.key === "Delete") {
+        try { localStorage.removeItem(coverKeyStorage); } catch {}
+        recording = false; label(); return;
+      }
+      const combo = comboFromEvent(event);
+      if (!combo) return;
+      try { localStorage.setItem(coverKeyStorage, combo); } catch {}
+      recording = false; label();
+      return;
+    }
+    const saved = storedKeybind();
+    if (!saved || event.repeat || comboFromEvent(event) !== saved) return;
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName) || event.target.isContentEditable;
+    if (typing && !/^(Ctrl|Alt|Meta)\+/.test(saved)) return;
+    event.preventDefault();
+    coverOn = !coverOn;
+    renderDisguise();
+  }, true);
+}
+setupDisguiseKeybind();
 
 const idPattern = /^dsc-[a-z0-9]{6,16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;
