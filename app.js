@@ -2602,7 +2602,8 @@ const themeCodePrefix = "dsc-theme:";
 const themeCodeKeys = ["accent", "backgroundStyle", "backgroundColor", "backgroundEndColor", "backgroundMidColor", "backgroundMidEnabled", "backgroundAngle", "backgroundAnimated", "backgroundSpeed", "backgroundTone", "panelOpacity", "panelBlur", "borderStrength"];
 const shortThemeKey = "dsc-short-themes";
 const builtInThemes = {
-  "586500": { accent: "#5865f2", backgroundStyle: "linear", backgroundColor: "#0b0d2e", backgroundEndColor: "#2b2f8f", backgroundAngle: 160, backgroundTone: "dark", panelOpacity: 70, panelBlur: 14, borderStrength: 40 }
+  "586500": { accent: "#5865f2", backgroundStyle: "linear", backgroundColor: "#0b0d2e", backgroundEndColor: "#2b2f8f", backgroundAngle: 160, backgroundTone: "dark", panelOpacity: 70, panelBlur: 14, borderStrength: 40 },
+  "10101": { accent: "#ffffff", backgroundStyle: "mesh", backgroundColor: "#000000", backgroundMidColor: "#5c5c5c", backgroundEndColor: "#f2f2f2", backgroundAnimated: true, backgroundSpeed: "slow", backgroundTone: "dark", panelOpacity: 60, panelBlur: 18, borderStrength: 50 }
 };
 
 function shortThemes() {
@@ -2667,7 +2668,7 @@ document.querySelector("#themePaste").addEventListener("click", () => {
   try {
     const trimmed = code.trim();
     let data;
-    if (/^\d{6}$/.test(trimmed)) {
+    if (/^\d{5,6}$/.test(trimmed)) {
       data = builtInThemes[trimmed] || shortThemes()[trimmed];
       if (!data) throw new Error("unknown code");
     } else {
