@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 2.0.7**
+**Version 2.8.0**
 
 ## How to play
 
@@ -24,13 +24,39 @@ Then open [http://localhost:8000](http://localhost:8000). Stop the server with `
 
 1. Open `index.html`. Choose **Create account** (username + password, optional display name) or **Sign in**. Accounts and passwords live only on your computer, and you can have several on one computer.
 2. Open **Friends** and copy your **friend code**. Send it to a friend, and paste theirs into "Paste a friend code".
-3. They accept the request, then you can message, send images/GIFs, and make group chats.
+3. They accept the request, then you can message, reply to messages, send files (up to 5 MB), images and GIFs, and make group chats. New accounts get a six-character friend code like `ab12cd` (the old `dsc-` prefix is hidden, and still accepted if pasted).
+4. Click anyone's picture or name to set a **nickname** that only you see. Group owners can set a group picture. Every message shows its sender's picture, name and @username.
+5. Settings has **Disguise tab as Minga**, which changes the browser tab's title and icon.
 
 Group owners can use **Manage group** to remove members, transfer ownership, or delete the group. Other members can leave. Use **Unadd** in Friends to remove a friend from both friends lists and delete the direct chat history on both devices; if the friend is offline, the removal waits on your device until you reconnect and both apps can communicate. You can delete your own messages; deletion is sent to chat participants who are online.
 
 Messages travel directly between browsers (WebRTC via [PeerJS](https://peerjs.com), which uses a free public service only to introduce peers). Group messages are sent to each member separately: online members receive them right away, while messages for offline members stay queued on the sender's device and are delivered when the sender and recipient are both online. The sender must open Discard again for queued messages to continue delivering; there is no always-on server to deliver them while the sender is offline. The delivery status shows how many group members have received each message.
 
 Because there is no central server, offline members may retain an older copy until they reconnect. The group owner queues membership changes and group deletions locally and sends them when members reconnect; message deletions are sent only to online chat participants.
+
+## Garlic Fone
+
+Open any chat, press the **+** at the left of the message bar and choose **🧄 Garlic Fone** to invite everyone in it to a telephone-pictionary game (2-8 players). Everyone writes a phrase, then the chains rotate: draw what you read, describe what you see, and so on. At the end each chain is revealed step by step. The host picks the number of rounds in the lobby (one per player by default, or 2 to 12; extra rounds loop the chains back around) and sets the time limits (presets or custom seconds per round type, or no limit; defaults are 40s to write, 90s to draw, 45s to describe) and a countdown bar shows the time left, and a step bar shows how far through the game you are. When time runs out your work is submitted automatically. The drawing pad has a fill bucket, an opacity slider and an eraser, and **Ctrl+Z** undoes and **Ctrl+Shift+Z** redoes (Cmd on Mac). Leaving mid-game asks for confirmation, and closing or reloading the tab always asks "are you sure?". The host's browser runs the game, so everyone must stay online, and invites only reach people who are online. The host can **Skip waiting** for slow players.
+
+## Other chat games
+
+Open a chat, press **+**, and choose **🕵️ Impostor** or **🎨 Sketch & Guess**. Both are hosted peer-to-peer by the person who starts the game; players need to stay online.
+
+**Impostor** needs at least 3 players. Everyone except one player gets the secret word. Share clues, vote for who seems suspicious, and see the reveal.
+
+**Sketch & Guess** rotates the artist through the chat. Draw the word while others guess; the sketch is uncovered gradually, with letter hints appearing over time. Earlier correct guesses earn more points. Choose the word category and number of rounds in the lobby.
+
+## Appearance
+
+Open **Customize appearance** and choose **Custom background** to build your own look:
+
+- 12 one-click presets (Aurora, Sunset, Neon, Mocha and more) plus a live preview.
+- Solid, linear fade, radial glow, color sweep or mesh blend backgrounds, with up to three colors and an angle slider.
+- **Animate fade** slowly drifts the gradient (slow, medium or fast; disabled if your system prefers reduced motion).
+- Text contrast is automatic, or force light or dark text. Glass and blur sliders control how see-through the panels are.
+- **Shuffle** makes a random palette, **Swap colors** flips it, and **Copy code** / **Paste code** share a theme with friends.
+
+Everything is saved with your account.
 
 ## Discard Official
 

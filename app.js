@@ -34,9 +34,30 @@ const settingControls = {
   cursorStyle: document.querySelector("#cursorPreference"),
   particlesEnabled: document.querySelector("#particlesEnabled"),
   particleStyle: document.querySelector("#particlePreference"),
+  cursorColorMode: document.querySelector("#cursorColorMode"),
+  cursorColor: document.querySelector("#cursorColor"),
+  cursorSize: document.querySelector("#cursorSize"),
+  particleColorMode: document.querySelector("#particleColorMode"),
+  particleColor: document.querySelector("#particleColor"),
+  particleCount: document.querySelector("#particleCount"),
+  particleSize: document.querySelector("#particleSize"),
+  particleTrail: document.querySelector("#particleTrail"),
   fontSize: document.querySelector("#fontSizePreference"),
   bubbleShape: document.querySelector("#bubblePreference"),
-  compact: document.querySelector("#compactPreference")
+  compact: document.querySelector("#compactPreference"),
+  tabDisguise: document.querySelector("#tabDisguise"),
+  backgroundStyle: document.querySelector("#backgroundStyle"),
+  backgroundColor: document.querySelector("#backgroundColor"),
+  backgroundEndColor: document.querySelector("#backgroundEndColor"),
+  backgroundMidColor: document.querySelector("#backgroundMidColor"),
+  backgroundMidEnabled: document.querySelector("#backgroundMidEnabled"),
+  backgroundAngle: document.querySelector("#backgroundAngle"),
+  backgroundAnimated: document.querySelector("#backgroundAnimated"),
+  backgroundSpeed: document.querySelector("#backgroundSpeed"),
+  backgroundTone: document.querySelector("#backgroundTone"),
+  panelOpacity: document.querySelector("#panelOpacity"),
+  panelBlur: document.querySelector("#panelBlur"),
+  borderStrength: document.querySelector("#borderStrength")
 };
 const defaultPreferences = {
   theme: "meadow",
@@ -45,10 +66,106 @@ const defaultPreferences = {
   cursorStyle: "sparkle",
   particlesEnabled: true,
   particleStyle: "sparkle",
+  cursorColorMode: "accent",
+  cursorColor: "#f2c94c",
+  cursorSize: 32,
+  particleColorMode: "accent",
+  particleColor: "#f2c94c",
+  particleCount: 6,
+  particleSize: 15,
+  particleTrail: false,
   fontSize: "regular",
   bubbleShape: "soft",
-  compact: false
+  compact: false,
+  tabDisguise: false,
+  backgroundStyle: "solid",
+  backgroundColor: "#f2f3ed",
+  backgroundEndColor: "#d7eddf",
+  backgroundMidColor: "#f3d9e4",
+  backgroundMidEnabled: false,
+  backgroundAngle: 135,
+  backgroundAnimated: false,
+  backgroundSpeed: "medium",
+  backgroundTone: "auto",
+  panelOpacity: 80,
+  panelBlur: 12,
+  borderStrength: 0
 };
+
+const cursorStyles = ["sparkle", "heart", "diamond", "star", "arrow", "ring", "dot", "paw"];
+const particleStyles = ["sparkle", "heart", "bubble", "leaf", "star", "confetti", "snow", "music", "flame"];
+function sanitizeEffectPreferences(input, base) {
+  const hex = (value, fallback) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
+  const range = (value, min, max, fallback) => Number.isFinite(Number(value)) && value !== "" && value !== null ? Math.min(max, Math.max(min, Math.round(Number(value)))) : fallback;
+  return {
+    cursorStyle: cursorStyles.includes(input.cursorStyle) ? input.cursorStyle : (cursorStyles.includes(base.cursorStyle) ? base.cursorStyle : "sparkle"),
+    cursorColorMode: ["accent", "custom"].includes(input.cursorColorMode) ? input.cursorColorMode : base.cursorColorMode,
+    cursorColor: hex(input.cursorColor, base.cursorColor),
+    cursorSize: range(input.cursorSize, 20, 64, base.cursorSize),
+    particleStyle: particleStyles.includes(input.particleStyle) ? input.particleStyle : (particleStyles.includes(base.particleStyle) ? base.particleStyle : "sparkle"),
+    particleColorMode: ["accent", "rainbow", "custom"].includes(input.particleColorMode) ? input.particleColorMode : base.particleColorMode,
+    particleColor: hex(input.particleColor, base.particleColor),
+    particleCount: range(input.particleCount, 2, 16, base.particleCount),
+    particleSize: range(input.particleSize, 10, 32, base.particleSize),
+    particleTrail: typeof input.particleTrail === "boolean" ? input.particleTrail : base.particleTrail
+  };
+}
+
+const backgroundStyles = ["solid", "linear", "radial", "conic", "mesh"];
+function sanitizeBackgroundPreferences(input, base) {
+  const hex = (value, fallback) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
+  const range = (value, min, max, fallback) => Number.isFinite(Number(value)) && value !== "" && value !== null ? Math.min(max, Math.max(min, Math.round(Number(value)))) : fallback;
+  const style = input.backgroundStyle === "gradient" ? "linear" : input.backgroundStyle;
+  return {
+    backgroundStyle: backgroundStyles.includes(style) ? style : base.backgroundStyle === "gradient" ? "linear" : base.backgroundStyle,
+    backgroundColor: hex(input.backgroundColor, base.backgroundColor),
+    backgroundEndColor: hex(input.backgroundEndColor, base.backgroundEndColor),
+    backgroundMidColor: hex(input.backgroundMidColor, base.backgroundMidColor),
+    backgroundMidEnabled: typeof input.backgroundMidEnabled === "boolean" ? input.backgroundMidEnabled : base.backgroundMidEnabled,
+    backgroundAngle: range(input.backgroundAngle, 0, 360, base.backgroundAngle),
+    backgroundAnimated: typeof input.backgroundAnimated === "boolean" ? input.backgroundAnimated : base.backgroundAnimated,
+    backgroundSpeed: ["slow", "medium", "fast"].includes(input.backgroundSpeed) ? input.backgroundSpeed : base.backgroundSpeed,
+    backgroundTone: ["auto", "light", "dark"].includes(input.backgroundTone) ? input.backgroundTone : base.backgroundTone,
+    panelOpacity: range(input.panelOpacity, 20, 100, base.panelOpacity),
+    panelBlur: range(input.panelBlur, 0, 30, base.panelBlur),
+    borderStrength: range(input.borderStrength, 0, 100, base.borderStrength ?? 0)
+  };
+}
+
+function buildBackground(p) {
+  const c1 = p.backgroundColor, c2 = p.backgroundEndColor, mid = p.backgroundMidEnabled ? `${p.backgroundMidColor}, ` : "";
+  const stops = `${c1}, ${mid}${c2}`;
+  switch (p.backgroundStyle) {
+    case "linear": return `linear-gradient(${p.backgroundAngle}deg, ${stops})`;
+    case "radial": return `radial-gradient(circle at 30% 20%, ${stops})`;
+    case "conic": return `conic-gradient(from ${p.backgroundAngle}deg at 50% 50%, ${c1}, ${p.backgroundMidEnabled ? p.backgroundMidColor : c2}, ${c2}, ${c1})`;
+    case "mesh": {
+      const m = p.backgroundMidColor;
+      return `radial-gradient(at 18% 14%, ${c1} 0, transparent 55%), radial-gradient(at 86% 18%, ${m} 0, transparent 52%), radial-gradient(at 78% 92%, ${c2} 0, transparent 55%), radial-gradient(at 8% 86%, ${m} 0, transparent 50%), ${c1}`;
+    }
+    default: return c1;
+  }
+}
+
+function backgroundLuminance(hex) {
+  const channels = hex.slice(1).match(/.{2}/g).map(value => parseInt(value, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+
+const themePresets = [
+  { name: "Aurora", style: "mesh", c1: "#0f3d3e", c2: "#3b1f5e", mid: "#1fa88a", accent: "#7ef0c6", animated: true },
+  { name: "Sunset", style: "linear", c1: "#ff9a62", mid: "#ff5e8a", c2: "#5b2a86", midOn: true, angle: 160, accent: "#ffe3a3", animated: true },
+  { name: "Lagoon", style: "linear", c1: "#d4f5ee", c2: "#a9d6f5", angle: 150, accent: "#1d7a8a" },
+  { name: "Candy", style: "mesh", c1: "#ffd1e8", c2: "#d6c9ff", mid: "#c8f4ff", accent: "#c2407e", animated: true },
+  { name: "Forest", style: "linear", c1: "#14301f", c2: "#2f5d3a", angle: 160, accent: "#b7e5a3" },
+  { name: "Ember", style: "radial", c1: "#4a1020", c2: "#120408", mid: "#c0392b", midOn: true, accent: "#ffb38a" },
+  { name: "Nebula", style: "conic", c1: "#1b1342", c2: "#0d2a52", mid: "#5b2a86", midOn: true, angle: 0, accent: "#c4a8ff", animated: true },
+  { name: "Mocha", style: "linear", c1: "#efe3d3", c2: "#d6bfa5", angle: 135, accent: "#7a4a2b" },
+  { name: "Neon", style: "mesh", c1: "#0b0b1e", c2: "#12122e", mid: "#ff2d95", accent: "#35f0ff", animated: true },
+  { name: "Mint", style: "solid", c1: "#e2f6ea", accent: "#2a8a5c" },
+  { name: "Slate", style: "solid", c1: "#1f2530", accent: "#8fb4ff" },
+  { name: "Peach", style: "radial", c1: "#fff0e4", c2: "#ffc9b0", accent: "#c2543a" }
+];
 
 let mode = "signin";
 let currentUser = null;
@@ -59,14 +176,27 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "2.0.7";
+const APP_VERSION = "2.8.0";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
 tabIcon.href = BRAND_IMAGE;
 document.head.append(tabIcon);
 
-const idPattern = /^dsc-[a-z0-9]{16}$/;
+const mingaIcon = `data:image/svg+xml;base64,${btoa("<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='#1e88e5'/><path d='M12 46V22l10 14 10-14v24M36 46V22l10 14 6-8' fill='none' stroke='#fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/></svg>")}`;
+const disguiseKey = "discard-tab-disguise";
+
+// The disguise is remembered outside the account so the sign-in screen is covered too.
+function applyTabDisguise(on, remember = true) {
+  document.title = on ? "Minga" : "Discard";
+  tabIcon.href = on ? mingaIcon : BRAND_IMAGE;
+  if (remember) {
+    try { localStorage.setItem(disguiseKey, on ? "1" : ""); } catch {}
+  }
+}
+try { if (localStorage.getItem(disguiseKey)) applyTabDisguise(true, false); } catch {}
+
+const idPattern = /^dsc-[a-z0-9]{6,16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;
 const avatarPattern = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const imageUrlPattern = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
@@ -74,6 +204,9 @@ const tenorUrlPattern = /^https:\/\/(?:media\d*\.tenor\.com|media\d*\.giphy\.com
 // Public GIPHY browser key shared by everyone using this app.
 const GIPHY_API_KEY = "8tdFAXlnlUWwcCjTd8Njko0kNQozvdc";
 const maxWireImageChars = 4.5 * 1024 * 1024;
+const maxFileBytes = 5 * 1024 * 1024;
+const maxWireFileChars = Math.ceil(maxFileBytes / 3) * 4 + 64;
+const fileDataPattern = /^data:application\/octet-stream;base64,[A-Za-z0-9+/=]*$/;
 
 const idb = {
   handle: null,
@@ -159,7 +292,7 @@ function touchChat(chat) {
 }
 
 function messageBytes(message) {
-  return 200 + (message.text?.length || 0) + (message.image?.url?.length || 0);
+  return 200 + (message.text?.length || 0) + (message.image?.url?.length || 0) + (message.file?.data?.length || 0);
 }
 
 function totalMessageBytes() {
@@ -258,7 +391,7 @@ async function flushSave() {
 window.addEventListener("pagehide", () => { if (dirty.size) flushSave(); });
 
 function defaultState(me) {
-  return { me, friends: {}, people: {}, requests: [], gifs: [], favoriteGifs: [], tenorKey: "", pendingFriendRemovals: [], pendingGroupDeletes: [], pendingGroupLeaves: [], chats: [] };
+  return { me, friends: {}, people: {}, requests: [], gifs: [], favoriteGifs: [], tenorKey: "", pendingFriendRemovals: [], pendingGroupDeletes: [], pendingGroupLeaves: [], nicknames: {}, chats: [] };
 }
 
 async function loadState() {
@@ -323,6 +456,22 @@ function sanitizeImage(image) {
   return { id, url: image.url, type: image.url.slice(5, image.url.indexOf(";")) };
 }
 
+function sanitizeFile(file) {
+  if (!file || typeof file.data !== "string" || file.data.length > maxWireFileChars || !fileDataPattern.test(file.data)) return null;
+  const name = (typeof file.name === "string" ? file.name : "").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").trim().slice(0, 100) || "file";
+  const type = typeof file.type === "string" && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) && file.type.length <= 100 ? file.type : "application/octet-stream";
+  const size = Number.isFinite(file.size) ? Math.max(0, Math.min(Math.floor(file.size), maxFileBytes)) : 0;
+  return { id: typeof file.id === "string" && safeIdPattern.test(file.id) ? file.id : randomId(16), name, type, size, data: file.data };
+}
+
+function sanitizeAvatar(value) {
+  return typeof value === "string" && value.length <= 300000 && avatarPattern.test(value) ? value : null;
+}
+
+function sanitizeNickname(value) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 32) : "";
+}
+
 function myProfile() {
   const { id, username, displayName, avatar } = state.me;
   return { id, username, displayName, avatar };
@@ -332,6 +481,13 @@ function personOf(id) {
   if (id === OFFICIAL_ID && !isOfficialSelf()) return officialProfile;
   if (id === state.me.id) return myProfile();
   return state.people[id] || { id, username: "unknown", displayName: "Former member", avatar: null };
+}
+
+// Local-only view of a person: a nickname you set replaces their display name.
+function viewPerson(id) {
+  const person = personOf(id);
+  const nickname = id === state.me.id ? "" : state.nicknames?.[id];
+  return nickname ? { ...person, displayName: nickname, realName: person.displayName } : person;
 }
 
 function directChatId(otherId) {
@@ -351,16 +507,16 @@ function ensureDirectChat(friendId) {
 
 function chatToView(chat) {
   const otherId = chat.isGroup ? null : chat.members.find(id => id !== state.me.id);
-  const other = otherId ? personOf(otherId) : null;
+  const other = otherId ? viewPerson(otherId) : null;
   return {
     id: chat.id,
     name: chat.isGroup ? chat.name : other.displayName,
-    avatar: other?.avatar || null,
+    avatar: chat.isGroup ? (chat.avatar || null) : (other?.avatar || null),
     username: other?.username || null,
     isGroup: chat.isGroup,
     ownerId: chat.isGroup ? (chat.ownerId || chat.members[0]) : null,
     online: otherId ? isOnline(otherId) : null,
-    members: chat.members.map(personOf),
+    members: chat.members.map(viewPerson),
     messages: chat.messages,
     rev: chat.rev || 0
   };
@@ -370,7 +526,7 @@ function snapshotLocal() {
   Object.keys(state.friends).forEach(ensureDirectChat);
   return {
     user: accountUser(),
-    friends: Object.values(state.friends).map(friend => ({ ...personOf(friend.id), online: isOnline(friend.id) })),
+    friends: Object.values(state.friends).map(friend => ({ ...viewPerson(friend.id), online: isOnline(friend.id) })),
     requests: state.requests.map(request => ({ id: request.id, direction: request.direction, user: request.user })),
     chats: state.chats.filter(chat => chat.isGroup || state.friends[chat.members.find(id => id !== state.me.id)]).map(chatToView)
   };
@@ -512,7 +668,7 @@ function attach(conn) {
 }
 
 function groupPayload(chat) {
-  return { id: chat.id, name: chat.name, ownerId: chat.ownerId || chat.members[0], members: chat.members.map(personOf) };
+  return { id: chat.id, name: chat.name, avatar: chat.avatar || null, ownerId: chat.ownerId || chat.members[0], members: chat.members.map(personOf) };
 }
 
 function groupUpdatePayload(chat) {
@@ -553,7 +709,7 @@ function flushOutbox(id) {
     if (chat.isGroup && chat.pendingGroupUpdateIds?.includes(id)) sendTo(id, { t: "group-update", chat: groupUpdatePayload(chat) });
     chat.messages.filter(message => message.sender === state.me.id && message.pending?.includes(id)
       && !chat.deletedMessageIds?.includes(message.id)).forEach(message => {
-      sendTo(id, { t: "msg", chatId: chat.id, msg: { id: message.id, text: message.text, image: message.image, createdAt: message.createdAt } });
+      sendTo(id, { t: "msg", chatId: chat.id, msg: { id: message.id, text: message.text, image: message.image, file: message.file, replyTo: message.replyTo, createdAt: message.createdAt } });
     });
   });
 }
@@ -587,6 +743,14 @@ function handleData(from, data) {
   if (entry) entry.lastSeen = Date.now();
   if (!data || typeof data !== "object" || typeof data.t !== "string") return;
   if (!officialTrusted(from) && data.t !== "proof") return;
+  if (data.t.startsWith("game-")) {
+    garlicHandle(from, data);
+    return;
+  }
+  if (data.t.startsWith("party-")) {
+    partyGamesHandle(from, data);
+    return;
+  }
   const profile = data.profile ? sanitizeProfile(data.profile, from) : null;
   switch (data.t) {
     case "challenge":
@@ -667,6 +831,8 @@ function handleData(from, data) {
         if (!profiles.some(item => item.id === ownerId)) return;
         profiles.forEach(item => { if (item.id !== state.me.id && !state.people[item.id]) state.people[item.id] = item; });
         const chat = { id: info.id, name, isGroup: true, ownerId, members: profiles.map(item => item.id), messages: [], invites: [], createdAt: Date.now(), rev: 0 };
+        const groupAvatar = sanitizeAvatar(info.avatar);
+        if (groupAvatar) chat.avatar = groupAvatar;
         state.chats.push(chat);
         touchChat(chat);
         touchMeta();
@@ -697,6 +863,9 @@ function handleData(from, data) {
         || !profiles.some(item => item.id === ownerId) || !profiles.some(item => item.id === from)) return;
       profiles.forEach(item => { if (item.id !== state.me.id) state.people[item.id] = item; });
       chat.name = name;
+      const groupAvatar = sanitizeAvatar(info.avatar);
+      if (groupAvatar) chat.avatar = groupAvatar;
+      else delete chat.avatar;
       chat.ownerId = ownerId;
       chat.members = profiles.map(item => item.id);
       chat.invites = (chat.invites || []).filter(id => chat.members.includes(id));
@@ -783,10 +952,12 @@ function handleData(from, data) {
       }
       const text = typeof msg.text === "string" ? msg.text.slice(0, 4000) : "";
       const image = msg.image ? sanitizeImage(msg.image) : null;
-      if (!text.trim() && !image) return;
+      const file = msg.file ? sanitizeFile(msg.file) : null;
+      const replyTo = typeof msg.replyTo === "string" && safeIdPattern.test(msg.replyTo) ? msg.replyTo : null;
+      if (!text.trim() && !image && !file) return;
       if (!chat.messages.some(message => message.id === msg.id)) {
         const createdAt = Number.isFinite(msg.createdAt) ? Math.min(Math.max(msg.createdAt, 0), Date.now()) : Date.now();
-        chat.messages.push({ id: msg.id, sender: from, text, ...(image ? { image } : {}), createdAt, pending: [] });
+        chat.messages.push({ id: msg.id, sender: from, text, ...(image ? { image } : {}), ...(file ? { file } : {}), ...(replyTo ? { replyTo } : {}), createdAt, pending: [] });
         if (chat.messages.length > 1 && chat.messages.at(-2).createdAt > createdAt) chat.messages.sort((first, second) => first.createdAt - second.createdAt);
         touchChat(chat);
         enforceStorageLimit();
@@ -840,14 +1011,14 @@ function fail(message) {
   throw new Error(message);
 }
 
-function sendMessageLocal(chat, text, image) {
+function sendMessageLocal(chat, text, image, file, replyTo) {
   const recipients = chat.members.filter(id => id !== state.me.id);
-  const message = { id: randomId(20), sender: state.me.id, text, ...(image ? { image } : {}), createdAt: Date.now(), pending: [...recipients] };
+  const message = { id: randomId(20), sender: state.me.id, text, ...(image ? { image } : {}), ...(file ? { file } : {}), ...(replyTo ? { replyTo } : {}), createdAt: Date.now(), pending: [...recipients] };
   chat.messages.push(message);
   touchChat(chat);
   recipients.forEach(id => {
     connectTo(id);
-    sendTo(id, { t: "msg", chatId: chat.id, msg: { id: message.id, text, image, createdAt: message.createdAt } });
+    sendTo(id, { t: "msg", chatId: chat.id, msg: { id: message.id, text, image, file, replyTo, createdAt: message.createdAt } });
   });
   enforceStorageLimit();
 }
@@ -892,17 +1063,17 @@ async function giphyGifs(query) {
 }
 
 function applyPreferencesLocal(input) {
-  const themes = ["meadow", "dark", "midnight", "rose", "ocean", "contrast"];
+  const themes = ["meadow", "dark", "midnight", "rose", "ocean", "contrast", "custom"];
   const current = { ...defaultPreferences, ...state.me.preferences };
   if (themes.includes(input.theme)) current.theme = input.theme;
   if (typeof input.accent === "string" && /^#[0-9a-f]{6}$/i.test(input.accent)) current.accent = input.accent;
   if (typeof input.cursorEnabled === "boolean") current.cursorEnabled = input.cursorEnabled;
-  if (["sparkle", "heart", "diamond"].includes(input.cursorStyle)) current.cursorStyle = input.cursorStyle;
   if (typeof input.particlesEnabled === "boolean") current.particlesEnabled = input.particlesEnabled;
-  if (["sparkle", "heart", "bubble", "leaf"].includes(input.particleStyle)) current.particleStyle = input.particleStyle;
   if (["small", "regular", "large"].includes(input.fontSize)) current.fontSize = input.fontSize;
   if (["soft", "square"].includes(input.bubbleShape)) current.bubbleShape = input.bubbleShape;
   if (typeof input.compact === "boolean") current.compact = input.compact;
+  if (typeof input.tabDisguise === "boolean") current.tabDisguise = input.tabDisguise;
+  Object.assign(current, sanitizeBackgroundPreferences(input, current), sanitizeEffectPreferences(input, current));
   state.me.preferences = current;
   touchMeta();
   return current;
@@ -940,7 +1111,8 @@ async function api(path, options = {}) {
   }
 
   if (method === "POST" && route === "/api/friends/request") {
-    const code = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
+    let code = typeof body.username === "string" ? body.username.trim().toLowerCase().replace(/\s+/g, "") : "";
+    if (/^[a-z0-9]{6,16}$/.test(code)) code = `dsc-${code}`;
     if (!idPattern.test(code)) fail("That is not a valid friend code. Ask your friend to copy theirs from the Friends panel.");
     if (code === state.me.id) fail("That is your own friend code.");
     if (state.friends[code]) fail("You are already friends.");
@@ -988,6 +1160,18 @@ async function api(path, options = {}) {
     return { ok: true };
   }
 
+  if (method === "POST" && route === "/api/nickname") {
+    const personId = typeof body.personId === "string" ? body.personId : "";
+    if (!idPattern.test(personId) || personId === state.me.id) fail("Choose someone other than yourself.");
+    if (!state.friends[personId] && !state.people[personId]) fail("Person not found.");
+    const nickname = sanitizeNickname(body.nickname);
+    state.nicknames ||= {};
+    if (nickname) state.nicknames[personId] = nickname;
+    else delete state.nicknames[personId];
+    touchMeta();
+    return { ok: true };
+  }
+
   if (method === "POST" && route === "/api/chats/direct") {
     if (!state.friends[body.friendId]) fail("Friend not found.");
     return { chat: chatToView(ensureDirectChat(body.friendId)) };
@@ -1000,6 +1184,11 @@ async function api(path, options = {}) {
     if (memberIds.length < 1 || memberIds.length > 49) fail("Choose at least one friend for the group.");
     if (memberIds.some(id => !state.friends[id])) fail("Group chats can include your friends only.");
     const chat = { id: `g-${randomId(20)}`, name, isGroup: true, ownerId: state.me.id, members: [state.me.id, ...memberIds], messages: [], invites: [...memberIds], createdAt: Date.now(), rev: 0 };
+    if (body.avatar) {
+      const groupAvatar = sanitizeAvatar(body.avatar);
+      if (!groupAvatar) fail("Group picture must be a small PNG, JPEG, or WebP image.");
+      chat.avatar = groupAvatar;
+    }
     state.chats.push(chat);
     touchChat(chat);
     memberIds.forEach(id => {
@@ -1041,6 +1230,17 @@ async function api(path, options = {}) {
       removeChatLocal(chat);
       return { ok: true };
     }
+    if (action === "avatar") {
+      if (body.avatar === null) {
+        delete chat.avatar;
+      } else {
+        const groupAvatar = sanitizeAvatar(body.avatar);
+        if (!groupAvatar) fail("Group picture must be a small PNG, JPEG, or WebP image.");
+        chat.avatar = groupAvatar;
+      }
+      broadcastGroupUpdate(chat, previousMembers);
+      return { ok: true };
+    }
     const memberId = typeof body.memberId === "string" ? body.memberId : "";
     if (!chat.members.includes(memberId) || memberId === state.me.id) fail("Choose another group member.");
     if (action === "transfer") {
@@ -1069,8 +1269,18 @@ async function api(path, options = {}) {
     } else if (body.image !== undefined) {
       image = sanitizeImage({ url: body.image }) || fail("Images must be PNG, JPEG, GIF, or WebP and under 3 MB.");
     }
-    if (!text && !image) fail("Messages must be 1 to 4,000 characters.");
-    sendMessageLocal(chat, text, image ? { id: image.id, url: image.url, type: image.type } : undefined);
+    let file = null;
+    if (body.file !== undefined) {
+      if (image) fail("Send a file on its own, without an image.");
+      file = sanitizeFile(body.file) || fail("Files must be under 5 MB.");
+    }
+    let replyTo = null;
+    if (body.replyTo !== undefined && body.replyTo !== null) {
+      if (typeof body.replyTo !== "string" || !chat.messages.some(item => item.id === body.replyTo)) fail("The message you are replying to no longer exists.");
+      replyTo = body.replyTo;
+    }
+    if (!text && !image && !file) fail("Messages must be 1 to 4,000 characters.");
+    sendMessageLocal(chat, text, image ? { id: image.id, url: image.url, type: image.type } : undefined, file || undefined, replyTo || undefined);
     return { ok: true };
   }
 
@@ -1164,7 +1374,7 @@ async function enterApp() {
   await openChatView();
 }
 
-async function signIn(username, password) {
+async function signIn(username, password, backupFile) {
   const key = username.toLowerCase();
   const official = key === OFFICIAL_USERNAME.toLowerCase();
   let db = officialDb;
@@ -1175,8 +1385,16 @@ async function signIn(username, password) {
     if (!account || await hashPassword(password, fromBase64(account.salt)) !== account.hash) throw badLogin();
     db = account.db;
   }
+  if (backupFile && !official) throw new Error("Restoring a backup while signing in only works for the official account. Use Create account for other backups.");
+  const imported = backupFile ? cleanImported(JSON.parse(await backupFile.text()), true) : null;
   if (!await lockAccount(db)) throw new Error("This account is already open in another tab.");
   idb.use(db);
+  if (imported) {
+    const { chats, ...meta } = imported;
+    const puts = { meta };
+    chats.forEach(chat => { puts[`chat:${chat.id}`] = chat; });
+    await idb.write(puts, []);
+  }
   state = await loadState();
   if (!state) {
     if (!official) throw new Error("This account's saved data was not found on this computer.");
@@ -1206,7 +1424,7 @@ async function signUp(username, password, displayName, backupFile) {
     await idb.write(puts, []);
     state = await loadState();
   } else {
-    state = defaultState({ id: `dsc-${randomId(16)}`, username, displayName: displayName || username, avatar: null, preferences: { ...defaultPreferences }, createdAt: Date.now() });
+    state = defaultState({ id: `dsc-${randomId(6)}`, username, displayName: displayName || username, avatar: null, preferences: { ...defaultPreferences }, createdAt: Date.now() });
     touchMeta();
     await flushSave();
   }
@@ -1235,10 +1453,11 @@ function exportBackup() {
   window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
-function cleanImported(raw) {
+function cleanImported(raw, official = false) {
   const meta = raw?.meta;
-  const me = sanitizeProfile(meta?.me, meta?.me?.id);
-  if (raw?.format !== "discard-backup" || !me || me.id === OFFICIAL_ID || !idPattern.test(me.id)) throw new Error("That is not a valid Discard backup file.");
+  const me = official ? { ...officialProfile, official: true } : sanitizeProfile(meta?.me, meta?.me?.id);
+  const isOfficialBackup = meta?.me?.id === OFFICIAL_ID;
+  if (raw?.format !== "discard-backup" || !me || isOfficialBackup !== official || !idPattern.test(me.id)) throw new Error(official ? "That is not a Discard Official backup file." : "That is not a valid Discard backup file.");
   const profiles = source => Object.fromEntries(Object.entries(source || {}).filter(([id]) => idPattern.test(id))
     .map(([id, value]) => [id, sanitizeProfile(value, id)]).filter(([, value]) => value));
   const friends = profiles(meta.friends);
@@ -1246,6 +1465,8 @@ function cleanImported(raw) {
   const imported = defaultState({ ...me, preferences: { ...defaultPreferences, ...(meta.me.preferences && typeof meta.me.preferences === "object" ? meta.me.preferences : {}) }, createdAt: Date.now() });
   imported.friends = friends;
   imported.people = people;
+  imported.nicknames = Object.fromEntries(Object.entries(meta.nicknames && typeof meta.nicknames === "object" ? meta.nicknames : {})
+    .filter(([id, value]) => idPattern.test(id) && id !== me.id && sanitizeNickname(value)).map(([id, value]) => [id, sanitizeNickname(value)]));
   imported.requests = (Array.isArray(meta.requests) ? meta.requests : []).filter(item => idPattern.test(item?.id) && ["incoming", "outgoing"].includes(item.direction))
     .map(item => ({ id: item.id, direction: item.direction, user: sanitizeProfile(item.user, item.id) || { id: item.id, username: "pending", displayName: "Friend", avatar: null } }));
   imported.gifs = (Array.isArray(meta.gifs) ? meta.gifs : []).map(sanitizeImage).filter(image => image && image.type === "image/gif" && !tenorUrlPattern.test(image.url));
@@ -1267,6 +1488,7 @@ function cleanImported(raw) {
       name: typeof chat.name === "string" ? chat.name.slice(0, 40) : "",
       isGroup: Boolean(chat.isGroup),
       members: chat.members.filter(id => idPattern.test(id)),
+      ...(chat.isGroup && sanitizeAvatar(chat.avatar) ? { avatar: chat.avatar } : {}),
       ...(chat.isGroup && idPattern.test(chat.ownerId) && chat.members.includes(chat.ownerId)
         ? { ownerId: chat.ownerId }
         : {}),
@@ -1284,11 +1506,14 @@ function cleanImported(raw) {
         : [],
       messages: (Array.isArray(chat.messages) ? chat.messages : []).filter(message => typeof message?.id === "string" && safeIdPattern.test(message.id) && idPattern.test(message.sender)).map(message => {
         const image = message.image ? sanitizeImage(message.image) : null;
+        const file = message.file ? sanitizeFile(message.file) : null;
         return {
           id: message.id,
           sender: message.sender,
           text: typeof message.text === "string" ? message.text.slice(0, 4000) : "",
           ...(image ? { image } : {}),
+          ...(file ? { file } : {}),
+          ...(safeIdPattern.test(message.replyTo || "") ? { replyTo: message.replyTo } : {}),
           createdAt: Number(message.createdAt) || Date.now(),
           pending: Array.isArray(message.pending) ? message.pending.filter(id => idPattern.test(id)) : []
         };
@@ -1317,7 +1542,7 @@ function handleSpan(username) {
 
 function renderProfile() {
   document.querySelector("#userHandle").textContent = `@${currentUser.username}`;
-  document.querySelector("#myCode").value = currentUser.id;
+  document.querySelector("#myCode").value = currentUser.id.replace(/^dsc-/, "");
   const name = currentUser.displayName || currentUser.username;
   document.querySelector("#userName").textContent = name;
   setAvatar(document.querySelector("#userAvatar"), name, currentUser.avatar);
@@ -1367,7 +1592,7 @@ authForm.addEventListener("submit", async event => {
   authMessage.textContent = authMode === "signup" ? "Creating your account..." : "Signing in...";
   try {
     if (authMode === "signup") await signUp(username, password, document.querySelector("#displayName").value.trim().slice(0, 32), backupFile);
-    else await signIn(username, password);
+    else await signIn(username, password, backupFile);
     authForm.reset();
     authMessage.textContent = "";
   } catch (error) {
@@ -1401,7 +1626,7 @@ async function refreshSnapshot() {
     const activeChat = snapshot.chats.find(chat => chat.id === activeChatId);
     const next = {
       list: JSON.stringify(snapshot.chats.map(chat => [chat.id, chat.name, chat.avatar, chat.online, chat.rev, chat.messages.length])),
-      conversation: JSON.stringify([activeChatId, activeChat && [activeChat.rev, activeChat.name, activeChat.avatar, activeChat.online, activeChat.ownerId, activeChat.members.map(member => [member.id, member.displayName, member.username])]]),
+      conversation: JSON.stringify([activeChatId, activeChat && [activeChat.rev, activeChat.name, activeChat.avatar, activeChat.online, activeChat.ownerId, activeChat.members.map(member => [member.id, member.displayName, member.username, member.avatar?.length || 0])]]),
       friends: JSON.stringify([snapshot.friends, snapshot.requests, snapshot.user.id])
     };
     if (next.list !== renderedKeys.list) renderChatList();
@@ -1424,6 +1649,47 @@ function showAuth() {
 
 function chatLastMessage(chat) {
   return chat.messages[chat.messages.length - 1];
+}
+
+function messagePreview(message) {
+  return message.text || (message.file ? `📎 ${message.file.name}` : "") || (message.image ? "📷 Image" : "");
+}
+
+let replyingTo = null;
+const replyBar = document.querySelector("#replyBar");
+
+function replyBody() {
+  return replyingTo && replyingTo.chatId === activeChatId ? { replyTo: replyingTo.id } : {};
+}
+
+function clearReply() {
+  replyingTo = null;
+  replyBar.classList.add("hidden");
+}
+
+function startReply(chat, message) {
+  replyingTo = { id: message.id, chatId: chat.id };
+  const sender = message.sender === currentUser.id ? "yourself" : (chat.members.find(member => member.id === message.sender)?.displayName || "Former member");
+  replyBar.querySelector(".reply-bar-text").textContent = `Replying to ${sender}: ${messagePreview(message).slice(0, 80)}`;
+  replyBar.classList.remove("hidden");
+  messageInput.focus();
+}
+
+document.querySelector("#replyCancel").addEventListener("click", clearReply);
+
+async function downloadFile(file) {
+  try {
+    const blob = await (await fetch(file.data)).blob();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([blob], { type: "application/octet-stream" }));
+    link.download = file.name;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+  } catch {
+    alert("Could not download that file.");
+  }
 }
 
 const profileModal = document.querySelector("#profileModal");
@@ -1450,6 +1716,34 @@ function openProfile(person) {
   const status = document.createElement("div");
   status.className = "profile-sub";
   status.textContent = person.id === currentUser.id ? "This is you" : friend ? (friend.online ? "Friend · Online" : "Friend · Offline") : "Not in your friends list";
+  const real = document.createElement("div");
+  real.className = "profile-sub";
+  real.textContent = info.realName ? `Display name: ${info.realName}` : "";
+  const nicknameBox = document.createElement("div");
+  nicknameBox.className = "nickname-edit";
+  if (person.id !== currentUser.id) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 32;
+    input.placeholder = "Nickname (only you see it)";
+    input.value = info.realName ? info.displayName : "";
+    input.setAttribute("aria-label", "Nickname");
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "profile-btn";
+    save.textContent = "Save nickname";
+    save.addEventListener("click", async () => {
+      try {
+        await api("/api/nickname", { method: "POST", body: { personId: person.id, nickname: input.value } });
+        profileModal.classList.add("hidden");
+        renderedKeys = {};
+        await refreshSnapshot();
+      } catch (error) {
+        friendMessage.textContent = error.message;
+      }
+    });
+    nicknameBox.append(input, save);
+  }
   const actions = document.createElement("div");
   actions.className = "profile-actions";
   if (friend) {
@@ -1490,7 +1784,7 @@ function openProfile(person) {
   close.textContent = "Close";
   close.addEventListener("click", () => profileModal.classList.add("hidden"));
   actions.append(close);
-  card.replaceChildren(avatar, name, handle, status, actions);
+  card.replaceChildren(avatar, name, handle, real, status, nicknameBox, actions);
   profileModal.classList.remove("hidden");
 }
 
@@ -1558,7 +1852,7 @@ function renderChatList() {
     time.textContent = chatLastMessage(chat) ? formatTime(chatLastMessage(chat).createdAt) : "";
     const preview = document.createElement("span");
     preview.className = "chat-preview";
-    preview.textContent = chatLastMessage(chat)?.text || (chatLastMessage(chat)?.image ? "📷 Image" : null) || (chat.isGroup ? "Group chat" : "Start a conversation");
+    preview.textContent = (chatLastMessage(chat) && messagePreview(chatLastMessage(chat))) || (chat.isGroup ? "Group chat" : "Start a conversation");
     titleRow.append(title, time);
     summary.append(titleRow, preview);
     button.append(avatar, summary);
@@ -1571,6 +1865,7 @@ function renderChatList() {
       });
     }
     button.addEventListener("click", () => {
+      if (activeChatId !== chat.id) { clearReply(); setPlusMenu(false); }
       activeChatId = chat.id;
       renderChatList();
       renderConversation();
@@ -1586,6 +1881,7 @@ function renderConversation() {
   const welcome = document.querySelector("#welcomeEmpty");
   messageArea.classList.toggle("no-anim", chat?.id === renderedChatId);
   renderedChatId = chat?.id || null;
+  if (replyingTo && replyingTo.chatId !== renderedChatId) clearReply();
   if (!chat) {
     groupManagement.classList.add("hidden");
     header.classList.add("hidden");
@@ -1630,6 +1926,7 @@ function renderConversation() {
   closeChat.title = "Close chat";
   closeChat.setAttribute("aria-label", "Close chat");
   closeChat.addEventListener("click", () => {
+    clearReply();
     activeChatId = null;
     renderChatList();
     renderConversation();
@@ -1641,11 +1938,49 @@ function renderConversation() {
   divider.textContent = chat.isGroup ? `GROUP CHAT · ${chat.members.length} PEOPLE` : "DIRECT MESSAGE";
   messageArea.append(divider);
 
+  const byId = new Map(chat.messages.map(item => [item.id, item]));
   chat.messages.slice(-400).forEach(message => {
+    const mine = message.sender === currentUser.id;
+    const senderInfo = chat.members.find(member => member.id === message.sender);
     const row = document.createElement("div");
-    row.className = `message${message.sender === currentUser.id ? " mine" : ""}`;
+    row.className = `message${mine ? " mine" : ""}`;
+    const senderName = mine ? "You" : (senderInfo?.displayName || "Former member");
+    const avatar = document.createElement("span");
+    avatar.className = "avatar message-avatar";
+    setAvatar(avatar, mine ? (currentUser.displayName || currentUser.username) : senderName, mine ? currentUser.avatar : senderInfo?.avatar);
+    if (mine || senderInfo) {
+      avatar.classList.add("clickable");
+      avatar.title = "View profile";
+      avatar.addEventListener("click", () => openProfile(mine ? { id: currentUser.id, ...currentUser } : senderInfo));
+    }
+    const body = document.createElement("div");
+    body.className = "message-body";
+    const head = document.createElement("div");
+    head.className = "message-head";
+    const nameLabel = document.createElement("span");
+    nameLabel.className = "message-sender";
+    nameLabel.textContent = senderName;
+    head.append(nameLabel);
+    const handleName = mine ? currentUser.username : senderInfo?.username;
+    if (handleName && handleName !== "unknown") head.append(handleSpan(handleName));
     const bubble = document.createElement("div");
     bubble.className = "message-bubble";
+    if (message.replyTo) {
+      const original = byId.get(message.replyTo);
+      const quote = document.createElement("div");
+      quote.className = "reply-quote";
+      const quoteName = document.createElement("strong");
+      const quoteText = document.createElement("span");
+      if (original) {
+        quoteName.textContent = original.sender === currentUser.id ? "You" : (chat.members.find(member => member.id === original.sender)?.displayName || "Former member");
+        quoteText.textContent = messagePreview(original);
+      } else {
+        quoteName.textContent = "Reply";
+        quoteText.textContent = "Original message is no longer available";
+      }
+      quote.append(quoteName, quoteText);
+      bubble.append(quote);
+    }
     if (message.image) {
       bubble.classList.add("has-image");
       const picture = document.createElement("img");
@@ -1656,27 +1991,49 @@ function renderConversation() {
       picture.addEventListener("click", () => openLightbox(message.image.url));
       bubble.append(picture);
     }
+    if (message.file) {
+      bubble.classList.add("has-image");
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "file-card";
+      card.title = "Download file";
+      const icon = document.createElement("span");
+      icon.className = "file-icon";
+      icon.textContent = "📎";
+      const fileInfo = document.createElement("span");
+      const fileName = document.createElement("strong");
+      fileName.textContent = message.file.name;
+      const fileSize = document.createElement("small");
+      fileSize.textContent = formatBytes(message.file.size);
+      fileInfo.append(fileName, fileSize);
+      card.append(icon, fileInfo);
+      card.addEventListener("click", () => downloadFile(message.file));
+      bubble.append(card);
+    }
     if (message.text) {
       const text = document.createElement("span");
       text.textContent = message.text;
       bubble.append(text);
     }
-    const sender = chat.members.find(member => member.id === message.sender)?.displayName || "Former member";
     const meta = document.createElement("div");
     meta.className = "message-meta";
-    const senderHandle = chat.members.find(member => member.id === message.sender)?.username;
-    const senderLabel = `${message.sender === currentUser.id ? "You" : sender}${message.sender !== currentUser.id && senderHandle ? ` (@${senderHandle})` : ""}`;
     const recipientIds = chat.members.filter(member => member.id !== currentUser.id).map(member => member.id);
     const recipientCount = recipientIds.length;
     const pendingIds = new Set(message.pending || []);
     const pendingCount = recipientIds.filter(id => pendingIds.has(id)).length;
-    const deliveryStatus = message.sender !== currentUser.id || !recipientCount
+    const deliveryStatus = !mine || !recipientCount
       ? ""
       : pendingCount
         ? ` · ${recipientCount - pendingCount}/${recipientCount} delivered · waiting for ${pendingCount}`
         : " · sent to everyone";
-    meta.textContent = `${senderLabel} · ${formatTime(message.createdAt)}${deliveryStatus}`;
-    if (message.sender === currentUser.id) {
+    meta.textContent = `${formatTime(message.createdAt)}${deliveryStatus}`;
+    const replyButton = document.createElement("button");
+    replyButton.type = "button";
+    replyButton.textContent = "Reply";
+    replyButton.setAttribute("aria-label", "Reply to this message");
+    replyButton.addEventListener("click", () => startReply(chat, message));
+    meta.append(replyButton);
+    if (mine) {
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.textContent = "Delete";
@@ -1684,6 +2041,7 @@ function renderConversation() {
       deleteButton.addEventListener("click", async () => {
         try {
           await api(`/api/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(message.id)}`, { method: "DELETE" });
+          if (replyingTo?.id === message.id) clearReply();
           await refreshSnapshot();
         } catch (error) {
           friendMessage.textContent = error.message;
@@ -1691,7 +2049,8 @@ function renderConversation() {
       });
       meta.append(deleteButton);
     }
-    row.append(bubble, meta);
+    body.append(head, bubble, meta);
+    row.append(avatar, body);
     messageArea.append(row);
   });
   messageArea.scrollTop = messageArea.scrollHeight;
@@ -1743,6 +2102,7 @@ function renderGroupManagement(chat) {
     }
     groupMemberList.append(row);
   });
+  document.querySelector("#groupAvatarRow").classList.toggle("hidden", !isOwner);
   document.querySelector("#groupDeleteButton").classList.toggle("hidden", !isOwner);
   document.querySelector("#groupLeaveButton").classList.toggle("hidden", isOwner);
 }
@@ -1889,28 +2249,100 @@ function formatTime(timestamp) {
 }
 
 const themeAccents = { meadow: "#245c48", dark: "#4f9d7f", midnight: "#83c9a3", rose: "#9c506f", ocean: "#277985", contrast: "#111111" };
-const cursorImages = {
-  sparkle: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path fill='#f2c94c' stroke='#202b28' stroke-width='1.5' d='M16 1l3.2 10.1L29 8l-6.1 9L32 22l-10.5.2L20 32l-5.7-8.8L5 29l3.2-10L0 14l10.5-.1z'/></svg>",
-  heart: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path fill='#e68191' stroke='#36272f' stroke-width='1.5' d='M16 29S2 20 2 10a7 7 0 0 1 14-1 7 7 0 0 1 14 1c0 10-14 19-14 19z'/></svg>",
-  diamond: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path fill='#7ebfd0' stroke='#203339' stroke-width='1.5' d='M16 1 31 16 16 31 1 16z'/></svg>"
+function cursorSvg(style, color, size) {
+  const outline = backgroundLuminance(color) > 0.55 ? "#1b1b1b" : "#ffffff";
+  const paint = `fill='${color}' stroke='${outline}' stroke-width='1.6' stroke-linejoin='round'`;
+  const shapes = {
+    sparkle: `<path ${paint} d='M16 1l3.2 10.1L29 8l-6.1 9L32 22l-10.5.2L20 32l-5.7-8.8L5 29l3.2-10L0 14l10.5-.1z'/>`,
+    heart: `<path ${paint} d='M16 29S2 20 2 10a7 7 0 0 1 14-1 7 7 0 0 1 14 1c0 10-14 19-14 19z'/>`,
+    diamond: `<path ${paint} d='M16 1 31 16 16 31 1 16z'/>`,
+    star: `<path ${paint} d='M16 2l4.2 9.6 10.3 1-7.8 6.9 2.3 10.2L16 24.4 7 29.7l2.3-10.2L1.5 12.6l10.3-1z'/>`,
+    arrow: `<path ${paint} d='M4 3v23l6-5.5 4.5 9 4-2-4.5-9H23z'/>`,
+    ring: `<circle cx='16' cy='16' r='10' fill='none' stroke='${outline}' stroke-width='5.5'/><circle cx='16' cy='16' r='10' fill='none' stroke='${color}' stroke-width='3'/><circle cx='16' cy='16' r='2.6' ${paint}/>`,
+    dot: `<circle cx='16' cy='16' r='8' ${paint}/>`,
+    paw: `<g ${paint}><ellipse cx='16' cy='21' rx='7.5' ry='6'/><ellipse cx='6.5' cy='13' rx='3' ry='4'/><ellipse cx='12.5' cy='7' rx='3' ry='4.2'/><ellipse cx='19.5' cy='7' rx='3' ry='4.2'/><ellipse cx='25.5' cy='13' rx='3' ry='4'/></g>`
+  };
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 32 32'>${shapes[style] || shapes.sparkle}</svg>`;
+}
+const particleGlyphs = {
+  sparkle: ["✦", "✧", "✳"], heart: ["♥", "♡"], bubble: ["○", "◦", "●"], leaf: ["❧", "✿"],
+  star: ["★", "☆", "✯"], confetti: ["■", "▰", "●", "▲"], snow: ["❄", "❅", "❆"], music: ["♪", "♫", "♬"], flame: ["✹", "✺", "•"]
 };
-const particleGlyphs = { sparkle: ["✦", "✧", "✳"], heart: ["♥", "♡"], bubble: ["○", "◦", "●"], leaf: ["❧", "✿"] };
+const particlePhysics = { leaf: { fall: 40, spin: 220 }, snow: { fall: 50, spin: 120 }, confetti: { fall: 45, spin: 300 }, flame: { fall: -30, spin: 40 }, bubble: { fall: -35, spin: 0 }, music: { fall: -25, spin: 30 } };
 
 function applyPreferences(input) {
-  const preferences = { ...defaultPreferences, ...input };
+  const themes = ["meadow", "dark", "midnight", "rose", "ocean", "contrast", "custom"];
+  const preferences = {
+    ...defaultPreferences,
+    ...input,
+    theme: themes.includes(input.theme) ? input.theme : defaultPreferences.theme,
+    accent: typeof input.accent === "string" && /^#[0-9a-f]{6}$/i.test(input.accent) ? input.accent : defaultPreferences.accent,
+    ...sanitizeBackgroundPreferences(input, defaultPreferences),
+    ...sanitizeEffectPreferences({ ...defaultPreferences, ...input }, defaultPreferences)
+  };
   const rootElement = document.documentElement;
   rootElement.dataset.theme = preferences.theme;
+  const customBackground = preferences.theme === "custom";
+  const pageBackground = buildBackground(preferences);
+  const speeds = { slow: "46s", medium: "24s", fast: "10s" };
+  const animated = customBackground && preferences.backgroundAnimated && preferences.backgroundStyle !== "solid";
+  rootElement.style.setProperty("--paper", customBackground ? preferences.backgroundColor : "");
+  rootElement.style.setProperty("--page-background", customBackground ? pageBackground : "");
+  rootElement.style.setProperty("--preview-bg", pageBackground);
+  rootElement.style.setProperty("--bg-speed", speeds[preferences.backgroundSpeed]);
+  rootElement.style.setProperty("--panel-alpha", `${preferences.panelOpacity}%`);
+  rootElement.style.setProperty("--panel-alpha-n", String(preferences.panelOpacity));
+  rootElement.style.setProperty("--panel-blur", `${preferences.panelBlur}px`);
+  rootElement.dataset.bgAnim = animated ? "on" : "off";
+  // Clear the override first so the theme's own --line is read, then blend it toward the text color.
+  rootElement.style.removeProperty("--line");
+  const themeLine = getComputedStyle(rootElement).getPropertyValue("--line").trim();
+  if (preferences.borderStrength > 0 && themeLine) {
+    rootElement.style.setProperty("--line", `color-mix(in srgb, ${themeLine}, var(--ink) ${preferences.borderStrength}%)`);
+  }
+  document.querySelector("#borderStrengthOut").textContent = `${preferences.borderStrength}%`;
+  const usedColors = [preferences.backgroundColor];
+  if (preferences.backgroundStyle !== "solid") usedColors.push(preferences.backgroundEndColor);
+  if (preferences.backgroundStyle === "mesh" || (preferences.backgroundMidEnabled && preferences.backgroundStyle !== "solid")) usedColors.push(preferences.backgroundMidColor);
+  const tone = usedColors.reduce((sum, color) => sum + backgroundLuminance(color), 0) / usedColors.length;
+  rootElement.dataset.customTone = preferences.backgroundTone === "auto" ? (tone < 0.32 ? "dark" : "light") : (preferences.backgroundTone === "dark" ? "dark" : "light");
   rootElement.dataset.cursor = preferences.cursorEnabled ? "on" : "off";
   rootElement.dataset.compact = preferences.compact ? "on" : "off";
   rootElement.dataset.fontSize = preferences.fontSize;
   rootElement.dataset.bubbles = preferences.bubbleShape;
   rootElement.style.setProperty("--accent", preferences.accent);
-  const cursor = btoa(cursorImages[preferences.cursorStyle] || cursorImages.sparkle);
-  rootElement.style.setProperty("--custom-cursor", `url("data:image/svg+xml;base64,${cursor}") 4 4, pointer`);
+  rootElement.style.setProperty("--accent-ink", backgroundLuminance(preferences.accent) > 0.35 ? "#111513" : "#ffffff");
+  const cursorColor = preferences.cursorColorMode === "custom" ? preferences.cursorColor : preferences.accent;
+  const cursor = btoa(cursorSvg(preferences.cursorStyle, cursorColor, preferences.cursorSize));
+  const hotspot = preferences.cursorStyle === "arrow" ? Math.round(preferences.cursorSize * 0.12) : Math.round(preferences.cursorSize / 2);
+  rootElement.style.setProperty("--custom-cursor", `url("data:image/svg+xml;base64,${cursor}") ${hotspot} ${hotspot}, pointer`);
+  document.querySelectorAll("[data-cursor-row]").forEach(row => { row.hidden = !preferences.cursorEnabled; });
+  document.querySelectorAll("[data-particle-row]").forEach(row => { row.hidden = !preferences.particlesEnabled; });
+  document.querySelectorAll("[data-cursor-color-row]").forEach(row => { row.hidden = preferences.cursorColorMode !== "custom"; });
+  document.querySelectorAll("[data-particle-color-row]").forEach(row => { row.hidden = preferences.particleColorMode !== "custom"; });
+  document.querySelector("#cursorSizeOut").textContent = `${preferences.cursorSize}px`;
+  document.querySelector("#particleCountOut").textContent = String(preferences.particleCount);
+  document.querySelector("#particleSizeOut").textContent = `${preferences.particleSize}px`;
   for (const [key, control] of Object.entries(settingControls)) control.value = typeof preferences[key] === "boolean" ? "on" : preferences[key];
   settingControls.cursorEnabled.checked = preferences.cursorEnabled;
   settingControls.particlesEnabled.checked = preferences.particlesEnabled;
+  settingControls.particleTrail.checked = preferences.particleTrail;
   settingControls.compact.checked = preferences.compact;
+  settingControls.tabDisguise.checked = preferences.tabDisguise;
+  document.querySelector("#customThemeControls").classList.toggle("hidden", !customBackground);
+  const gradient = preferences.backgroundStyle !== "solid";
+  document.querySelectorAll("#customThemeControls [data-gradient-row]").forEach(row => { row.hidden = !gradient; });
+  document.querySelectorAll("#customThemeControls [data-angle-row]").forEach(row => { row.hidden = !["linear", "conic"].includes(preferences.backgroundStyle); });
+  document.querySelector("#backgroundAngleOut").textContent = `${preferences.backgroundAngle}°`;
+  document.querySelector("#panelOpacityOut").textContent = `${preferences.panelOpacity}%`;
+  document.querySelector("#panelBlurOut").textContent = `${preferences.panelBlur}px`;
+  settingControls.backgroundMidEnabled.checked = preferences.backgroundMidEnabled;
+  settingControls.backgroundAnimated.checked = preferences.backgroundAnimated;
+  document.querySelectorAll("#themePresets .theme-preset").forEach(button => {
+    const preset = themePresets[Number(button.dataset.index)];
+    button.classList.toggle("active", presetPreferences(preset).backgroundColor === preferences.backgroundColor && presetPreferences(preset).backgroundEndColor === preferences.backgroundEndColor && presetPreferences(preset).backgroundStyle === preferences.backgroundStyle);
+  });
+  applyTabDisguise(preferences.tabDisguise);
 }
 
 function currentPreferences() {
@@ -1921,9 +2353,30 @@ function currentPreferences() {
     cursorStyle: settingControls.cursorStyle.value,
     particlesEnabled: settingControls.particlesEnabled.checked,
     particleStyle: settingControls.particleStyle.value,
+    cursorColorMode: settingControls.cursorColorMode.value,
+    cursorColor: settingControls.cursorColor.value,
+    cursorSize: Number(settingControls.cursorSize.value),
+    particleColorMode: settingControls.particleColorMode.value,
+    particleColor: settingControls.particleColor.value,
+    particleCount: Number(settingControls.particleCount.value),
+    particleSize: Number(settingControls.particleSize.value),
+    particleTrail: settingControls.particleTrail.checked,
     fontSize: settingControls.fontSize.value,
     bubbleShape: settingControls.bubbleShape.value,
-    compact: settingControls.compact.checked
+    compact: settingControls.compact.checked,
+    tabDisguise: settingControls.tabDisguise.checked,
+    backgroundStyle: settingControls.backgroundStyle.value,
+    backgroundColor: settingControls.backgroundColor.value,
+    backgroundEndColor: settingControls.backgroundEndColor.value,
+    backgroundMidColor: settingControls.backgroundMidColor.value,
+    backgroundMidEnabled: settingControls.backgroundMidEnabled.checked,
+    backgroundAngle: Number(settingControls.backgroundAngle.value),
+    backgroundAnimated: settingControls.backgroundAnimated.checked,
+    backgroundSpeed: settingControls.backgroundSpeed.value,
+    backgroundTone: settingControls.backgroundTone.value,
+    panelOpacity: Number(settingControls.panelOpacity.value),
+    panelBlur: Number(settingControls.panelBlur.value),
+    borderStrength: Number(settingControls.borderStrength.value)
   };
 }
 
@@ -1944,6 +2397,135 @@ function savePreferences() {
   }, 250);
 }
 
+function presetPreferences(preset) {
+  return {
+    backgroundStyle: preset.style,
+    backgroundColor: preset.c1,
+    backgroundEndColor: preset.c2 || preset.c1,
+    backgroundMidColor: preset.mid || defaultPreferences.backgroundMidColor,
+    backgroundMidEnabled: Boolean(preset.midOn),
+    backgroundAngle: preset.angle ?? 135,
+    backgroundAnimated: Boolean(preset.animated)
+  };
+}
+
+function pushThemeChange(changes, note) {
+  const next = { ...currentPreferences(), theme: "custom", ...changes };
+  const clean = { ...next, ...sanitizeBackgroundPreferences(next, defaultPreferences) };
+  if (typeof changes.accent === "string") clean.accent = changes.accent;
+  for (const [key, control] of Object.entries(settingControls)) {
+    if (key in clean && control.type !== "checkbox") control.value = clean[key];
+    else if (key in clean) control.checked = Boolean(clean[key]);
+  }
+  savePreferences();
+  if (note) document.querySelector("#themeNote").textContent = note;
+}
+
+function buildThemePresets() {
+  const container = document.querySelector("#themePresets");
+  themePresets.forEach((preset, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "theme-preset";
+    button.dataset.index = String(index);
+    button.title = `${preset.name} theme`;
+    button.setAttribute("role", "listitem");
+    button.style.background = buildBackground({ ...defaultPreferences, ...presetPreferences(preset) });
+    button.innerHTML = `<span>${preset.name}</span>`;
+    button.addEventListener("click", () => pushThemeChange({ ...presetPreferences(preset), accent: preset.accent }, `${preset.name} applied.`));
+    container.append(button);
+  });
+}
+buildThemePresets();
+
+const themeCodePrefix = "dsc-theme:";
+const themeCodeKeys = ["accent", "backgroundStyle", "backgroundColor", "backgroundEndColor", "backgroundMidColor", "backgroundMidEnabled", "backgroundAngle", "backgroundAnimated", "backgroundSpeed", "backgroundTone", "panelOpacity", "panelBlur", "borderStrength"];
+const shortThemeKey = "dsc-short-themes";
+const builtInThemes = {
+  "586500": { accent: "#5865f2", backgroundStyle: "linear", backgroundColor: "#0b0d2e", backgroundEndColor: "#2b2f8f", backgroundAngle: 160, backgroundTone: "dark", panelOpacity: 70, panelBlur: 14, borderStrength: 40 }
+};
+
+function shortThemes() {
+  try { return JSON.parse(localStorage.getItem(shortThemeKey) || "{}"); } catch { return {}; }
+}
+
+function makeShortCode(data) {
+  const saved = shortThemes();
+  const json = JSON.stringify(data);
+  const existing = Object.keys(saved).find(key => JSON.stringify(saved[key]) === json);
+  if (existing) return existing;
+  let code;
+  do code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); while (saved[code] || builtInThemes[code]);
+  saved[code] = data;
+  try { localStorage.setItem(shortThemeKey, JSON.stringify(saved)); } catch {}
+  return code;
+}
+
+function randomPalette() {
+  const hue = Math.floor(Math.random() * 360);
+  const toHex = (h, s, l) => {
+    const a = s * Math.min(l, 1 - l);
+    const channel = n => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0"); };
+    return `#${channel(0)}${channel(8)}${channel(4)}`;
+  };
+  const dark = Math.random() < 0.5;
+  const l = dark ? 0.16 : 0.88;
+  const spread = 30 + Math.random() * 60;
+  return {
+    backgroundColor: toHex(hue, 0.55, l),
+    backgroundEndColor: toHex((hue + spread) % 360, 0.6, dark ? 0.26 : 0.8),
+    backgroundMidColor: toHex((hue + spread * 2) % 360, 0.65, dark ? 0.34 : 0.84),
+    accent: toHex((hue + 180) % 360, 0.6, dark ? 0.72 : 0.34)
+  };
+}
+
+document.querySelector("#themeShuffle").addEventListener("click", () => {
+  const style = backgroundStyles[1 + Math.floor(Math.random() * (backgroundStyles.length - 1))];
+  pushThemeChange({ ...randomPalette(), backgroundStyle: style, backgroundAngle: Math.floor(Math.random() * 72) * 5, backgroundMidEnabled: Math.random() < 0.5 }, "Shuffled. Press again for another.");
+});
+document.querySelector("#themeSwap").addEventListener("click", () => {
+  const now = currentPreferences();
+  pushThemeChange({ backgroundColor: now.backgroundEndColor, backgroundEndColor: now.backgroundColor }, "Colors swapped.");
+});
+document.querySelector("#themeReset").addEventListener("click", () => {
+  pushThemeChange({ ...Object.fromEntries(Object.entries(defaultPreferences).filter(([key]) => key.startsWith("background") || key.startsWith("panel"))), accent: themeAccents.meadow }, "Custom theme reset.");
+});
+document.querySelector("#themeCopy").addEventListener("click", async () => {
+  const now = currentPreferences();
+  const data = Object.fromEntries(themeCodeKeys.map(key => [key, now[key]]));
+  const code = makeShortCode(data);
+  try {
+    await navigator.clipboard.writeText(code);
+    document.querySelector("#themeNote").textContent = `Theme code ${code} copied. Short codes work in this browser; long codes (dsc-theme:...) still paste anywhere.`;
+  } catch {
+    window.prompt("Copy your theme code:", code);
+  }
+});
+document.querySelector("#themePaste").addEventListener("click", () => {
+  const code = window.prompt("Paste a theme code:");
+  if (!code) return;
+  try {
+    const trimmed = code.trim();
+    let data;
+    if (/^\d{6}$/.test(trimmed)) {
+      data = builtInThemes[trimmed] || shortThemes()[trimmed];
+      if (!data) throw new Error("unknown code");
+    } else {
+      if (!trimmed.startsWith(themeCodePrefix)) throw new Error("bad prefix");
+      data = JSON.parse(atob(trimmed.slice(themeCodePrefix.length)));
+    }
+    const changes = { ...sanitizeBackgroundPreferences(data, defaultPreferences) };
+    if (typeof data.accent === "string" && /^#[0-9a-f]{6}$/i.test(data.accent)) changes.accent = data.accent;
+    pushThemeChange(changes, "Theme code applied.");
+  } catch {
+    document.querySelector("#themeNote").textContent = "That doesn't look like a valid theme code.";
+  }
+});
+
+["backgroundColor", "backgroundEndColor", "backgroundMidColor", "backgroundAngle", "panelOpacity", "panelBlur", "borderStrength", "cursorColor", "cursorSize", "particleColor", "particleCount", "particleSize"].forEach(key => {
+  settingControls[key].addEventListener("input", () => savePreferences());
+});
+
 Object.values(settingControls).forEach(control => control.addEventListener("change", event => {
   if (event.currentTarget === settingControls.theme) {
     settingControls.accent.value = themeAccents[settingControls.theme.value] || themeAccents.meadow;
@@ -1960,26 +2542,53 @@ document.querySelector("#settingsToggle").addEventListener("click", () => {
 
 document.querySelector("#settingsClose").addEventListener("click", () => settingsPanel.classList.add("hidden"));
 
-document.addEventListener("click", event => {
-  if (!currentUser?.preferences?.particlesEnabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  if (event.target.closest("input, textarea, select, .click-particle-layer")) return;
-  const glyphs = particleGlyphs[currentUser.preferences.particleStyle] || particleGlyphs.sparkle;
+function particleColor(prefs, index) {
+  if (prefs.particleColorMode === "rainbow") return `hsl(${(index * 67 + Math.random() * 40) % 360} 85% 60%)`;
+  return prefs.particleColorMode === "custom" ? prefs.particleColor : "var(--accent)";
+}
+
+function spawnParticles(x, y, count, spread = 1) {
+  const prefs = { ...defaultPreferences, ...currentUser.preferences };
+  const glyphs = particleGlyphs[prefs.particleStyle] || particleGlyphs.sparkle;
+  const physics = particlePhysics[prefs.particleStyle] || { fall: 0, spin: 100 };
   const layer = document.createElement("div");
   layer.className = "click-particle-layer";
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const particle = document.createElement("span");
-    const angle = (Math.PI * 2 * index) / 5;
-    const distance = 20 + Math.random() * 24;
+    const angle = (Math.PI * 2 * index) / count + Math.random() * 0.6;
+    const distance = (22 + Math.random() * 34) * spread;
     particle.className = "click-particle";
-    particle.textContent = glyphs[index % glyphs.length];
-    particle.style.setProperty("--x", `${event.clientX}px`);
-    particle.style.setProperty("--y", `${event.clientY}px`);
+    particle.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+    particle.style.setProperty("--x", `${x}px`);
+    particle.style.setProperty("--y", `${y}px`);
     particle.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
     particle.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    particle.style.setProperty("--fall", `${physics.fall * (0.6 + Math.random() * 0.8)}px`);
+    particle.style.setProperty("--rot", `${(Math.random() < 0.5 ? -1 : 1) * physics.spin * (0.5 + Math.random())}deg`);
+    particle.style.setProperty("--dur", `${0.55 + Math.random() * 0.45}s`);
+    particle.style.fontSize = `${Math.round(prefs.particleSize * (0.7 + Math.random() * 0.6))}px`;
+    particle.style.color = particleColor(prefs, index);
     layer.append(particle);
   }
   document.body.append(layer);
-  window.setTimeout(() => layer.remove(), 700);
+  window.setTimeout(() => layer.remove(), 1200);
+}
+
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+document.addEventListener("click", event => {
+  if (!currentUser?.preferences?.particlesEnabled || reducedMotion.matches) return;
+  if (event.target.closest("input, textarea, select, .click-particle-layer")) return;
+  spawnParticles(event.clientX, event.clientY, currentUser.preferences.particleCount ?? defaultPreferences.particleCount);
+}, { passive: true });
+
+let lastTrail = 0;
+document.addEventListener("pointermove", event => {
+  const prefs = currentUser?.preferences;
+  if (!prefs?.particlesEnabled || !prefs.particleTrail || reducedMotion.matches || event.pointerType === "touch") return;
+  const now = performance.now();
+  if (now - lastTrail < 55) return;
+  lastTrail = now;
+  spawnParticles(event.clientX, event.clientY, 1, 0.45);
 }, { passive: true });
 
 document.querySelector("#friendsToggle").addEventListener("click", () => {
@@ -2002,6 +2611,27 @@ document.querySelector("#groupManagementClose").addEventListener("click", () => 
   groupManagement.classList.add("hidden");
   conversationActions.querySelector("button")?.setAttribute("aria-expanded", "false");
 });
+async function setGroupAvatar(avatar) {
+  const chat = snapshot.chats.find(item => item.id === activeChatId && item.isGroup);
+  if (!chat) return;
+  try {
+    await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "avatar", avatar } });
+    await refreshSnapshot();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+document.querySelector("#groupAvatarFile").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  try {
+    await setGroupAvatar(await resizeImage(file));
+  } catch (error) {
+    alert(error.message);
+  }
+});
+document.querySelector("#groupAvatarRemove").addEventListener("click", () => setGroupAvatar(null));
 document.querySelector("#groupDeleteButton").addEventListener("click", async () => {
   const chat = snapshot.chats.find(item => item.id === activeChatId && item.isGroup);
   if (!chat || !confirm(`Delete ${chat.name} for you and notify members who are online?`)) return;
@@ -2040,14 +2670,30 @@ friendForm.addEventListener("submit", async event => {
   }
 });
 
+let newGroupAvatar = null;
+const newGroupAvatarLabel = document.querySelector("#newGroupAvatarLabel");
+document.querySelector("#newGroupAvatarFile").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  try {
+    newGroupAvatar = await resizeImage(file);
+    newGroupAvatarLabel.textContent = `Picture: ${file.name.slice(0, 30)}`;
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
+});
+
 newChatForm.addEventListener("submit", async event => {
   event.preventDefault();
   const name = newChatName.value.trim();
   const memberIds = [...memberChoices.querySelectorAll("input[name=memberId]:checked")].map(input => input.value);
   try {
-    const result = await api("/api/chats", { method: "POST", body: { name, memberIds } });
+    const result = await api("/api/chats", { method: "POST", body: { name, memberIds, ...(newGroupAvatar ? { avatar: newGroupAvatar } : {}) } });
     activeChatId = result.chat.id;
     newChatName.value = "";
+    newGroupAvatar = null;
+    newGroupAvatarLabel.textContent = "Group picture (optional)";
     newChatForm.classList.add("hidden");
     await refreshSnapshot();
     messageInput.focus();
@@ -2063,8 +2709,9 @@ messageForm.addEventListener("submit", async event => {
   const text = messageInput.value.trim();
   if (!text || !activeChatId) return;
   try {
-    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text } });
+    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text, ...replyBody() } });
     messageInput.value = "";
+    clearReply();
     await refreshSnapshot();
     messageInput.focus();
   } catch (error) {
@@ -2208,32 +2855,84 @@ async function sendImage(file) {
   try {
     friendMessage.textContent = "";
     const image = await prepareImage(file);
-    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text: messageInput.value.trim(), image } });
+    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text: messageInput.value.trim(), image, ...replyBody() } });
     messageInput.value = "";
+    clearReply();
     await refreshSnapshot();
   } catch (error) {
     alert(error.message);
   }
 }
 
+async function sendFile(file) {
+  if (!file || !activeChatId) return;
+  try {
+    friendMessage.textContent = "";
+    if (file.size > maxFileBytes) throw new Error(`Files must be under ${formatBytes(maxFileBytes)}.`);
+    const dataUrl = await readAsDataUrl(file);
+    const data = `data:application/octet-stream;base64,${dataUrl.slice(dataUrl.indexOf(",") + 1)}`;
+    const payload = { name: file.name, type: file.type, size: file.size, data };
+    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text: messageInput.value.trim(), file: payload, ...replyBody() } });
+    messageInput.value = "";
+    clearReply();
+    await refreshSnapshot();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+const sendAttachment = file => (/^image\/(png|jpeg|gif|webp)$/.test(file?.type) ? sendImage(file) : sendFile(file));
+
+const plusMenu = document.querySelector("#plusMenu");
+const plusToggle = document.querySelector("#plusToggle");
+function setPlusMenu(open) {
+  plusMenu.classList.toggle("hidden", !open);
+  plusToggle.setAttribute("aria-expanded", String(open));
+}
+plusToggle.addEventListener("click", event => {
+  event.stopPropagation();
+  setPlusMenu(plusMenu.classList.contains("hidden"));
+});
+document.addEventListener("click", event => { if (!event.target.closest("#plusMenu")) setPlusMenu(false); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") setPlusMenu(false); });
+document.querySelector("#plusGame").addEventListener("click", () => {
+  setPlusMenu(false);
+  const chat = state?.chats.find(item => item.id === activeChatId);
+  if (chat) startGameInvite(chat);
+});
+document.querySelector("#plusImpostor").addEventListener("click", () => {
+  setPlusMenu(false);
+  const chat = state?.chats.find(item => item.id === activeChatId);
+  if (chat) startImpostorInvite(chat);
+});
+document.querySelector("#plusSketch").addEventListener("click", () => {
+  setPlusMenu(false);
+  const chat = state?.chats.find(item => item.id === activeChatId);
+  if (chat) startSketchInvite(chat);
+});
+document.querySelector("#plusFile").addEventListener("click", () => {
+  setPlusMenu(false);
+  document.querySelector("#imageFile").click();
+});
+
 document.querySelector("#imageFile").addEventListener("change", event => {
   const file = event.target.files[0];
   event.target.value = "";
-  sendImage(file);
+  sendAttachment(file);
 });
 messageInput.addEventListener("paste", event => {
-  const file = [...(event.clipboardData?.files || [])].find(item => item.type.startsWith("image/"));
+  const file = [...(event.clipboardData?.files || [])][0];
   if (file) {
     event.preventDefault();
-    sendImage(file);
+    sendAttachment(file);
   }
 });
 document.querySelector("#composerWrap").addEventListener("dragover", event => event.preventDefault());
 document.querySelector("#composerWrap").addEventListener("drop", event => {
-  const file = [...event.dataTransfer.files].find(item => item.type.startsWith("image/"));
+  const file = event.dataTransfer.files[0];
   if (file) {
     event.preventDefault();
-    sendImage(file);
+    sendAttachment(file);
   }
 });
 
