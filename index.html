@@ -479,34 +479,8 @@
     .toast-text { display: grid; gap: 2px; min-width: 0; }
     .toast strong { font-size: 14px; }
     .toast span { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-    #mingaCover { position: fixed; inset: 0; z-index: 2147483647; display: none; background: #fff; color: #0b2a4a; font-family: Montserrat, "Segoe UI", Helvetica, Arial, sans-serif; overflow: hidden; cursor: default; }
-    #mingaCover.on { display: flex; }
-    #mingaCover .mg-side { width: 200px; flex: none; background: #f2f7fc; border-right: 1px solid #dde3ea; position: relative; }
-    #mingaCover .mg-school { position: absolute; left: 14px; top: 14px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; }
-    #mingaCover .mg-school i { width: 42px; height: 42px; border-radius: 50%; background: #0a8aa3; display: block; box-shadow: 0 2px 6px #0003; }
-    #mingaCover .mg-nav { position: absolute; left: 12px; right: 12px; top: 74px; display: grid; gap: 0; }
-    #mingaCover .mg-nav div { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 8px; color: #5b6f85; font-size: 15px; }
-    #mingaCover .mg-nav div b { width: 20px; height: 20px; border-radius: 5px; background: #6b7f95; opacity: .8; }
-    #mingaCover .mg-nav .act { background: #dcedf9; color: #0b2a4a; font-weight: 600; }
-    #mingaCover .mg-nav .act b { background: #1c4f7c; }
-    #mingaCover .mg-help { position: absolute; left: 31px; bottom: 80px; padding: 8px 14px; border-radius: 16px; background: #0a74b9; color: #fff; font-size: 11px; font-weight: 700; }
-    #mingaCover .mg-hot { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-size: 11px; color: #2a5d94; text-decoration: underline; }
-    #mingaCover .mg-main { flex: 1; min-width: 0; position: relative; overflow: hidden; }
-    #mingaCover .mg-tabs { display: flex; gap: 24px; height: 53px; padding-left: 44px; align-items: stretch; border-bottom: 1px solid #dde3ea; font-size: 15px; color: #5b6f85; }
-    #mingaCover .mg-tabs span { display: flex; align-items: center; }
-    #mingaCover .mg-tabs .act { color: #0a74b9; font-weight: 700; font-size: 19px; border-bottom: 3px solid #0a74b9; padding: 0 2px; }
-    #mingaCover .mg-card { position: absolute; left: 48px; top: 101px; width: 510px; background: #fff; border-radius: 6px; box-shadow: 0 1px 8px #0002; }
-    #mingaCover .mg-who { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 13px; font-weight: 600; }
-    #mingaCover .mg-who i { width: 26px; height: 26px; border-radius: 50%; background: #3f7fd0; }
-    #mingaCover .mg-who small { display: block; font-weight: 400; color: #5b6f85; font-size: 11px; }
-    #mingaCover .mg-img { height: 345px; border-top: 1px solid #e5e9ee; border-bottom: 1px solid #e5e9ee; padding: 10px 20px; background: #fff; color: #222; text-align: center; }
-    #mingaCover .mg-img h4 { margin: 8px 0 14px; font: 700 22px Georgia, serif; color: #5b3a8c; }
-    #mingaCover .mg-img .rows { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    #mingaCover .mg-img .tbl { height: 250px; border: 1px solid #999; background: repeating-linear-gradient(#fff 0 22px, #aaa 22px 23px); }
-    #mingaCover .mg-img .tbl::before { content: ""; display: block; height: 20px; background: #d8d2ea; border-bottom: 1px solid #999; }
-    #mingaCover .mg-title { padding: 12px; font-size: 20px; font-weight: 700; color: #0b2a4a; }
-    #mingaCover .mg-react { padding: 0 12px 12px; color: #c0527a; font-size: 13px; }
-    #mingaCover .mg-react span { color: #0b2a4a; margin-left: 28px; }
+    #mingaCover { position: fixed; inset: 0; z-index: 2147483647; display: none; background: #fff url("minga-cover.png") left top / cover no-repeat; cursor: default; }
+    #mingaCover.on { display: block; }
   </style>
 </head>
 <body>
@@ -628,7 +602,7 @@
       </section><div class="reply-bar hidden" id="replyBar"><span class="reply-bar-text"></span><button type="button" id="replyCancel" aria-label="Cancel reply">×</button></div><form class="composer" id="messageForm"><button class="attach-button plus-button" id="plusToggle" type="button" title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">+</button><div class="plus-menu hidden" id="plusMenu" role="menu"><button type="button" role="menuitem" id="plusGame">🧄 <span>Garlic Fone<small>Telephone drawing game</small></span></button><button type="button" role="menuitem" id="plusImpostor">🕵️ <span>Impostor<small>Find the player with no word</small></span></button><button type="button" role="menuitem" id="plusSketch">🎨 <span>Sketch & Guess<small>Draw, guess, and uncover</small></span></button><button type="button" role="menuitem" id="plusFile">📎 <span>Send a file<small>Up to 5 MB</small></span></button></div><label class="attach-button" title="Send a file, image or GIF" aria-label="Attach file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
     </section>
   </main>
-  <div id="mingaCover" aria-hidden="true"><div class="mg-side"><div class="mg-school"><i></i>Gilmer High Sc...</div><div class="mg-nav"><div><b></b>My Tools</div><div class="act"><b></b>Home</div><div><b></b>Calendar</div><div><b></b>Groups</div><div><b></b>View ID</div></div><div class="mg-help">Help &amp; Support</div><div class="mg-hot">Suicide Prevention Hotline</div></div><div class="mg-main"><div class="mg-tabs"><span class="act">Home</span><span>My Content</span><span>Files</span></div><div class="mg-card"><div class="mg-who"><i></i><div>Tiffany Boyette<small>a month ago</small></div></div><div class="mg-img"><h4>Gilmer High School<br>Bell Schedule</h4><div class="rows"><div class="tbl"></div><div class="tbl"></div></div></div><div class="mg-title">Bell Schedule</div><div class="mg-react">&#9825; 30 <span>&#9633; 0</span></div></div></div></div>
+  <div id="mingaCover" aria-hidden="true"></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
   <script src="assets.js?v=2.8.0"></script>
   <script src="app.js?v=2.8.0"></script>
