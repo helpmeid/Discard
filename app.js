@@ -186,12 +186,12 @@ tabIcon.rel = "icon";
 tabIcon.href = BRAND_IMAGE;
 document.head.append(tabIcon);
 
-const mingaIcon = `data:image/svg+xml;base64,${btoa("<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='#1e88e5'/><path d='M12 46V22l10 14 10-14v24M36 46V22l10 14 6-8' fill='none' stroke='#fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/></svg>")}`;
+const mingaIcon = `data:image/svg+xml;base64,${btoa("<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#6aa8ff'/><stop offset='1' stop-color='#3b4fd8'/></linearGradient></defs><path d='M4 54 26 10c1.2-2.3 4.4-2.3 5.6 0L36 18l6-8c1.3-1.8 4-1.8 5.300 0L60 54H46L32 32 18 54z' fill='url(#g)'/></svg>")}`;
 const disguiseKey = "discard-tab-disguise";
 
 // The disguise is remembered outside the account so the sign-in screen is covered too.
 function applyTabDisguise(on, remember = true) {
-  document.title = on ? "Minga" : "Discard";
+  document.title = on ? "Home · Home – Minga" : "Discard";
   tabIcon.href = on ? mingaIcon : BRAND_IMAGE;
   if (remember) {
     try { localStorage.setItem(disguiseKey, on ? "1" : ""); } catch {}
