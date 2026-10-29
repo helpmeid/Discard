@@ -718,117 +718,24 @@ function partyAppendGuess(player, text) {
 }
 
 function partyDrawingPad() {
-  const wrap = partyElement("div", "game-pad party-pad");
-  const canvas = partyElement("canvas", "game-canvas party-canvas");
-  canvas.width = 540;
-  canvas.height = 360;
-  const context = canvas.getContext("2d");
-  context.fillStyle = "#fff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  if (partyGame.drawing) {
-    const image = new Image();
-    image.onload = () => {
-      if (canvas.isConnected) context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    };
-    image.src = partyGame.drawing;
-  }
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  let color = "#202b28";
-  let brush = 6;
-  let erasing = false;
-  let drawing = false;
   let lastSent = 0;
-  let changed = false;
-  const undoStack = [];
-  const swatches = [];
-  const toolbar = partyElement("div", "game-tools");
-  const sendSnapshot = force => {
-    if (!changed || (!force && Date.now() - lastSent < 1100)) return;
-    changed = false;
-    lastSent = Date.now();
-    const data = canvas.toDataURL("image/jpeg", 0.58);
-    if (data.length > partyMaxDrawingChars) return;
-    partyGame.drawing = data;
-    if (partyHost()) partyHandleDrawing(state.me.id, data);
-    else partySend(partyGame.hostId, { t: "party-sketch-drawing", gameId: partyGame.id, drawing: data });
-  };
-  const point = event => {
-    const rect = canvas.getBoundingClientRect();
-    return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
-  };
-  canvas.addEventListener("pointerdown", event => {
-    event.preventDefault();
-    canvas.setPointerCapture(event.pointerId);
-    drawing = true;
-    undoStack.push(context.getImageData(0, 0, canvas.width, canvas.height));
-    if (undoStack.length > 30) undoStack.shift();
-    const at = point(event);
-    context.beginPath();
-    context.moveTo(at.x, at.y);
-    context.lineTo(at.x + 0.01, at.y);
-    context.strokeStyle = erasing ? "#ffffff" : color;
-    context.lineWidth = erasing ? brush * 3 : brush;
-    context.stroke();
-    changed = true;
+  const pad = buildDrawingPad({
+    className: "game-pad party-pad",
+    canvasClass: "game-canvas party-canvas",
+    width: 540,
+    height: 360,
+    initial: partyGame.drawing,
+    onChange(canvas, force) {
+      if (!force && Date.now() - lastSent < 1100) return;
+      lastSent = Date.now();
+      const data = canvas.toDataURL("image/jpeg", 0.58);
+      if (data.length > partyMaxDrawingChars) return;
+      partyGame.drawing = data;
+      if (partyHost()) partyHandleDrawing(state.me.id, data);
+      else partySend(partyGame.hostId, { t: "party-sketch-drawing", gameId: partyGame.id, drawing: data });
+    }
   });
-  canvas.addEventListener("pointermove", event => {
-    if (!drawing) return;
-    const at = point(event);
-    context.lineTo(at.x, at.y);
-    context.stroke();
-    changed = true;
-    sendSnapshot(false);
-  });
-  const stop = () => {
-    drawing = false;
-    sendSnapshot(true);
-  };
-  canvas.addEventListener("pointerup", stop);
-  canvas.addEventListener("pointercancel", stop);
-  ["#202b28", "#e34f4f", "#f08a32", "#edc840", "#4d9d68", "#4386d1", "#8d62bf", "#7d5f4e"].forEach((value, index) => {
-    const swatch = partyElement("button", `game-swatch${index === 0 ? " active" : ""}`);
-    swatch.type = "button";
-    swatch.style.background = value;
-    swatch.setAttribute("aria-label", `Color ${value}`);
-    swatch.addEventListener("click", () => {
-      color = value;
-      erasing = false;
-      eraser.classList.remove("active");
-      swatches.forEach(item => item.classList.toggle("active", item === swatch));
-    });
-    swatches.push(swatch);
-    toolbar.append(swatch);
-  });
-  const eraser = partyButton("Eraser", () => {
-    erasing = !erasing;
-    eraser.classList.toggle("active", erasing);
-  });
-  const size = partyElement("input");
-  size.type = "range";
-  size.min = "2";
-  size.max = "28";
-  size.value = String(brush);
-  size.setAttribute("aria-label", "Brush size");
-  size.addEventListener("input", () => { brush = Number(size.value); });
-  const clear = partyButton("Clear", () => {
-    undoStack.push(context.getImageData(0, 0, canvas.width, canvas.height));
-    if (undoStack.length > 30) undoStack.shift();
-    context.fillStyle = "#fff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    changed = true;
-    sendSnapshot(true);
-  });
-  const undo = partyButton("↶ Undo", () => {
-    const previous = undoStack.pop();
-    if (!previous) return;
-    context.putImageData(previous, 0, 0);
-    changed = true;
-    sendSnapshot(true);
-  });
-  toolbar.append(eraser, partyElement("span", "game-hint", "Size"), size, undo, clear);
-  wrap.append(canvas, toolbar);
-  return wrap;
+  return pad.element;
 }
 
 function partySketchView() {

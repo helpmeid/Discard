@@ -541,20 +541,26 @@ function renderTask(body, actions) {
 
 const fallbackText = "A mysterious blob";
 
-function buildDrawingPad() {
-  const element = gameElement("div", "game-pad");
-  const canvas = gameElement("canvas", "game-canvas");
-  canvas.width = 480;
-  canvas.height = 320;
+// Shared with the party sketch game: options.onChange(canvas, force) fires after edits, options.initial is a data URL to preload.
+function buildDrawingPad(options = {}) {
+  const element = gameElement("div", options.className || "game-pad");
+  const canvas = gameElement("canvas", options.canvasClass || "game-canvas");
+  canvas.width = options.width || 480;
+  canvas.height = options.height || 320;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
+  if (options.initial) {
+    const image = new Image();
+    image.onload = () => { if (canvas.isConnected) context.drawImage(image, 0, 0, canvas.width, canvas.height); };
+    image.src = options.initial;
+  }
+  const notify = force => { if (options.onChange) options.onChange(canvas, force); };
   context.lineCap = "round";
   context.lineJoin = "round";
   let color = "#222222";
   let size = 5;
-  let erasing = false;
-  let filling = false;
+  let tool = "pen";
   let opacity = 1;
   let drawing = false;
   let path = [];
@@ -572,11 +578,13 @@ function buildDrawingPad() {
     if (!undoStack.length) return;
     redoStack.push(grab());
     context.putImageData(undoStack.pop(), 0, 0);
+    notify(true);
   };
   const redo = () => {
     if (!redoStack.length) return;
     undoStack.push(grab());
     context.putImageData(redoStack.pop(), 0, 0);
+    notify(true);
   };
   const point = event => {
     const rect = canvas.getBoundingClientRect();
@@ -585,14 +593,29 @@ function buildDrawingPad() {
   // The whole stroke is redrawn over a snapshot so overlapping segments don't stack up opacity.
   const paintPath = () => {
     context.putImageData(base, 0, 0);
+    const erasing = tool === "erase";
     context.globalAlpha = erasing ? 1 : opacity;
     context.strokeStyle = erasing ? "#ffffff" : color;
     context.lineWidth = erasing ? size * 2 : size;
     context.beginPath();
-    context.moveTo(path[0].x, path[0].y);
-    path.slice(1).forEach(item => context.lineTo(item.x, item.y));
+    if (tool === "line") {
+      context.moveTo(path[0].x, path[0].y);
+      context.lineTo(path[path.length - 1].x, path[path.length - 1].y);
+    } else if (tool === "circle") {
+      const end = path[path.length - 1];
+      context.arc(path[0].x, path[0].y, Math.hypot(end.x - path[0].x, end.y - path[0].y), 0, Math.PI * 2);
+    } else {
+      context.moveTo(path[0].x, path[0].y);
+      path.slice(1).forEach(item => context.lineTo(item.x, item.y));
+    }
     context.stroke();
     context.globalAlpha = 1;
+  };
+  const pickColor = at => {
+    const x = Math.min(canvas.width - 1, Math.max(0, Math.floor(at.x)));
+    const y = Math.min(canvas.height - 1, Math.max(0, Math.floor(at.y)));
+    const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+    setColor(`#${[r, g, b].map(value => value.toString(16).padStart(2, "0")).join("")}`);
   };
   const floodFill = (startX, startY) => {
     const { width, height } = canvas;
@@ -623,11 +646,17 @@ function buildDrawingPad() {
   };
   canvas.addEventListener("pointerdown", event => {
     event.preventDefault();
+    const start = point(event);
+    if (tool === "dropper") {
+      pickColor(start);
+      setTool("pen");
+      return;
+    }
     checkpoint();
     touched = true;
-    const start = point(event);
-    if (filling) {
+    if (tool === "fill") {
       floodFill(start.x, start.y);
+      notify(true);
       return;
     }
     canvas.setPointerCapture(event.pointerId);
@@ -635,13 +664,19 @@ function buildDrawingPad() {
     base = grab();
     path = [start, { x: start.x + 0.01, y: start.y }];
     paintPath();
+    notify(false);
   });
   canvas.addEventListener("pointermove", event => {
     if (!drawing) return;
     path.push(point(event));
     paintPath();
+    notify(false);
   });
-  const stop = () => { drawing = false; };
+  const stop = () => {
+    if (!drawing) return;
+    drawing = false;
+    notify(true);
+  };
   canvas.addEventListener("pointerup", stop);
   canvas.addEventListener("pointercancel", stop);
 
@@ -662,29 +697,44 @@ function buildDrawingPad() {
 
   const tools = gameElement("div", "game-tools");
   const swatches = [];
-  ["#222222", "#e53935", "#fb8c00", "#fdd835", "#43a047", "#1e88e5", "#8e24aa", "#6d4c41"].forEach((value, index) => {
-    const swatch = gameElement("button", `game-swatch${index === 0 ? " active" : ""}`);
+  const palette = ["#222222", "#ffffff", "#e53935", "#fb8c00", "#fdd835", "#43a047", "#1e88e5", "#8e24aa", "#6d4c41", "#ec407a"];
+  const picker = gameElement("input", "game-color-picker");
+  picker.type = "color";
+  picker.value = color;
+  picker.title = "Pick any color";
+  picker.setAttribute("aria-label", "Custom color");
+  function setColor(value) {
+    color = value;
+    picker.value = value;
+    swatches.forEach(item => item.classList.toggle("active", item.dataset.color === value));
+    if (tool === "erase" || tool === "dropper") setTool("pen");
+  }
+  picker.addEventListener("input", () => setColor(picker.value));
+  palette.forEach(value => {
+    const swatch = gameElement("button", `game-swatch${value === color ? " active" : ""}`);
     swatch.type = "button";
+    swatch.dataset.color = value;
     swatch.style.background = value;
     swatch.setAttribute("aria-label", `Color ${value}`);
-    swatch.addEventListener("click", () => {
-      color = value;
-      if (erasing) setMode("erase");
-      swatches.forEach(item => item.classList.toggle("active", item === swatch));
-    });
+    swatch.addEventListener("click", () => setColor(value));
     swatches.push(swatch);
     tools.append(swatch);
   });
-  const setMode = mode => {
-    erasing = mode === "erase" && !erasing;
-    filling = mode === "fill" && !filling;
-    eraser.classList.toggle("active", erasing);
-    fillButton.classList.toggle("active", filling);
-    canvas.style.cursor = filling ? "cell" : "crosshair";
-  };
-  const eraser = gameButton("Eraser", () => setMode("erase"));
-  const fillButton = gameButton("🪣 Fill", () => setMode("fill"));
-  fillButton.title = "Click an area to fill it with the chosen color";
+  tools.append(picker);
+  const toolButtons = {};
+  function setTool(next) {
+    tool = next;
+    Object.entries(toolButtons).forEach(([name, button]) => button.classList.toggle("active", name === tool));
+    canvas.style.cursor = tool === "fill" ? "cell" : "crosshair";
+  }
+  const toolbar = gameElement("div", "game-tools");
+  [["pen", "✏️ Pen", "Freehand brush"], ["line", "╱ Line", "Drag to draw a straight line"], ["circle", "◯ Circle", "Drag from the center outward"], ["fill", "🪣 Fill", "Click an area to fill it with the chosen color"], ["dropper", "💧 Dropper", "Click the drawing to pick a color"], ["erase", "Eraser", "Erase"]].forEach(([name, label, title]) => {
+    const button = gameButton(label, () => setTool(name));
+    button.title = title;
+    toolButtons[name] = button;
+    toolbar.append(button);
+  });
+  setTool("pen");
   const opacityInput = gameElement("input");
   opacityInput.type = "range";
   opacityInput.min = "10";
@@ -705,11 +755,15 @@ function buildDrawingPad() {
   undoButton.title = "Ctrl+Z";
   const redoButton = gameButton("↷ Redo", redo);
   redoButton.title = "Ctrl+Shift+Z";
-  tools.append(fillButton, eraser, gameElement("span", "game-hint", "Size"), sizeInput, gameElement("span", "game-hint", "Opacity"), opacityInput, opacityLabel, undoButton, redoButton, gameButton("Clear", () => {
+  const options2 = gameElement("div", "game-tools");
+  options2.append(gameElement("span", "game-hint", "Size"), sizeInput, gameElement("span", "game-hint", "Opacity"), opacityInput, opacityLabel, undoButton, redoButton, gameButton("Clear", () => {
     checkpoint();
+    touched = true;
     context.fillStyle = "#fff";
     context.fillRect(0, 0, canvas.width, canvas.height);
+    notify(true);
   }));
+  tools.append(toolbar, options2);
   const hint = gameElement("div", "game-hint game-center");
   hint.append("Shortcuts: ", gameElement("span", "game-kbd", "Ctrl+Z"), " undo · ", gameElement("span", "game-kbd", "Ctrl+Shift+Z"), " redo");
   element.append(canvas, tools, hint);
