@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.2.6**
+**Version 3.3.1**
 
 ## How to play
 
@@ -63,6 +63,8 @@ Everything is saved with your account.
 ## Discard Official
 
 Friends panel has **Add Discard Official ✓**. It accepts you automatically and replies "Message received! Thanks for contacting Discard." to your messages (once every 20 seconds per person). It only answers while the owner has it open and unlocked.
+
+When signed in as Discard Official, the Friends panel has an **Announcement** box that sends one message to every friend (offline friends get it when they reconnect). Other accounts never see it.
 
 The account is verified with a digital signature, so nobody else can pretend to be it. Reserved names like "DiscardOfficial" can't be used by normal profiles.
 

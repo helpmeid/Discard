@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f2f3ed">
   <title>Discard</title>
+  <link rel="icon" type="image/png" href="discard-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -121,6 +122,8 @@
     .chat-preview { overflow: hidden; margin-top: 4px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
     .empty-list { padding: 14px 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
     .sidebar-bottom { padding: 14px 7px 0; border-top: 1px solid var(--line); }
+    .auth-version { position: fixed; left: 12px; bottom: 10px; z-index: 5; color: var(--muted); font-size: 11px; pointer-events: none; }
+    .auth-version.hidden { display: none; }
     .version-note { margin: -6px 0 10px; color: var(--muted); font-size: 10px; }
     .storage-note { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #738078; font-size: 11px; }
     .storage-dot { width: 7px; height: 7px; border-radius: 50%; background: #62a77b; }
@@ -538,6 +541,7 @@
   <div class="profile-modal game-modal hidden" id="gameModal"><div class="profile-card game-card" role="dialog" aria-label="Garlic Fone" id="gameCard"></div></div>
   <div class="profile-modal game-modal hidden" id="partyGameModal"><div class="profile-card game-card" role="dialog" aria-label="Party game" id="partyGameCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
+  <div class="auth-version" id="authVersion"></div>
   <main id="authView" class="auth-view">
     <section class="auth-main">
       <div class="auth-card">
@@ -629,6 +633,7 @@
         <div class="code-row"><input id="myCode" readonly aria-label="Your friend code"><button type="button" id="copyCode">Copy</button></div><p class="panel-message">Your friend code. Share it so friends can add you.</p>
         <form class="inline-form" id="friendForm"><input id="friendUsername" maxlength="40" aria-label="Friend code" placeholder="Paste a friend code" autocomplete="off"><button type="submit" aria-label="Send friend request">+</button></form>
         <button class="profile-btn" id="addOfficial" type="button">Add Discard Official ✓</button>
+        <form class="hidden" id="broadcastForm"><textarea id="broadcastText" maxlength="2000" rows="3" aria-label="Announcement to everyone" placeholder="Announcement to all friends" style="width:100%;box-sizing:border-box;resize:vertical"></textarea><button class="profile-btn" type="submit">📢 Send to everyone</button></form>
         <p class="panel-message" id="friendMessage" aria-live="polite"></p>
         <div id="requestList"></div>
         <div class="social-list" id="friendsList"></div>
@@ -653,9 +658,9 @@
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.2.6"></script>
-  <script src="app.js?v=3.2.6"></script>
-  <script src="garlic.js?v=3.2.6"></script>
-  <script src="party-games.js?v=3.2.6"></script>
+  <script src="assets.js?v=3.3.1"></script>
+  <script src="app.js?v=3.3.1"></script>
+  <script src="garlic.js?v=3.3.1"></script>
+  <script src="party-games.js?v=3.3.1"></script>
 </body>
 </html>

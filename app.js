@@ -180,7 +180,8 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.2.6";
+const APP_VERSION = "3.3.1";
+document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -1292,6 +1293,15 @@ async function api(path, options = {}) {
   if (method === "GET" && route === "/api/me") return { user: accountUser() };
   if (method === "GET" && route === "/api/snapshot") return snapshotLocal();
 
+  if (method === "POST" && route === "/api/broadcast") {
+    if (!isOfficialSelf()) fail("Only the Discard Official account can do that.");
+    const text = typeof body.text === "string" ? body.text.trim().slice(0, 2000) : "";
+    if (!text) fail("Type a message first.");
+    const friendIds = Object.keys(state.friends);
+    friendIds.forEach(id => sendMessageLocal(ensureDirectChat(id), text));
+    return { sent: friendIds.length };
+  }
+
   if (method === "POST" && route === "/api/mute") {
     if (typeof body.id !== "string" || !safeIdPattern.test(body.id)) fail("Invalid mute target.");
     const muted = new Set(state.me.preferences?.mutedIds || []);
@@ -1763,6 +1773,7 @@ function handleSpan(username) {
 }
 
 function renderProfile() {
+  document.querySelector("#broadcastForm").classList.toggle("hidden", !state?.me.official);
   document.querySelector("#userHandle").textContent = `@${currentUser.username}`;
   document.querySelector("#myCode").value = currentUser.id.replace(/^dsc-/, "");
   const name = currentUser.displayName || currentUser.username;
@@ -1827,6 +1838,7 @@ authForm.addEventListener("submit", async event => {
 
 async function openChatView() {
   authView.classList.add("hidden");
+  document.querySelector("#authVersion").classList.add("hidden");
   chatView.classList.remove("hidden");
   loadVersion();
   renderProfile();
@@ -1874,6 +1886,7 @@ function showAuth() {
   activeChatId = null;
   chatView.classList.add("hidden");
   authView.classList.remove("hidden");
+  document.querySelector("#authVersion").classList.remove("hidden");
 }
 
 function chatLastMessage(chat) {
@@ -3048,6 +3061,21 @@ document.querySelector("#copyCode").addEventListener("click", async () => {
 document.querySelector("#exportButton").addEventListener("click", exportBackup);
 document.querySelector("#settingsToggle").addEventListener("click", () => {
   document.querySelector("#storageInfo").textContent = state ? storageSummary() : "";
+});
+
+document.querySelector("#broadcastForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const input = document.querySelector("#broadcastText");
+  const count = Object.keys(state?.friends || {}).length;
+  if (!input.value.trim() || !confirm(`Send this message to all ${count} friends?`)) return;
+  try {
+    const result = await api("/api/broadcast", { method: "POST", body: { text: input.value } });
+    input.value = "";
+    friendMessage.textContent = `Sent to ${result.sent} ${result.sent === 1 ? "person" : "people"}. Offline friends get it when they reconnect.`;
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
 });
 
 document.querySelector("#addOfficial").addEventListener("click", async () => {
