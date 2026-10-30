@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.3.2**
+**Version 3.3.3**
 
 ## How to play
 
@@ -30,7 +30,7 @@ Unread chats show a red count in the chat list and a red dot on the browser tab 
 4. Click anyone's picture or name to set a **nickname** that only you see. Group owners can set a group picture. Every message shows its sender's picture, name and @username.
 5. Settings has **Disguise tab as Minga**, which changes the browser tab's title and icon.
 
-Group owners can use **Manage group** to remove members, transfer ownership, or delete the group. Other members can leave. Use **Unadd** in Friends to remove a friend from both friends lists and delete the direct chat history on both devices; if the friend is offline, the removal waits on your device until you reconnect and both apps can communicate. You can delete your own messages; deletion is sent to chat participants who are online.
+Group owners can use **Manage group** to add friends, remove members, transfer ownership, or delete the group. Other members can leave. Cancel a pending outgoing friend request with **Delete** in the chat list or **Cancel** in Friends. Use **Unadd** in Friends to remove a friend from both friends lists and delete the direct chat history on both devices; if the friend is offline, the removal waits on your device until you reconnect and both apps can communicate. You can delete your own messages; deletion is sent to chat participants who are online.
 
 Messages travel directly between browsers (WebRTC via [PeerJS](https://peerjs.com), which uses a free public service only to introduce peers). Group messages are sent to each member separately: online members receive them right away, while messages for offline members stay queued on the sender's device and are delivered when the sender and recipient are both online. The sender must open Discard again for queued messages to continue delivering; there is no always-on server to deliver them while the sender is offline. The delivery status shows how many group members have received each message.
 

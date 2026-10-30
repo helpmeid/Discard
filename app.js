@@ -24,6 +24,10 @@ const memberChoices = document.querySelector("#memberChoices");
 const conversationActions = document.querySelector("#conversationActions");
 const groupManagement = document.querySelector("#groupManagement");
 const groupMemberList = document.querySelector("#groupMemberList");
+const groupAddMembers = document.querySelector("#groupAddMembers");
+const groupAddMemberChoices = document.querySelector("#groupAddMemberChoices");
+const groupAddNote = document.querySelector("#groupAddNote");
+const groupAddButton = document.querySelector("#groupAddButton");
 const settingsPanel = document.querySelector("#settingsPanel");
 const settingsStatus = document.querySelector("#settingsStatus");
 const displayNameInput = document.querySelector("#displayNameInput");
@@ -180,7 +184,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.3.2";
+const APP_VERSION = "3.3.3";
 document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
@@ -926,6 +930,10 @@ function handleData(from, data) {
       state.requests = state.requests.filter(request => !(request.id === from && request.direction === "outgoing"));
       touchMeta();
       break;
+    case "friend-cancel":
+      state.requests = state.requests.filter(request => !(request.id === from && request.direction === "incoming"));
+      touchMeta();
+      break;
     case "friend-remove": {
       if (!safeIdPattern.test(data.removalId || "")) return;
       delete state.friends[from];
@@ -1379,6 +1387,16 @@ async function api(path, options = {}) {
     return { ok: true };
   }
 
+  if (method === "POST" && route === "/api/friends/cancel") {
+    const requestId = typeof body.requestId === "string" ? body.requestId : "";
+    const request = state.requests.find(item => item.id === requestId && item.direction === "outgoing");
+    if (!request) fail("Outgoing friend request not found.");
+    state.requests = state.requests.filter(item => item !== request);
+    touchMeta();
+    if (conns.get(request.id)?.conn.open) sendTo(request.id, { t: "friend-cancel" });
+    return { ok: true };
+  }
+
   if (method === "POST" && route === "/api/friends/remove") {
     const friendId = typeof body.friendId === "string" ? body.friendId : "";
     if (!state.friends[friendId]) fail("Friend not found.");
@@ -1462,6 +1480,23 @@ async function api(path, options = {}) {
         sendTo(id, { t: "group-delete", chatId: chat.id });
       });
       removeChatLocal(chat);
+      return { ok: true };
+    }
+    if (action === "add") {
+      const requestedIds = Array.isArray(body.memberIds) ? body.memberIds : [];
+      if (!requestedIds.length || requestedIds.some(id => typeof id !== "string" || !state.friends[id])) {
+        fail("Choose at least one of your friends to add.");
+      }
+      const additions = [...new Set(requestedIds)].filter(id => !chat.members.includes(id));
+      if (!additions.length) fail("Those friends are already in the group.");
+      if (chat.members.length + additions.length > 50) fail("A group can have at most 50 people.");
+      chat.members.push(...additions);
+      chat.invites = [...new Set([...(chat.invites || []), ...additions])];
+      additions.forEach(id => {
+        connectTo(id);
+        sendTo(id, { t: "group", chat: groupPayload(chat) });
+      });
+      broadcastGroupUpdate(chat, previousMembers);
       return { ok: true };
     }
     if (action === "avatar") {
@@ -1874,7 +1909,11 @@ async function refreshSnapshot() {
     updateUnreadBadge(snapshot.chats.reduce((sum, chat) => sum + (chat.unread || 0), 0));
     if (next.list !== renderedKeys.list) renderChatList();
     if (next.conversation !== renderedKeys.conversation) renderConversation();
-    if (next.friends !== renderedKeys.friends) renderFriends();
+    if (next.friends !== renderedKeys.friends) {
+      renderFriends();
+      const activeGroup = snapshot.chats.find(chat => chat.id === activeChatId && chat.isGroup);
+      if (activeGroup && !groupManagement.classList.contains("hidden")) renderGroupManagement(activeGroup);
+    }
     renderedKeys = next;
   } catch (error) {
     if (error.message === "Please sign in again.") showAuth();
@@ -2094,7 +2133,13 @@ function renderChatList() {
     preview.className = "chat-preview";
     preview.textContent = "Pending - waiting for them to come online";
     summary.append(title, preview);
-    item.append(avatar, summary);
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "pending-request-cancel";
+    cancel.textContent = "Delete";
+    cancel.setAttribute("aria-label", `Delete friend request to ${name}`);
+    cancel.addEventListener("click", () => cancelFriendRequest(request.id));
+    item.append(avatar, summary, cancel);
     chatList.append(item);
   });
   if (!chats.length && !pending.length) {
@@ -2409,6 +2454,37 @@ function renderGroupManagement(chat) {
     }
     groupMemberList.append(row);
   });
+  const canAdd = chat.members.length < 50;
+  const addableFriends = snapshot.friends.filter(friend => !chat.members.some(member => member.id === friend.id));
+  groupAddMembers.classList.toggle("hidden", !isOwner);
+  groupAddMemberChoices.replaceChildren();
+  groupAddNote.textContent = "";
+  groupAddButton.disabled = true;
+  if (!canAdd) {
+    groupAddNote.textContent = "Groups can have up to 50 people.";
+  } else if (!addableFriends.length) {
+    groupAddNote.textContent = snapshot.friends.length
+      ? "All your friends are already in this group."
+      : "Add friends first, then you can invite them here.";
+  } else {
+    addableFriends.forEach(friend => {
+      const choice = document.createElement("label");
+      choice.className = "member-choice";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = friend.id;
+      checkbox.addEventListener("change", () => {
+        groupAddButton.disabled = !groupAddMemberChoices.querySelector("input:checked");
+      });
+      const label = document.createElement("span");
+      label.textContent = `${friend.displayName} (@${friend.username})`;
+      choice.append(checkbox, label);
+      groupAddMemberChoices.append(choice);
+    });
+  }
+  groupAddMemberChoices.hidden = !canAdd || !addableFriends.length;
+  groupAddNote.hidden = !groupAddNote.textContent;
+  groupAddButton.hidden = !canAdd || !addableFriends.length;
   document.querySelector("#groupAvatarRow").classList.toggle("hidden", !isOwner);
   document.querySelector("#groupDeleteButton").classList.toggle("hidden", !isOwner);
   document.querySelector("#groupLeaveButton").classList.toggle("hidden", isOwner);
@@ -2430,6 +2506,16 @@ function addSectionTitle(container, text) {
   heading.className = "request-title";
   heading.textContent = text;
   container.append(heading);
+}
+
+async function cancelFriendRequest(requestId) {
+  friendMessage.textContent = "";
+  try {
+    await api("/api/friends/cancel", { method: "POST", body: { requestId } });
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
 }
 
 function renderFriends() {
@@ -2469,6 +2555,12 @@ function renderFriends() {
       row.className = "social-item social-name";
       row.textContent = `Waiting for ${request.user.displayName} `;
       row.append(handleSpan(request.user.username));
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = "Cancel";
+      cancel.setAttribute("aria-label", `Cancel friend request to ${request.user.displayName}`);
+      cancel.addEventListener("click", () => cancelFriendRequest(request.id));
+      row.append(cancel);
       requestList.append(row);
     });
   }
@@ -2963,6 +3055,18 @@ document.querySelector("#groupLeaveButton").addEventListener("click", async () =
     await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "leave" } });
     groupManagement.classList.add("hidden");
     activeChatId = null;
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
+});
+groupAddButton.addEventListener("click", async () => {
+  const chat = snapshot.chats.find(item => item.id === activeChatId && item.isGroup);
+  const memberIds = [...groupAddMemberChoices.querySelectorAll("input:checked")].map(input => input.value);
+  if (!chat || !memberIds.length) return;
+  friendMessage.textContent = "";
+  try {
+    await api(`/api/chats/${encodeURIComponent(chat.id)}/group`, { method: "POST", body: { action: "add", memberIds } });
     await refreshSnapshot();
   } catch (error) {
     friendMessage.textContent = error.message;

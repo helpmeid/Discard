@@ -114,6 +114,8 @@
     .chat-item:nth-child(3n) .avatar { color: #4a4b70; background: #d8d6ed; }
     .chat-item:nth-child(3n + 1) .avatar { color: #5c5140; background: #f1dfab; }
     .chat-summary { min-width: 0; flex: 1; }
+    .pending-request-cancel { flex: none; padding: 5px 7px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; font-size: 11px; }
+    .pending-request-cancel:hover { color: #a34535; background: var(--hover); }
     .chat-title-row { display: flex; justify-content: space-between; gap: 5px; }
     .chat-title { overflow: hidden; color: var(--ink); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .unread-badge { flex: none; min-width: 18px; padding: 2px 6px; border-radius: 9px; background: #e5283b; color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
@@ -179,6 +181,9 @@
     .group-member-name { min-width: 0; overflow-wrap: anywhere; }
     .group-member-actions { display: flex; flex: none; gap: 5px; }
     .group-management .danger { color: #a34535; }
+    .group-add-members { padding: 9px 0; border-top: 1px solid var(--line); }
+    .group-add-members h4 { margin: 0 0 7px; font: 700 12px Manrope, sans-serif; }
+    .group-add-note { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
     .group-management-footer { display: flex; justify-content: flex-end; gap: 6px; padding-top: 9px; }
     .group-management-footer .danger { border-color: #dfb9ae; }
     @media (max-width: 620px) {
@@ -645,7 +650,7 @@
     </aside>
     <section class="conversation" aria-label="Conversation">
       <header class="conversation-header hidden" id="conversationHeader"><div class="avatar" id="conversationAvatar">C</div><div class="conversation-heading"><div class="conversation-title" id="conversationTitle"></div><div class="conversation-status" id="conversationStatus">Saved on this device</div></div><div class="conversation-actions" id="conversationActions"></div></header>
-      <section class="group-management hidden" id="groupManagement" aria-label="Group management"><div class="group-management-heading"><h3>Group members and ownership</h3><button type="button" id="groupManagementClose">Close</button></div><div class="group-avatar-row hidden" id="groupAvatarRow"><label class="profile-btn">Upload group picture<input id="groupAvatarFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="profile-btn" id="groupAvatarRemove" type="button">Remove picture</button></div><div id="groupMemberList"></div><div class="group-management-footer"><button type="button" class="danger" id="groupLeaveButton">Leave group</button><button type="button" class="danger" id="groupDeleteButton">Delete group</button></div></section>
+      <section class="group-management hidden" id="groupManagement" aria-label="Group management"><div class="group-management-heading"><h3>Group members and ownership</h3><button type="button" id="groupManagementClose">Close</button></div><div class="group-avatar-row hidden" id="groupAvatarRow"><label class="profile-btn">Upload group picture<input id="groupAvatarFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="profile-btn" id="groupAvatarRemove" type="button">Remove picture</button></div><div id="groupMemberList"></div><div class="group-add-members hidden" id="groupAddMembers"><h4>Add friends</h4><div class="member-choices" id="groupAddMemberChoices"></div><p class="group-add-note" id="groupAddNote"></p><button type="button" id="groupAddButton">Add selected people</button></div><div class="group-management-footer"><button type="button" class="danger" id="groupLeaveButton">Leave group</button><button type="button" class="danger" id="groupDeleteButton">Delete group</button></div></section>
       <div class="welcome-empty" id="welcomeEmpty"><div class="welcome-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6a7.5 7.5 0 1 1 17-3.5Z"/><path d="M8 11h8M8 14h5"/></svg></div><h2>Your conversations</h2><p>Add friends to start a direct message, or make a group chat together.</p></div>
       <div class="message-area hidden" id="messageArea" aria-live="polite"></div>
       <div class="composer-wrap hidden" id="composerWrap"><section class="gif-panel hidden" id="gifPanel" aria-label="GIFs">
@@ -658,9 +663,9 @@
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.3.2"></script>
-  <script src="app.js?v=3.3.2"></script>
-  <script src="garlic.js?v=3.3.2"></script>
-  <script src="party-games.js?v=3.3.2"></script>
+  <script src="assets.js?v=3.3.3"></script>
+  <script src="app.js?v=3.3.3"></script>
+  <script src="garlic.js?v=3.3.3"></script>
+  <script src="party-games.js?v=3.3.3"></script>
 </body>
 </html>
