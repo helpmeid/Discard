@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Discard</title>
+  <style>body { margin: 0; display: grid; min-height: 100vh; place-items: center; font: 16px system-ui, sans-serif; background: #1e1f22; color: #ddd; text-align: center; }</style>
+</head>
+<body>
+  <p id="status">Loading the latest Discard…</p>
+  <script>
+    // Download only this file once. It fetches the newest Discard from GitHub on every open,
+    // so updates arrive automatically. Keep using the same copy of this file so your data stays put.
+    (async () => {
+      const base = "https://raw.githubusercontent.com/helpmeid/Discard/main/";
+      const cacheKey = "discard-loader-cache";
+      const status = document.getElementById("status");
+      const get = async name => {
+        const response = await fetch(base + name, { cache: "no-cache" });
+        if (!response.ok) throw new Error(name + " " + response.status);
+        return response.text();
+      };
+      const inline = code => code.replace(/<\/script/gi, "<\\/script").replace(/<!--/g, "<\\!--");
+
+      let html;
+      try {
+        let page = await get("index.html");
+        const scripts = [...page.matchAll(/<script src="((?!https?:)[^"]+)"><\/script>/g)];
+        const sources = await Promise.all(scripts.map(match => get(match[1].split("?")[0])));
+        scripts.forEach((match, index) => {
+          page = page.replace(match[0], () => "<script>" + inline(sources[index]) + "</script>");
+        });
+        html = page.replace("<head>", `<head><base href="${base}">`);
+        try { localStorage.setItem(cacheKey, html); } catch {}
+      } catch (error) {
+        try { html = localStorage.getItem(cacheKey); } catch {}
+        if (!html) {
+          status.textContent = "Could not load Discard. Check your internet connection and reload.";
+          return;
+        }
+      }
+      document.open();
+      document.write(html);
+      document.close();
+    })();
+  </script>
+</body>
+</html>

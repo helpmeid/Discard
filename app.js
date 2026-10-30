@@ -81,6 +81,7 @@ const defaultPreferences = {
   tabDisguise: false,
   notifications: true,
   mutedIds: [],
+  pinnedIds: [],
   backgroundStyle: "solid",
   backgroundColor: "#f2f3ed",
   backgroundEndColor: "#d7eddf",
@@ -179,7 +180,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.0.1";
+const APP_VERSION = "3.2.6";
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 const tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
@@ -192,10 +193,49 @@ let tabDisguised = false;
 let coverOn = false;
 
 // The disguise is remembered outside the account so the sign-in screen is covered too.
+let unreadTotal = 0;
+let badgedIconFor = "";
+function drawBadgedIcon(source) {
+  const image = new Image();
+  image.onload = () => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 64;
+      const context = canvas.getContext("2d");
+      context.drawImage(image, 0, 0, 64, 64);
+      context.beginPath();
+      context.arc(48, 48, 14, 0, Math.PI * 2);
+      context.fillStyle = "#e5283b";
+      context.fill();
+      context.lineWidth = 4;
+      context.strokeStyle = "#fff";
+      context.stroke();
+      if (badgedIconFor === source) tabIcon.href = canvas.toDataURL("image/png");
+    } catch {
+      // A tainted canvas (local file icon) can't be exported, so fall back to a plain red dot.
+      const dot = "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='#888'/><circle cx='48' cy='48' r='14' fill='#e5283b' stroke='#fff' stroke-width='4'/></svg>");
+      if (badgedIconFor === source) tabIcon.href = dot;
+    }
+  };
+  image.src = source;
+}
+function updateUnreadBadge(total) {
+  if (total === unreadTotal) return;
+  unreadTotal = total;
+  renderDisguise();
+}
 function renderDisguise() {
   const on = tabDisguised || coverOn;
-  document.title = on ? "Home · Home – Minga" : "Discard";
-  tabIcon.href = on ? "minga-icon.png" : BRAND_IMAGE;
+  const base = on ? "minga-icon.png" : BRAND_IMAGE;
+  const title = on ? "Home · Home – Minga" : "Discard";
+  document.title = unreadTotal && !on ? `(${unreadTotal}) ${title}` : title;
+  if (unreadTotal) {
+    badgedIconFor = base;
+    drawBadgedIcon(base);
+  } else {
+    badgedIconFor = "";
+    tabIcon.href = base;
+  }
   document.querySelector("#mingaCover")?.classList.toggle("on", coverOn);
 }
 function applyTabDisguise(on, remember = true) {
@@ -249,6 +289,7 @@ setupDisguiseKeybind();
 
 const idPattern = /^dsc-[a-z0-9]{6,16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;
+const pinIdPattern = /^[\w:-]{1,140}$/;
 const avatarPattern = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const imageUrlPattern = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 const tenorUrlPattern = /^https:\/\/(?:media\d*\.tenor\.com|media\d*\.giphy\.com)\/[\w\-/.%~]+$/;
@@ -319,7 +360,8 @@ const dirty = new Set();
 const removedKeys = new Set();
 let saveTimer = null;
 let saving = false;
-let storageLimit = 100 * 1024 * 1024;
+// Messages are only trimmed when the browser actually refuses a write, never by a guessed quota.
+let storageLimit = Infinity;
 let storageNotice = "";
 
 function randomId(length) {
@@ -383,9 +425,7 @@ function enforceStorageLimit() {
 
 async function refreshStorageLimit() {
   try {
-    const estimate = await navigator.storage.estimate();
-    if (estimate.quota) storageLimit = Math.min(300 * 1024 * 1024, Math.max(20 * 1024 * 1024, estimate.quota * 0.4));
-    navigator.storage.persist?.();
+    await navigator.storage.persist?.();
   } catch {}
   enforceStorageLimit();
 }
@@ -439,6 +479,7 @@ async function flushSave() {
   }
 }
 
+window.addEventListener("focus", () => { if (currentUser) refreshSnapshot(); });
 window.addEventListener("pagehide", () => { if (dirty.size) flushSave(); });
 
 function defaultState(me) {
@@ -450,6 +491,11 @@ async function loadState() {
   if (!entries.meta?.me) return null;
   const loaded = { ...defaultState(entries.meta.me), ...entries.meta, chats: [] };
   loaded.me.preferences = { ...defaultPreferences, ...(loaded.me.preferences || {}) };
+  if (!loaded.readInit) {
+    loaded.readInit = Date.now();
+    loaded.reads = {};
+    window.setTimeout(touchMeta, 0);
+  }
   Object.entries(entries).forEach(([key, value]) => {
     if (key.startsWith("chat:")) loaded.chats.push({ rev: 0, invites: [], ...value });
   });
@@ -556,6 +602,22 @@ function ensureDirectChat(friendId) {
   return chat;
 }
 
+function lastReadAt(chat) {
+  return state.reads?.[chat.id] ?? state.readInit ?? 0;
+}
+
+function unreadCount(chat) {
+  const since = lastReadAt(chat);
+  return chat.messages.filter(message => message.sender !== state.me.id && message.createdAt > since).length;
+}
+
+function markChatRead(chat) {
+  const latest = chat.messages.reduce((max, message) => Math.max(max, message.createdAt), 0);
+  if (latest <= lastReadAt(chat)) return;
+  state.reads = { ...(state.reads || {}), [chat.id]: latest };
+  touchMeta();
+}
+
 function chatToView(chat) {
   const otherId = chat.isGroup ? null : chat.members.find(id => id !== state.me.id);
   const other = otherId ? viewPerson(otherId) : null;
@@ -569,6 +631,8 @@ function chatToView(chat) {
     online: otherId ? isOnline(otherId) : null,
     members: chat.members.map(viewPerson),
     messages: chat.messages,
+    unread: unreadCount(chat),
+    pinned: Boolean(state.me.preferences?.pinnedIds?.includes(chat.id)),
     rev: chat.rev || 0
   };
 }
@@ -631,7 +695,15 @@ function startPeer() {
     return;
   }
   setNet("Connecting...", false);
-  const current = new Peer(state.me.id);
+  const current = new Peer(state.me.id, {
+    config: {
+      iceCandidatePoolSize: 4,
+      iceServers: [
+        { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:global.stun.twilio.com:3478"] },
+        { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turns:openrelay.metered.ca:443?transport=tcp"], username: "openrelayproject", credential: "openrelayproject" }
+      ]
+    }
+  });
   peer = current;
   const restart = delay => {
     if (peer === current) peer = null;
@@ -1114,6 +1186,13 @@ function showToast(title, body, chatId, name, avatarUrl) {
   window.setTimeout(dismiss, 6000);
 }
 
+async function setPinned(id, pinned) {
+  const result = await api("/api/pin", { method: "POST", body: { id, pinned } });
+  currentUser.preferences = result.preferences;
+  renderedKeys = {};
+  await refreshSnapshot();
+}
+
 async function setMuted(id, muted) {
   const result = await api("/api/mute", { method: "POST", body: { id, muted } });
   currentUser.preferences = result.preferences;
@@ -1195,6 +1274,7 @@ function applyPreferencesLocal(input) {
   if (typeof input.tabDisguise === "boolean") current.tabDisguise = input.tabDisguise;
   if (typeof input.notifications === "boolean") current.notifications = input.notifications;
   if (Array.isArray(input.mutedIds)) current.mutedIds = [...new Set(input.mutedIds.filter(id => typeof id === "string" && safeIdPattern.test(id)))].slice(0, 500);
+  if (Array.isArray(input.pinnedIds)) current.pinnedIds = [...new Set(input.pinnedIds.filter(id => typeof id === "string" && pinIdPattern.test(id)))].slice(0, 500);
   Object.assign(current, sanitizeBackgroundPreferences(input, current), sanitizeEffectPreferences(input, current));
   state.me.preferences = current;
   touchMeta();
@@ -1217,6 +1297,19 @@ async function api(path, options = {}) {
     const muted = new Set(state.me.preferences?.mutedIds || []);
     if (body.muted) muted.add(body.id); else muted.delete(body.id);
     return { preferences: applyPreferencesLocal({ mutedIds: [...muted] }) };
+  }
+
+  if (method === "POST" && route === "/api/pin") {
+    if (typeof body.id !== "string" || !pinIdPattern.test(body.id)) fail("Invalid pin target.");
+    const pinned = new Set(state.me.preferences?.pinnedIds || []);
+    if (body.pinned) pinned.add(body.id); else pinned.delete(body.id);
+    return { preferences: applyPreferencesLocal({ pinnedIds: [...pinned] }) };
+  }
+
+  if (method === "POST" && route === "/api/read") {
+    const chat = state.chats.find(item => item.id === body.chatId);
+    if (chat) markChatRead(chat);
+    return { ok: true };
   }
 
   if (method === "PATCH" && route === "/api/preferences") {
@@ -1754,10 +1847,17 @@ async function refreshSnapshot() {
     if (!snapshot.chats.some(chat => chat.id === activeChatId)) activeChatId = null;
     const activeChat = snapshot.chats.find(chat => chat.id === activeChatId);
     const next = {
-      list: JSON.stringify(snapshot.chats.map(chat => [chat.id, chat.name, chat.avatar, chat.online, chat.rev, chat.messages.length])),
+      list: JSON.stringify(snapshot.chats.map(chat => [chat.id, chat.name, chat.avatar, chat.online, chat.rev, chat.messages.length, chat.unread, chat.pinned])),
       conversation: JSON.stringify([activeChatId, activeChat && [activeChat.rev, activeChat.name, activeChat.avatar, activeChat.online, activeChat.ownerId, activeChat.members.map(member => [member.id, member.displayName, member.username, member.avatar?.length || 0])]]),
       friends: JSON.stringify([snapshot.friends, snapshot.requests, snapshot.user.id])
     };
+    const viewing = activeChat && !document.hidden && document.hasFocus();
+    if (viewing && activeChat.unread) {
+      await api("/api/read", { method: "POST", body: { chatId: activeChat.id } });
+      activeChat.unread = 0;
+      next.list = JSON.stringify(snapshot.chats.map(chat => [chat.id, chat.name, chat.avatar, chat.online, chat.rev, chat.messages.length, chat.unread, chat.pinned]));
+    }
+    updateUnreadBadge(snapshot.chats.reduce((sum, chat) => sum + (chat.unread || 0), 0));
     if (next.list !== renderedKeys.list) renderChatList();
     if (next.conversation !== renderedKeys.conversation) renderConversation();
     if (next.friends !== renderedKeys.friends) renderFriends();
@@ -1922,6 +2022,24 @@ function openProfile(person) {
       }
     });
     actions.append(mute);
+    if (state.friends[person.id]) {
+      const chatId = directChatId(person.id);
+      const pin = document.createElement("button");
+      pin.type = "button";
+      pin.className = "profile-btn";
+      const pinned = () => Boolean(currentUser.preferences?.pinnedIds?.includes(chatId));
+      const label = () => { pin.textContent = pinned() ? "📌 Unpin" : "Pin"; pin.classList.toggle("pinned", pinned()); };
+      label();
+      pin.addEventListener("click", async () => {
+        try {
+          await setPinned(chatId, !pinned());
+          label();
+        } catch (error) {
+          friendMessage.textContent = error.message;
+        }
+      });
+      actions.append(pin);
+    }
   }
   const close = document.createElement("button");
   close.type = "button";
@@ -1941,7 +2059,7 @@ function renderChatList() {
   const filter = document.querySelector("#chatSearch").value.trim().toLowerCase();
   const chats = snapshot.chats
     .filter(chat => chat.name.toLowerCase().includes(filter))
-    .sort((first, second) => (chatLastMessage(second)?.createdAt || 0) - (chatLastMessage(first)?.createdAt || 0));
+    .sort((first, second) => Number(second.pinned) - Number(first.pinned) || (chatLastMessage(second)?.createdAt || 0) - (chatLastMessage(first)?.createdAt || 0));
   chatList.replaceChildren();
   const pending = snapshot.requests.filter(request => request.direction === "outgoing"
     && (request.user.displayName || request.user.username || "").toLowerCase().includes(filter));
@@ -1975,7 +2093,7 @@ function renderChatList() {
   chats.forEach(chat => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `chat-item${chat.id === activeChatId ? " active" : ""}`;
+    button.className = `chat-item${chat.id === activeChatId ? " active" : ""}${chat.pinned ? " pinned" : ""}`;
     button.setAttribute("aria-label", `Open chat ${chat.name}`);
     const avatar = document.createElement("span");
     avatar.className = "avatar";
@@ -1991,7 +2109,7 @@ function renderChatList() {
     titleRow.className = "chat-title-row";
     const title = document.createElement("span");
     title.className = "chat-title";
-    title.textContent = chat.name;
+    title.textContent = (chat.pinned ? "📌 " : "") + chat.name;
     const time = document.createElement("span");
     time.className = "chat-time";
     time.textContent = chatLastMessage(chat) ? formatTime(chatLastMessage(chat).createdAt) : "";
@@ -2001,6 +2119,13 @@ function renderChatList() {
     titleRow.append(title, time);
     summary.append(titleRow, preview);
     button.append(avatar, summary);
+    if (chat.unread && chat.id !== activeChatId) {
+      preview.classList.add("unread-text");
+      const badge = document.createElement("span");
+      badge.className = "unread-badge";
+      badge.textContent = chat.unread > 99 ? "99+" : String(chat.unread);
+      button.append(badge);
+    }
     if (!chat.isGroup) {
       avatar.classList.add("clickable");
       avatar.title = "View profile";
@@ -2014,6 +2139,7 @@ function renderChatList() {
       activeChatId = chat.id;
       renderChatList();
       renderConversation();
+      refreshSnapshot();
     });
     chatList.append(button);
   });
@@ -2077,6 +2203,14 @@ function renderConversation() {
   } else {
     groupManagement.classList.add("hidden");
   }
+  const pinChat = document.createElement("button");
+  pinChat.type = "button";
+  pinChat.textContent = chat.pinned ? "Unpin" : "Pin";
+  pinChat.title = "Keep this chat at the top of your list";
+  pinChat.addEventListener("click", async () => {
+    try { await setPinned(chat.id, !chat.pinned); } catch (error) { friendMessage.textContent = error.message; }
+  });
+  conversationActions.append(pinChat);
   const closeChat = document.createElement("button");
   closeChat.type = "button";
   closeChat.className = "close-chat";

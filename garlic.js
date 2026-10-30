@@ -52,6 +52,7 @@ function gameButton(label, onClick, className = "profile-btn") {
 
 function closeGameModal() {
   gameModal.classList.add("hidden");
+  gameModal.classList.remove("fullscreen", "collapsed");
 }
 
 function endGameLocal() {
@@ -294,6 +295,8 @@ function garlicHandle(from, data) {
       if (!game || game.hostId !== from || game.id !== data.gameId) return true;
       game.phase = "ended";
       renderGame();
+      const endedId = game.id;
+      window.setTimeout(() => { if (game?.id === endedId && game.phase === "ended") endGameLocal(); }, 3000);
       return true;
     }
     default:
@@ -431,12 +434,22 @@ function gameHeader(subtitle) {
   const titles = gameElement("div");
   titles.style.flex = "1";
   titles.append(gameElement("h3", "game-head-title", "Garlic Fone"), gameElement("div", "game-head-sub", subtitle));
-  head.append(gameElement("span", "game-logo", "🧄"), titles);
+  head.append(gameElement("span", "game-logo", "🧄"), titles, gameFullscreenButton(gameModal));
   return head;
+}
+
+// Goes fullscreen once when a game leaves its lobby; after that the player's own choice sticks.
+function autoFullscreenOnStart(modal, current) {
+  if (["lobby", "invited"].includes(current.phase)) current.autoFullscreened = false;
+  if (["lobby", "invited", "ended"].includes(current.phase) || current.autoFullscreened) return;
+  current.autoFullscreened = true;
+  modal.classList.remove("collapsed");
+  modal.classList.add("fullscreen");
 }
 
 function renderGame() {
   if (!game) return closeGameModal();
+  autoFullscreenOnStart(gameModal, game);
   const isHost = game.hostId === state.me.id;
   const body = gameElement("div", "game-body");
   const actions = gameElement("div", "game-actions");
@@ -489,7 +502,7 @@ function renderGame() {
     renderReveal(body, actions);
   } else {
     body.classList.add("game-center");
-    body.append(gameElement("div", "game-big", "👋"), gameElement("p", "game-text", "The host ended the game."));
+    body.append(gameElement("div", "game-big", "👋"), gameElement("p", "game-text", "The host closed the game."));
     actions.append(gameButton("Close", endGameLocal));
   }
   body.append(actions);
@@ -695,39 +708,138 @@ function buildDrawingPad(options = {}) {
   };
   document.addEventListener("keydown", onKey);
 
-  const tools = gameElement("div", "game-tools");
+  // Left column: colour wheel, brightness, hex and quick swatches.
+  const colors = gameElement("div", "game-pad-colors");
+  const wheel = gameElement("canvas", "game-wheel");
+  wheel.width = 180;
+  wheel.height = 180;
+  const wheelContext = wheel.getContext("2d");
+  const hsv = { h: 0, s: 0, v: 0.13 };
+  const hsvToHex = ({ h, s, v }) => {
+    const f = n => {
+      const k = (n + h / 60) % 6;
+      return v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+    };
+    return "#" + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+  };
+  const hexToHsv = hex => {
+    const [r, g, b] = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16) / 255);
+    const max = Math.max(r, g, b);
+    const delta = max - Math.min(r, g, b);
+    let h = 0;
+    if (delta) {
+      if (max === r) h = ((g - b) / delta + 6) % 6;
+      else if (max === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+    }
+    return { h: h * 60, s: max ? delta / max : 0, v: max };
+  };
+  const drawWheel = () => {
+    const size2 = wheel.width;
+    const radius = size2 / 2 - 2;
+    const image = wheelContext.createImageData(size2, size2);
+    for (let y = 0; y < size2; y += 1) {
+      for (let x = 0; x < size2; x += 1) {
+        const dx = x - size2 / 2 + 0.5;
+        const dy = y - size2 / 2 + 0.5;
+        const dist = Math.hypot(dx, dy);
+        if (dist > radius) continue;
+        const hex = hsvToHex({ h: (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, s: dist / radius, v: hsv.v });
+        const at = (y * size2 + x) * 4;
+        image.data[at] = parseInt(hex.slice(1, 3), 16);
+        image.data[at + 1] = parseInt(hex.slice(3, 5), 16);
+        image.data[at + 2] = parseInt(hex.slice(5, 7), 16);
+        image.data[at + 3] = 255;
+      }
+    }
+    wheelContext.putImageData(image, 0, 0);
+    const angle = hsv.h * Math.PI / 180;
+    const mx = size2 / 2 + Math.cos(angle) * hsv.s * radius;
+    const my = size2 / 2 + Math.sin(angle) * hsv.s * radius;
+    wheelContext.beginPath();
+    wheelContext.arc(mx, my, 7, 0, Math.PI * 2);
+    wheelContext.lineWidth = 3;
+    wheelContext.strokeStyle = "#fff";
+    wheelContext.stroke();
+    wheelContext.lineWidth = 1;
+    wheelContext.strokeStyle = "#000";
+    wheelContext.stroke();
+  };
+  const preview = gameElement("div", "game-color-preview");
+  const hexInput = gameElement("input", "game-hex");
+  hexInput.maxLength = 7;
+  hexInput.spellcheck = false;
+  hexInput.setAttribute("aria-label", "Hex color");
+  const brightness = gameElement("input");
+  brightness.type = "range";
+  brightness.min = "0";
+  brightness.max = "100";
+  brightness.setAttribute("aria-label", "Brightness");
+  brightness.title = "Brightness";
   const swatches = [];
   const palette = ["#222222", "#ffffff", "#e53935", "#fb8c00", "#fdd835", "#43a047", "#1e88e5", "#8e24aa", "#6d4c41", "#ec407a"];
-  const picker = gameElement("input", "game-color-picker");
-  picker.type = "color";
-  picker.value = color;
-  picker.title = "Pick any color";
-  picker.setAttribute("aria-label", "Custom color");
-  function setColor(value) {
+  function setColor(value, fromWheel = false) {
     color = value;
-    picker.value = value;
+    if (!fromWheel) {
+      const next = hexToHsv(value);
+      if (next.s > 0.02 && next.v > 0.02) hsv.h = next.h;
+      hsv.s = next.s;
+      hsv.v = next.v;
+    }
+    drawWheel();
+    brightness.value = String(Math.round(hsv.v * 100));
+    hexInput.value = value;
+    preview.style.background = value;
     swatches.forEach(item => item.classList.toggle("active", item.dataset.color === value));
     if (tool === "erase" || tool === "dropper") setTool("pen");
   }
-  picker.addEventListener("input", () => setColor(picker.value));
+  const pickFromWheel = event => {
+    const rect = wheel.getBoundingClientRect();
+    const dx = (event.clientX - rect.left) / rect.width * 2 - 1;
+    const dy = (event.clientY - rect.top) / rect.height * 2 - 1;
+    hsv.h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    hsv.s = Math.min(1, Math.hypot(dx, dy));
+    setColor(hsvToHex(hsv), true);
+  };
+  let wheelActive = false;
+  wheel.addEventListener("pointerdown", event => { wheelActive = true; wheel.setPointerCapture(event.pointerId); pickFromWheel(event); });
+  wheel.addEventListener("pointermove", event => { if (wheelActive) pickFromWheel(event); });
+  wheel.addEventListener("pointerup", () => { wheelActive = false; });
+  wheel.addEventListener("pointercancel", () => { wheelActive = false; });
+  brightness.addEventListener("input", () => {
+    hsv.v = Number(brightness.value) / 100;
+    setColor(hsvToHex(hsv), true);
+  });
+  hexInput.addEventListener("change", () => {
+    const text = hexInput.value.trim().toLowerCase();
+    if (/^#?[0-9a-f]{6}$/.test(text)) setColor(text.startsWith("#") ? text : `#${text}`);
+    else hexInput.value = color;
+  });
+  const swatchRow = gameElement("div", "game-swatches");
   palette.forEach(value => {
-    const swatch = gameElement("button", `game-swatch${value === color ? " active" : ""}`);
+    const swatch = gameElement("button", "game-swatch");
     swatch.type = "button";
     swatch.dataset.color = value;
     swatch.style.background = value;
     swatch.setAttribute("aria-label", `Color ${value}`);
     swatch.addEventListener("click", () => setColor(value));
     swatches.push(swatch);
-    tools.append(swatch);
+    swatchRow.append(swatch);
   });
-  tools.append(picker);
+  const hexRow = gameElement("div", "game-hex-row");
+  hexRow.append(preview, hexInput);
+  colors.append(wheel, brightness, hexRow, swatchRow);
+
+  // Right column: tools.
   const toolButtons = {};
   function setTool(next) {
     tool = next;
     Object.entries(toolButtons).forEach(([name, button]) => button.classList.toggle("active", name === tool));
     canvas.style.cursor = tool === "fill" ? "cell" : "crosshair";
   }
-  const toolbar = gameElement("div", "game-tools");
+  const toolbar = gameElement("div", "game-pad-tools");
+  const sizeLabel = gameElement("span", "game-hint", "Size");
+  toolbar.append(sizeLabel);
   [["pen", "✏️ Pen", "Freehand brush"], ["line", "╱ Line", "Drag to draw a straight line"], ["circle", "◯ Circle", "Drag from the center outward"], ["fill", "🪣 Fill", "Click an area to fill it with the chosen color"], ["dropper", "💧 Dropper", "Click the drawing to pick a color"], ["erase", "Eraser", "Erase"]].forEach(([name, label, title]) => {
     const button = gameButton(label, () => setTool(name));
     button.title = title;
@@ -742,8 +854,8 @@ function buildDrawingPad(options = {}) {
   opacityInput.value = "100";
   opacityInput.setAttribute("aria-label", "Opacity");
   opacityInput.title = "Opacity";
-  opacityInput.addEventListener("input", () => { opacity = Number(opacityInput.value) / 100; opacityLabel.textContent = `${opacityInput.value}%`; });
-  const opacityLabel = gameElement("span", "game-hint", "100%");
+  opacityInput.addEventListener("input", () => { opacity = Number(opacityInput.value) / 100; opacityLabel.textContent = `Opacity ${opacityInput.value}%`; });
+  const opacityLabel = gameElement("span", "game-hint", "Opacity 100%");
   const sizeInput = gameElement("input");
   sizeInput.type = "range";
   sizeInput.min = "2";
@@ -755,18 +867,23 @@ function buildDrawingPad(options = {}) {
   undoButton.title = "Ctrl+Z";
   const redoButton = gameButton("↷ Redo", redo);
   redoButton.title = "Ctrl+Shift+Z";
-  const options2 = gameElement("div", "game-tools");
-  options2.append(gameElement("span", "game-hint", "Size"), sizeInput, gameElement("span", "game-hint", "Opacity"), opacityInput, opacityLabel, undoButton, redoButton, gameButton("Clear", () => {
+  sizeLabel.after(sizeInput);
+  const extras = gameElement("div", "game-pad-tools game-pad-extras");
+  extras.append(opacityLabel, opacityInput, undoButton, redoButton, gameButton("Clear", () => {
     checkpoint();
     touched = true;
     context.fillStyle = "#fff";
     context.fillRect(0, 0, canvas.width, canvas.height);
     notify(true);
   }));
-  tools.append(toolbar, options2);
-  const hint = gameElement("div", "game-hint game-center");
-  hint.append("Shortcuts: ", gameElement("span", "game-kbd", "Ctrl+Z"), " undo · ", gameElement("span", "game-kbd", "Ctrl+Shift+Z"), " redo");
-  element.append(canvas, tools, hint);
+  setColor(color);
+  // The wheel and brightness slider open at full brightness; the pen stays dark until a color is picked.
+  hsv.v = 1;
+  brightness.value = "100";
+  drawWheel();
+  const layout = gameElement("div", "game-pad-layout");
+  layout.append(colors, canvas, toolbar, extras);
+  element.append(layout);
   return {
     element,
     export() {
@@ -818,6 +935,96 @@ function renderReveal(body, actions) {
   }, "profile-btn primary"), gameButton("Close", endGameLocal));
 }
 
-gameModal.addEventListener("click", event => {
-  if (event.target === gameModal) closeGameModal();
-});
+
+// Header button that toggles the big fullscreen view of a game.
+function gameFullscreenButton(modal) {
+  const full = document.createElement("button");
+  full.type = "button";
+  full.className = "game-full-btn";
+  full.title = "Toggle fullscreen";
+  full.textContent = modal.classList.contains("fullscreen") ? "🗗" : "⛶";
+  full.addEventListener("click", event => {
+    event.stopPropagation();
+    modal.classList.remove("collapsed");
+    full.textContent = modal.classList.toggle("fullscreen") ? "🗗" : "⛶";
+  });
+  return full;
+}
+
+// Docked panels collapse on a title-bar click and snap to the nearest corner when dragged.
+// In fullscreen the card is scaled down so the whole game fits without scrolling.
+function setupGameWindow(modal, card, storageKey) {
+  const corners = ["tl", "tr", "bl", "br"];
+  try {
+    const saved = localStorage.getItem(storageKey);
+    modal.dataset.corner = corners.includes(saved) ? saved : "br";
+  } catch { modal.dataset.corner = "br"; }
+
+  let queued = false;
+  const fit = () => {
+    queued = false;
+    card.style.zoom = "";
+    card.style.maxHeight = "";
+    if (!modal.classList.contains("fullscreen")) return;
+    card.style.maxHeight = "none";
+    const natural = Math.max(card.offsetHeight, card.scrollHeight);
+    const room = window.innerHeight * 0.97;
+    card.style.maxHeight = "";
+    if (natural > room) {
+      const zoom = Math.max(0.3, room / natural);
+      card.style.zoom = String(zoom);
+      card.style.maxHeight = `${room / zoom}px`;
+    }
+  };
+  const schedule = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(fit);
+  };
+  new MutationObserver(schedule).observe(card, { childList: true, subtree: true, characterData: true });
+  new MutationObserver(schedule).observe(modal, { attributes: true, attributeFilter: ["class"] });
+  window.addEventListener("resize", schedule);
+
+  let start = null;
+  let moved = false;
+  card.addEventListener("pointerdown", event => {
+    const head = event.target.closest(".game-head");
+    if (!head || event.target.closest("button") || modal.classList.contains("fullscreen") || event.button !== 0) return;
+    start = { x: event.clientX, y: event.clientY, id: event.pointerId, head };
+    moved = false;
+  });
+  window.addEventListener("pointermove", event => {
+    if (!start || event.pointerId !== start.id) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
+    if (!moved) {
+      moved = true;
+      card.style.animation = "none";
+      try { start.head.setPointerCapture(start.id); } catch {}
+    }
+    card.style.translate = `${dx}px ${dy}px`;
+  });
+  const finish = event => {
+    if (!start || event.pointerId !== start.id) return;
+    if (moved) {
+      const rect = card.getBoundingClientRect();
+      const top = rect.top + rect.height / 2 < window.innerHeight / 2;
+      const left = rect.left + rect.width / 2 < window.innerWidth / 2;
+      modal.dataset.corner = (top ? "t" : "b") + (left ? "l" : "r");
+      try { localStorage.setItem(storageKey, modal.dataset.corner); } catch {}
+      card.style.translate = "";
+    }
+    start = null;
+  };
+  window.addEventListener("pointerup", finish);
+  window.addEventListener("pointercancel", finish);
+  modal.addEventListener("click", event => {
+    if (moved) {
+      moved = false;
+      return;
+    }
+    if (event.target.closest(".game-head") && !event.target.closest("button") && !modal.classList.contains("fullscreen")) modal.classList.toggle("collapsed");
+  });
+}
+setupGameWindow(gameModal, gameCard, "discard-game-corner");

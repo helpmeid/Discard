@@ -39,6 +39,7 @@ function partySend(id, message) {
 
 function partyClose() {
   partyModal.classList.add("hidden");
+  partyModal.classList.remove("fullscreen", "collapsed");
 }
 
 function partyEndLocal() {
@@ -513,7 +514,10 @@ function partyGamesHandle(from, data) {
     case "party-end":
       if (partyGame?.hostId === from && partyGame.id === data.gameId) {
         partyGame.phase = "ended";
+        partyGame.message = "The host closed the game.";
         renderPartyGame();
+        const endedId = partyGame.id;
+        window.setTimeout(() => { if (partyGame?.id === endedId && partyGame.phase === "ended") partyEndLocal(); }, 3000);
       }
       return true;
     default:
@@ -526,7 +530,7 @@ function partyHeader(subtitle) {
   const titles = partyElement("div");
   titles.style.flex = "1";
   titles.append(partyElement("h3", "game-head-title", partyTitle(partyGame.kind)), partyElement("div", "game-head-sub", subtitle));
-  head.append(partyElement("span", "game-logo", partyIcon(partyGame.kind)), titles);
+  head.append(partyElement("span", "game-logo", partyIcon(partyGame.kind)), titles, gameFullscreenButton(partyModal));
   return head;
 }
 
@@ -567,7 +571,7 @@ function partyLobby(kind) {
   body.append(partyElement("div", "game-big", partyIcon(kind)), partyElement("p", "game-text", host ? "Invite your chat to play" : "Waiting for the host to start"));
   body.append(partyElement("p", "game-hint", kind === "impostor"
     ? "Everyone gets the same secret word except the impostor. Share clues, then vote to catch them. At least 3 players."
-    : "Take turns drawing a secret word while everyone else guesses. The sketch and letter hints uncover gradually."));
+    : "Take turns drawing a secret word while everyone else guesses. Letter hints appear over time."));
   partyPlayers(body);
   if (host) {
     const settings = partyElement("div", "game-settings");
@@ -693,7 +697,7 @@ function partyImpostorView() {
     body.append(list);
   } else {
     body.classList.add("game-center");
-    body.append(partyElement("div", "game-big", "👋"), partyElement("p", "game-text", partyGame.message || "The host ended the game."));
+    body.append(partyElement("div", "game-big", "👋"), partyElement("p", "game-text", partyGame.message || "The host closed the game."));
   }
   actions.append(partyButton(partyGame.phase === "results" || partyGame.phase === "ended" ? "Close" : "Leave", partyLeave));
   body.append(actions);
@@ -763,7 +767,7 @@ function partySketchView() {
       if (partyGame.drawing) {
         const image = partyElement("img", "party-reveal-image");
         image.id = "partyRevealImage";
-        image.alt = "The sketch is gradually revealed";
+        image.alt = "The sketch";
         image.src = partyGame.drawing;
         stage.append(image);
       } else {
@@ -815,7 +819,7 @@ function partySketchView() {
     partyScoreboard(body);
   } else {
     body.classList.add("game-center");
-    body.append(partyElement("p", "game-text", partyGame.message || "The host ended the game."));
+    body.append(partyElement("p", "game-text", partyGame.message || "The host closed the game."));
   }
   actions.append(partyButton(partyGame.phase === "finished" || partyGame.phase === "ended" ? "Close" : "Leave", partyLeave));
   body.append(actions);
@@ -839,17 +843,16 @@ function partyRefreshSketch() {
     if (!image) {
       image = partyElement("img", "party-reveal-image");
       image.id = "partyRevealImage";
-      image.alt = "The sketch is gradually revealed";
+      image.alt = "The sketch";
       stage.replaceChildren(image);
     }
     if (image.src !== partyGame.drawing) image.src = partyGame.drawing;
-    const reveal = Math.min(100, Math.max(7, (Date.now() - partyGame.startedAt) / 60000 * 100));
-    image.style.clipPath = `inset(0 ${100 - reveal}% 0 0)`;
   }
 }
 
 function renderPartyGame() {
   if (!partyGame) return partyClose();
+  autoFullscreenOnStart(partyModal, partyGame);
   let subtitle = partyGame.phase === "lobby" ? `Lobby · ${partyGame.players.length} / ${partyMaxPlayers} players` : "A game with your chat";
   if (partyGame.kind === "impostor") {
     subtitle = ({ invited: "Social deduction", lobby: `Lobby · ${partyGame.players.length} / ${partyMaxPlayers} players`, clues: "Share a clue", vote: "Find the impostor", results: "The reveal", ended: "Game ended" })[partyGame.phase] || subtitle;
@@ -871,7 +874,7 @@ function partyInviteView() {
   body.append(partyElement("div", "game-big", partyIcon(partyGame.kind)), partyElement("p", "game-text", `${partyName(partyGame.hostId)} invited you to play ${partyTitle(partyGame.kind)}!`));
   body.append(partyElement("p", "game-hint", partyGame.kind === "impostor"
     ? "Share clues, bluff your way through, then vote to find the impostor."
-    : "Draw a secret word while the chat guesses as the sketch and letter hints reveal."));
+    : "Draw a secret word while the chat guesses as letter hints appear over time."));
   const actions = partyElement("div", "game-actions");
   actions.append(partyButton("Join game", () => {
     partyGame.phase = "lobby";
@@ -886,9 +889,7 @@ function partyInviteView() {
   return body;
 }
 
-partyModal.addEventListener("click", event => {
-  if (event.target === partyModal) partyClose();
-});
+setupGameWindow(partyModal, partyCard, "discard-game-corner");
 
 window.setInterval(() => {
   if (!state || !partyGame) return;

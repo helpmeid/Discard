@@ -102,6 +102,8 @@
     .social-panel, .social-list, .social-item { min-width: 0; max-width: 100%; }
     .social-panel { overflow-x: hidden; }
     .chat-item { display: flex; width: 100%; gap: 10px; align-items: center; padding: 10px 8px; border: 0; border-radius: 8px; text-align: left; background: transparent; }
+    .chat-item.pinned { box-shadow: inset 3px 0 0 var(--accent, #7a5cff); background: var(--hover); }
+    .profile-btn.pinned { box-shadow: inset 0 0 0 2px var(--accent, #7a5cff); }
     .chat-item:hover { background: var(--hover); }
     .chat-item.active { background: var(--hover); }
     html[data-theme="dark"] .chat-item .avatar, html[data-theme="midnight"] .chat-item .avatar { color: #1e1e1e; }
@@ -113,6 +115,8 @@
     .chat-summary { min-width: 0; flex: 1; }
     .chat-title-row { display: flex; justify-content: space-between; gap: 5px; }
     .chat-title { overflow: hidden; color: var(--ink); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .unread-badge { flex: none; min-width: 18px; padding: 2px 6px; border-radius: 9px; background: #e5283b; color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
+    .chat-preview.unread-text { color: inherit; font-weight: 700; }
     .chat-time { flex: none; color: var(--muted); font-size: 10px; }
     .chat-preview { overflow: hidden; margin-top: 4px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
     .empty-list { padding: 14px 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
@@ -306,9 +310,25 @@
     .profile-card .profile-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
     .clickable { cursor: pointer; }
     .close-chat { width: 30px; height: 30px; padding: 0; font-size: 20px; line-height: 1; }
-    .game-modal { background: radial-gradient(circle at 30% 20%, #3b2a6ecc, #0b0a1be6); backdrop-filter: blur(6px); }
+    .game-modal { inset: auto 16px 16px auto; z-index: 60; display: block; background: none; pointer-events: none; }
+    .game-modal > .game-card { pointer-events: auto; }
+    .game-modal .game-head { cursor: grab; user-select: none; touch-action: none; }
+    .game-modal .game-head::after { content: "▾"; margin-left: 4px; font-size: 18px; opacity: .85; }
+    .game-modal.collapsed .game-head::after { content: "▴"; }
+    .game-modal.collapsed .game-card { overflow: hidden; }
+    .game-modal.collapsed .game-card > :not(.game-head) { display: none; }
+    .game-modal.collapsed .game-head { border-radius: 22px; }
+    .game-modal[data-corner="tl"] { inset: 16px auto auto 16px; }
+    .game-modal[data-corner="tr"] { inset: 16px 16px auto auto; }
+    .game-modal[data-corner="bl"] { inset: auto auto 16px 16px; }
+    .game-modal[data-corner="br"] { inset: auto 16px 16px auto; }
+    .game-full-btn { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; color: #fff; background: #ffffff2e; font-size: 16px; cursor: pointer; }
+    .game-full-btn:hover { background: #ffffff55; }
+    .game-modal.fullscreen { inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 30% 20%, #3b2a6ecc, #0b0a1be6); backdrop-filter: blur(6px); pointer-events: auto; z-index: 90; }
+    .game-modal.fullscreen .game-head { cursor: default; }
+    .game-modal.fullscreen .game-head::after { content: none; }
     .game-modal.hidden { display: none; }
-    .profile-card.game-card { display: block; gap: 0; width: min(620px, 95vw); max-height: 94vh; overflow-y: auto; padding: 0; border: 0; border-radius: 22px; text-align: left; box-shadow: 0 30px 80px #0009, 0 0 0 1px #ffffff14; animation: gamePop .25s ease both; }
+    .profile-card.game-card { display: block; gap: 0; width: min(400px, 94vw); max-height: 72vh; overflow-y: auto; padding: 0; border: 0; border-radius: 22px; text-align: left; box-shadow: 0 30px 80px #0009, 0 0 0 1px #ffffff14; animation: gamePop .25s ease both; }
     @keyframes gamePop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
     .game-head { width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 16px 20px; color: #fff; background: linear-gradient(135deg, #6d3fd8, #c0397b 60%, #f0803c); border-radius: 22px 22px 0 0; }
     .game-logo { font-size: 30px; filter: drop-shadow(0 2px 4px #0006); animation: gameWobble 3s ease-in-out infinite; }
@@ -353,6 +373,30 @@
     .avatar *, .game-chip .avatar * { pointer-events: none; }
     .game-tools input[type=range] { width: 90px; accent-color: #8d6be8; }
     .game-tools .profile-btn.active { color: #fff; background: #8d6be8; }
+    .game-modal.fullscreen .profile-card.game-card { width: min(620px, 98vw); max-height: 98vh; }
+    .game-modal.fullscreen .profile-card.game-card:has(.game-pad) { width: min(1100px, 98vw); }
+    .profile-card.game-card:has(.game-pad) .game-body { padding-top: 8px; padding-bottom: 8px; }
+    .game-modal:not(.fullscreen) .game-pad-layout { grid-template-columns: 1fr; }
+    .game-modal:not(.fullscreen) .game-pad-layout .game-canvas { order: -1; max-width: none; max-height: none; }
+    .game-modal:not(.fullscreen) .game-pad-tools { flex-direction: row; flex-wrap: wrap; }
+    .game-modal:not(.fullscreen) .game-pad-tools .game-hint { flex-basis: 100%; }
+    .game-pad-layout { display: grid; grid-template-columns: 176px minmax(0, 1fr) 118px 118px; gap: 12px; align-items: start; }
+    .game-pad-layout .game-canvas { width: 100%; max-width: calc((100vh - 330px) * 1.5); max-height: calc(100vh - 330px); margin: 0 auto; }
+    .game-pad-colors, .game-pad-tools { display: flex; flex-direction: column; align-items: stretch; gap: 7px; }
+    .game-pad-tools .profile-btn { padding: 7px 8px; font-size: 12px; text-align: left; }
+    .game-pad-tools input[type=range], .game-pad-colors input[type=range] { width: 100%; accent-color: #8d6be8; }
+    .game-pad-tools .game-hint { font-size: 11px; }
+    .game-wheel { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: none; cursor: crosshair; box-shadow: 0 2px 10px #0003; }
+    .game-hex-row { display: flex; align-items: center; gap: 6px; }
+    .game-color-preview { flex: none; width: 30px; height: 30px; border: 2px solid var(--line); border-radius: 8px; }
+    .game-hex { min-width: 0; width: 100%; padding: 6px 8px; font: 12px monospace; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: inherit; }
+    .game-swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; justify-items: center; }
+    .game-swatches .game-swatch { width: 24px; height: 24px; }
+    @media (max-width: 720px) {
+      .game-pad-layout { grid-template-columns: 1fr; }
+      .game-pad-layout .game-canvas { order: -1; }
+      .game-pad-tools { flex-direction: row; flex-wrap: wrap; }
+    }
     .game-drawing { display: block; max-width: 100%; margin: 8px auto; border-radius: 12px; background: #fff; box-shadow: 0 2px 10px #0002; }
     .game-chain { display: flex; flex-direction: column; gap: 12px; margin: 10px 0; }
     .game-entry { padding: 12px 14px; border-radius: 14px; background: var(--field); animation: gamePop .3s ease both; }
@@ -449,7 +493,7 @@
     .party-scores { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin: 14px 0; }
     .party-score { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--field); font-size: 12px; font-weight: 700; }
     .party-reveal-stage { position: relative; width: 100%; aspect-ratio: 3 / 2; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 18px #00000012; }
-    .party-reveal-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; transition: clip-path .4s ease; }
+    .party-reveal-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
     .party-canvas-empty { position: absolute; inset: 0; display: grid; place-items: center; color: #78827b; font-size: 13px; }
     .party-word-hint { margin: 10px 0; color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-align: center; text-transform: uppercase; }
     .party-guess-form { display: flex; gap: 8px; align-items: center; }
@@ -459,7 +503,8 @@
     .party-guess { padding: 6px 10px; border-radius: 8px; color: var(--muted); background: var(--field); font-size: 12px; text-align: center; }
     .party-drawing-reveal { display: block; width: min(100%, 520px); margin: 12px auto; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
     @media (max-width: 480px) {
-      .profile-card.game-card { width: 97vw; max-height: 96dvh; }
+      .profile-card.game-card { width: 94vw; max-height: 60dvh; }
+      .game-modal { inset: auto 3vw 8px auto; }
       .party-clue { align-items: flex-start; flex-direction: column; gap: 3px; }
       .party-guess-form .profile-btn { padding: 8px 10px; }
     }
@@ -490,8 +535,8 @@
 <body>
   <div class="theme-backdrop" id="themeBackdrop" aria-hidden="true"></div>
   <div class="profile-modal hidden" id="profileModal"><div class="profile-card" role="dialog" aria-modal="true" aria-label="Profile" id="profileCard"></div></div>
-  <div class="profile-modal game-modal hidden" id="gameModal"><div class="profile-card game-card" role="dialog" aria-modal="true" aria-label="Garlic Fone" id="gameCard"></div></div>
-  <div class="profile-modal game-modal hidden" id="partyGameModal"><div class="profile-card game-card" role="dialog" aria-modal="true" aria-label="Party game" id="partyGameCard"></div></div>
+  <div class="profile-modal game-modal hidden" id="gameModal"><div class="profile-card game-card" role="dialog" aria-label="Garlic Fone" id="gameCard"></div></div>
+  <div class="profile-modal game-modal hidden" id="partyGameModal"><div class="profile-card game-card" role="dialog" aria-label="Party game" id="partyGameCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
   <main id="authView" class="auth-view">
     <section class="auth-main">
@@ -608,9 +653,9 @@
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.0.1"></script>
-  <script src="app.js?v=3.0.1"></script>
-  <script src="garlic.js?v=3.0.1"></script>
-  <script src="party-games.js?v=3.0.1"></script>
+  <script src="assets.js?v=3.2.6"></script>
+  <script src="app.js?v=3.2.6"></script>
+  <script src="garlic.js?v=3.2.6"></script>
+  <script src="party-games.js?v=3.2.6"></script>
 </body>
 </html>

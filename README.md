@@ -2,13 +2,13 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.0.1**
+**Version 3.2.6**
 
 ## How to play
 
-1. Download the zip file of this repository (green **Code** button, then **Download ZIP**).
-2. Unzip it.
-3. Open `index.html` to load into Discard. Keep `app.js` and `assets.js` in the same folder as `index.html`; it loads them.
+**Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
+
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `garlic.js` and `party-games.js` beside it).
 
 ## Run a local test server
 
@@ -21,6 +21,8 @@ python3 -m http.server 8000 --bind 0.0.0.0
 Then open [http://localhost:8000](http://localhost:8000). Stop the server with `Ctrl+C`.
 
 ## Using it
+
+Unread chats show a red count in the chat list and a red dot on the browser tab icon. Press **Pin** in a chat's header to keep it at the top of your list.
 
 1. Open `index.html`. Choose **Create account** (username + password, optional display name) or **Sign in**. Accounts and passwords live only on your computer, and you can have several on one computer.
 2. Open **Friends** and copy your **friend code**. Send it to a friend, and paste theirs into "Paste a friend code".
@@ -40,11 +42,11 @@ Open any chat, press the **+** at the left of the message bar and choose **🧄 
 
 ## Other chat games
 
-Open a chat, press **+**, and choose **🕵️ Impostor** or **🎨 Sketch & Guess**. Both are hosted peer-to-peer by the person who starts the game; players need to stay online.
+Open a chat, press **+**, and choose **🕵️ Impostor** or **🎨 Sketch & Guess**. Games open in a small panel in a corner of the screen so you can keep chatting; drag the title bar to move it to any corner, click it to collapse, or press ⛶ for fullscreen. Both are hosted peer-to-peer by the person who starts the game; players need to stay online.
 
 **Impostor** needs at least 3 players. Everyone except one player gets the secret word. Share clues, vote for who seems suspicious, and see the reveal.
 
-**Sketch & Guess** rotates the artist through the chat. Draw the word while others guess; the sketch is uncovered gradually, with letter hints appearing over time. Earlier correct guesses earn more points. Choose the word category and number of rounds in the lobby.
+**Sketch & Guess** rotates the artist through the chat. Draw the word while others guess; the sketch is shown live, with letter hints appearing over time. Earlier correct guesses earn more points. Choose the word category and number of rounds in the lobby.
 
 ## Appearance
 
@@ -68,7 +70,7 @@ The account is verified with a digital signature, so nobody else can pretend to 
 
 Everything is saved on your own computer (IndexedDB): profile, friends, messages, images, GIFs.
 
-- If storage runs low, or messages exceed a size cap (about 40% of the browser's quota, 20-300 MB), the **oldest messages are deleted automatically**.
+- Messages are never deleted on a schedule. Only if the browser truly refuses to save because the disk is full are the oldest messages removed to make room.
 - Settings has **Export backup**; restore it from **Create account** (Restore from a backup file). Clearing browser data erases your profile, so export a backup first.
 - Keep one tab open per profile.
 
