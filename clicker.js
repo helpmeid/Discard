@@ -25,6 +25,17 @@
     const abs = Math.abs(value);
     if (abs >= 1 && abs < 1000) return abs < 10 ? value.toFixed(2) : abs < 100 ? value.toFixed(1) : String(Math.round(value));
     if (abs >= 1 && abs < 1e6) return Math.round(value).toLocaleString("en-US");
+    // Words up to quadrillions, plain decimals down to 0.00001, scientific only beyond that.
+    if (abs >= 1e6 && abs < 1e18) {
+      let tier = Math.floor(Math.log10(abs) / 3);
+      let scaled = abs / 1000 ** tier;
+      if (scaled.toFixed(2) === "1000.00" && tier < 5) { tier += 1; scaled = abs / 1000 ** tier; }
+      if (tier < 6) return `${value < 0 ? "-" : ""}${scaled.toFixed(2)} ${["", "thousand", "million", "billion", "trillion", "quadrillion"][tier]}`;
+    }
+    if (abs < 1 && abs >= 1e-5) {
+      const decimals = Math.min(8, 2 - Math.floor(Math.log10(abs)));
+      return value.toFixed(decimals).replace(/0+$/, "").replace(/\.$/, "");
+    }
     let exp = Math.floor(Math.log10(abs));
     let mantissa = value / 10 ** exp;
     if (Math.abs(mantissa).toFixed(2) === "10.00") { mantissa /= 10; exp += 1; }
