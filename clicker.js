@@ -820,7 +820,7 @@
         let best = null;
         let bestDistance = Infinity;
         objs.forEach(object => {
-          if (object.ev || object.tug || (drag && drag.items.some(item => item.o === object))) return;
+          if (object.ev || object.tug || (drag && drag.set?.has(object))) return;
           const d = Math.hypot(object.x - view.cx, object.y - view.cy);
           if (d < bestDistance) { best = object; bestDistance = d; }
         });
@@ -835,7 +835,10 @@
     const pullRange = Math.max(R * 3, 70) * (1 + S.pull) * (surge > 1 ? 3 : 1.4);
     const damping = 0.03 * (1 + S.drift);
     const field = drag ? fieldRadius() : 0;
-    if (drag) drag.items = objs.filter(o => Math.hypot(o.x - drag.px, o.y - drag.py) < field).map(o => ({ o }));
+    if (drag) {
+      drag.items = objs.filter(o => Math.hypot(o.x - drag.px, o.y - drag.py) < field).map(o => ({ o }));
+      drag.set = new Set(drag.items.map(item => item.o));
+    }
     for (let index = objs.length - 1; index >= 0; index -= 1) {
       const object = objs[index];
       object.age += dt;
@@ -912,8 +915,12 @@
       if (novaTimer <= 0) {
         const targets = objs.filter(object => !object.ev);
         if (targets.length) {
-          targets.slice().forEach(object => { eat(object, true); objs.splice(objs.indexOf(object), 1); });
-          if (drag) drag.items = drag.items.filter(item => objs.includes(item.o));
+          const swallowed = new Set(targets);
+          targets.forEach(object => eat(object, true));
+          const remaining = objs.filter(object => !swallowed.has(object));
+          objs.length = 0;
+          objs.push(...remaining);
+          if (drag) drag.items = drag.items.filter(item => !swallowed.has(item.o));
           triggerNova(targets);
           toast(`💥 Nova! Swallowed ${targets.length} object${targets.length === 1 ? "" : "s"}.`);
           novaTimer = Math.max(6, 60 / (1 + 4 * S.nova));
@@ -1335,6 +1342,42 @@
     if (S.flags.sparkle && Math.random() < 0.5) burst(cx + rand(-R, R) * 2, cy + rand(-R, R) * 2, "#fff", 1, false);
   };
 
+  // Emoji text and shadowBlur are expensive, so each look is drawn once to a small canvas and reused with drawImage.
+  const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  const spriteCache = new Map();
+  let spriteScale = 1;
+  const getSprite = (icon, size, cluster, glow) => {
+    const px = Math.max(8, Math.round(size * 1.1 / 4) * 4);
+    const key = `${icon}|${px}|${cluster ? 1 : 0}|${glow}`;
+    let sprite = spriteCache.get(key);
+    if (sprite) return sprite;
+    if (spriteCache.size > 600) spriteCache.clear();
+    const blur = glow === "exotic" ? px * 0.8 : glow === "hl" ? 14 : 0;
+    const side = Math.ceil(px * 1.7 + blur * 2.5);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(side * spriteScale);
+    canvas.height = canvas.width;
+    const sctx = canvas.getContext("2d");
+    sctx.scale(spriteScale, spriteScale);
+    sctx.translate(side / 2, side / 2);
+    sctx.textAlign = "center";
+    sctx.textBaseline = "middle";
+    if (glow) {
+      sctx.shadowColor = glow === "exotic" ? "#ffd54a" : "#ffffff";
+      sctx.shadowBlur = blur * spriteScale;
+    }
+    if (cluster) {
+      sctx.font = `${Math.round(px * 0.7 / 1.1)}px ${EMOJI_FONT}`;
+      sctx.fillText(icon, -px / 1.1 * 0.38, -px / 1.1 * 0.3);
+      sctx.fillText(icon, px / 1.1 * 0.3, px / 1.1 * 0.34);
+    }
+    sctx.font = `${px}px ${EMOJI_FONT}`;
+    sctx.fillText(icon, 0, 0);
+    sprite = { canvas, side };
+    spriteCache.set(key, sprite);
+    return sprite;
+  };
+
   const drawObjects = (ctx, time) => {
     const { cx, cy, R } = view;
     ctx.textAlign = "center";
@@ -1367,27 +1410,14 @@
         ctx.beginPath();
         ctx.arc(0, 0, object.size * 0.85, 0, TAU);
         ctx.stroke();
-      } else if (object.exotic) {
-        ctx.shadowColor = "#ffd54a";
-        ctx.shadowBlur = object.size * 0.9;
-      } else if (drag?.items.some(item => item.o === object) || hover === object) {
-        ctx.shadowColor = "#ffffff";
-        ctx.shadowBlur = 14;
-      }
-      const emojiFont = size => `${Math.round(size)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-      if (object.ev) {
-        ctx.font = emojiFont(object.size * 1.1);
+        ctx.font = `${Math.round(object.size * 1.1)}px ${EMOJI_FONT}`;
         ctx.fillText(EVENTS[object.ev].icon, 0, 0);
         ctx.restore();
         return;
       }
-      if (object.n > 1) {
-        ctx.font = emojiFont(object.size * 0.7);
-        ctx.fillText(tier.icon, -object.size * 0.38, -object.size * 0.3);
-        ctx.fillText(tier.icon, object.size * 0.3, object.size * 0.34);
-      }
-      ctx.font = emojiFont(object.size * 1.1);
-      ctx.fillText(tier.icon, 0, 0);
+      const glow = object.exotic ? "exotic" : drag?.set?.has(object) || hover === object ? "hl" : "";
+      const sprite = getSprite(tier.icon, object.size, object.n > 1, glow);
+      ctx.drawImage(sprite.canvas, -sprite.side / 2, -sprite.side / 2, sprite.side, sprite.side);
       ctx.restore();
     });
     const focus = drag?.items[0]?.o || hover;
@@ -1582,6 +1612,7 @@
     feedAge += realDt;
     pulse = Math.max(0, pulse - realDt * 2.2);
     const dpr = resize();
+    if (dpr !== spriteScale) { spriteScale = dpr; spriteCache.clear(); }
     update(dt, realDt);
     view.R = holeRadius();
     const ctx = refs.canvas.getContext("2d");
