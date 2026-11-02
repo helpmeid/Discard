@@ -2,13 +2,13 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.3.3**
+**Version 3.5.1**
 
 ## How to play
 
 **Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
 
-**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `garlic.js` and `party-games.js` beside it).
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js` and `party-games.js` beside it).
 
 ## Run a local test server
 
@@ -39,6 +39,10 @@ Because there is no central server, offline members may retain an older copy unt
 ## Garlic Fone
 
 Open any chat, press the **+** at the left of the message bar and choose **🧄 Garlic Fone** to invite everyone in it to a telephone-pictionary game (2-8 players). Everyone writes a phrase, then the chains rotate: draw what you read, describe what you see, and so on. At the end each chain is revealed step by step. The host picks the number of rounds in the lobby (one per player by default, or 2 to 12; extra rounds loop the chains back around) and sets the time limits (presets or custom seconds per round type, or no limit; defaults are 40s to write, 90s to draw, 45s to describe) and a countdown bar shows the time left, and a step bar shows how far through the game you are. When time runs out your work is submitted automatically. The drawing pad has a fill bucket, an opacity slider and an eraser, and **Ctrl+Z** undoes and **Ctrl+Shift+Z** redoes (Cmd on Mac). Leaving mid-game asks for confirmation, and closing or reloading the tab always asks "are you sure?". The host's browser runs the game, so everyone must stay online, and invites only reach people who are online. The host can **Skip waiting** for slow players.
+
+## Solo games
+
+Press the **🎮** button above your chat list to open the solo games area. You can play **Event Horizon**, a black hole idle game, without being in a chat. Use **Export save** to download your progress as a file and **Import save** to load one back in (it replaces your current progress after a confirmation). The same Export and Import buttons are at the top of the game.
 
 ## Other chat games
 

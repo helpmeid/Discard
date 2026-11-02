@@ -184,7 +184,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.3.3";
+const APP_VERSION = "3.5.1";
 document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
@@ -844,6 +844,31 @@ function flushOutbox(id) {
   });
 }
 
+const reactionPattern = /^\p{Extended_Pictographic}[\p{Extended_Pictographic}\u200d\ufe0f\u{1F3FB}-\u{1F3FF}]{0,10}$/u;
+function sanitizeReactions(input) {
+  const clean = {};
+  if (!input || typeof input !== "object") return clean;
+  Object.entries(input).slice(0, 24).forEach(([emoji, ids]) => {
+    if (!reactionPattern.test(emoji) || !Array.isArray(ids)) return;
+    const list = [...new Set(ids.filter(id => typeof id === "string" && idPattern.test(id)))].slice(0, 200);
+    if (list.length) clean[emoji] = list;
+  });
+  return clean;
+}
+// Adds or removes one person's reaction; returns false when nothing changed.
+function setReaction(message, emoji, userId, on) {
+  if (!reactionPattern.test(emoji)) return false;
+  const reactions = message.reactions || (message.reactions = {});
+  const list = reactions[emoji] || [];
+  const has = list.includes(userId);
+  if (on === has) return false;
+  if (on && !has && Object.keys(reactions).length >= 24 && !reactions[emoji]) return false;
+  reactions[emoji] = on ? [...list, userId] : list.filter(id => id !== userId);
+  if (!reactions[emoji].length) delete reactions[emoji];
+  if (!Object.keys(reactions).length) delete message.reactions;
+  return true;
+}
+
 function rememberDeletedMessage(chat, messageId) {
   chat.deletedMessageIds ||= [];
   if (!chat.deletedMessageIds.includes(messageId)) {
@@ -1113,6 +1138,25 @@ function handleData(from, data) {
       touchChat(chat);
       break;
     }
+    case "react": {
+      const chat = chatForSender(from, data.chatId);
+      if (!chat || typeof data.msgId !== "string" || typeof data.emoji !== "string" || typeof data.on !== "boolean") return;
+      const message = chat.messages.find(item => item.id === data.msgId);
+      if (message && setReaction(message, data.emoji, from, data.on)) touchChat(chat);
+      break;
+    }
+    case "read": {
+      const chat = chatForSender(from, data.chatId);
+      if (!chat || !Number.isFinite(data.upTo)) return;
+      let changed = false;
+      chat.messages.forEach(message => {
+        if (message.sender !== state.me.id || message.createdAt > data.upTo || message.pending?.includes(from)) return;
+        if (!message.readBy) message.readBy = [];
+        if (!message.readBy.includes(from)) { message.readBy.push(from); changed = true; }
+      });
+      if (changed) touchChat(chat);
+      break;
+    }
     case "ack": {
       const chat = chatForSender(from, data.chatId);
       if (!chat) return;
@@ -1141,6 +1185,21 @@ document.addEventListener("click", () => {
 function isMuted(id) {
   return Boolean(state?.me.preferences?.mutedIds?.includes(id));
 }
+
+const readSent = new Map();
+// Tells the other members which of their messages we've seen; only sent while the chat is actually on screen.
+function sendReadReceipts(chat) {
+  if (!chat || document.hidden || !document.hasFocus() || !state) return;
+  const incoming = chat.messages.filter(message => message.sender !== state.me.id);
+  if (!incoming.length) return;
+  chat.members.filter(id => id !== state.me.id).forEach(id => {
+    const upTo = Math.max(...incoming.filter(message => message.sender === id).map(message => message.createdAt), 0);
+    if (!upTo || (readSent.get(`${chat.id}:${id}`) || 0) >= upTo) return;
+    if (sendTo(id, { t: "read", chatId: chat.id, upTo })) readSent.set(`${chat.id}:${id}`, upTo);
+  });
+}
+window.addEventListener("focus", () => sendReadReceipts(state?.chats.find(item => item.id === activeChatId)));
+document.addEventListener("visibilitychange", () => sendReadReceipts(state?.chats.find(item => item.id === activeChatId)));
 
 function showMessageNotification(chat, from, text, image, file) {
   if (from === state.me.id || !state.me.preferences?.notifications) return;
@@ -1219,6 +1278,32 @@ window.setInterval(() => {
 // ---------- local stand-in for the old server API ----------
 function fail(message) {
   throw new Error(message);
+}
+
+const sendTimes = [];
+let sendNoticeTimer = null;
+// Allows 5 sends per 5 seconds; otherwise shows a "wait" notice and refuses.
+function allowSend() {
+  const now = Date.now();
+  while (sendTimes.length && now - sendTimes[0] > 5000) sendTimes.shift();
+  if (sendTimes.length >= 5) {
+    let notice = document.querySelector("#sendNotice");
+    if (!notice) {
+      notice = document.createElement("div");
+      notice.id = "sendNotice";
+      notice.setAttribute("role", "alert");
+      notice.style.cssText = "position:fixed;left:50%;bottom:90px;transform:translateX(-50%);padding:9px 14px;border-radius:10px;background:#a34535;color:#fff;font-size:13px;box-shadow:0 8px 24px #0004;z-index:9999";
+      document.body.append(notice);
+    }
+    const wait = Math.max(1, Math.ceil((5000 - (now - sendTimes[0])) / 1000));
+    notice.textContent = `You're sending too fast. Wait ${wait}s before sending again.`;
+    notice.hidden = false;
+    window.clearTimeout(sendNoticeTimer);
+    sendNoticeTimer = window.setTimeout(() => { notice.hidden = true; }, 2500);
+    return false;
+  }
+  sendTimes.push(now);
+  return true;
 }
 
 function sendMessageLocal(chat, text, image, file, replyTo) {
@@ -1553,6 +1638,21 @@ async function api(path, options = {}) {
     return { ok: true };
   }
 
+  const reactRoute = route.match(/^\/api\/chats\/([^/]+)\/messages\/([^/]+)\/react$/);
+  if (method === "POST" && reactRoute) {
+    const chat = state.chats.find(item => item.id === decodeURIComponent(reactRoute[1]));
+    if (!chat) fail("Chat not found.");
+    const message = chat.messages.find(item => item.id === decodeURIComponent(reactRoute[2]));
+    if (!message) fail("Message not found.");
+    const emoji = typeof body.emoji === "string" ? body.emoji : "";
+    if (!reactionPattern.test(emoji)) fail("Pick an emoji to react with.");
+    const on = !message.reactions?.[emoji]?.includes(state.me.id);
+    if (!setReaction(message, emoji, state.me.id, on)) fail("You can't add more reaction types to this message.");
+    touchChat(chat);
+    chat.members.filter(id => id !== state.me.id).forEach(id => { connectTo(id); sendTo(id, { t: "react", chatId: chat.id, msgId: message.id, emoji, on }); });
+    return { ok: true };
+  }
+
   const deleteMessageRoute = route.match(/^\/api\/chats\/([^/]+)\/messages\/([^/]+)$/);
   if (method === "DELETE" && deleteMessageRoute) {
     const chat = state.chats.find(item => item.id === decodeURIComponent(deleteMessageRoute[1]));
@@ -1784,7 +1884,9 @@ function cleanImported(raw, official = false) {
           ...(file ? { file } : {}),
           ...(safeIdPattern.test(message.replyTo || "") ? { replyTo: message.replyTo } : {}),
           createdAt: Number(message.createdAt) || Date.now(),
-          pending: Array.isArray(message.pending) ? message.pending.filter(id => idPattern.test(id)) : []
+          pending: Array.isArray(message.pending) ? message.pending.filter(id => idPattern.test(id)) : [],
+          ...(Array.isArray(message.readBy) ? { readBy: message.readBy.filter(id => idPattern.test(id)) } : {}),
+          ...(Object.keys(sanitizeReactions(message.reactions)).length ? { reactions: sanitizeReactions(message.reactions) } : {})
         };
       })
     })).filter(chat => chat.members.includes(me.id));
@@ -1820,6 +1922,34 @@ function renderProfile() {
 }
 
 let authMode = "signin";
+const lastUserKey = "discard-last-username";
+
+// Only the username is kept by the app; the password is handed to the browser's own password manager.
+function rememberAccount(username, password) {
+  try { localStorage.setItem(lastUserKey, username); } catch {}
+  if (window.PasswordCredential && navigator.credentials?.store) {
+    try { navigator.credentials.store(new PasswordCredential({ id: username, password, name: username })).catch(() => {}); } catch {}
+  }
+}
+
+async function prefillAuth() {
+  setAuthMode("signin");
+  let username = "";
+  try { username = localStorage.getItem(lastUserKey) || ""; } catch {}
+  if (username && !usernameInput.value) usernameInput.value = username;
+  const passwordInput = document.querySelector("#password");
+  if (window.PasswordCredential && navigator.credentials?.get && !passwordInput.value) {
+    try {
+      const credential = await navigator.credentials.get({ password: true, mediation: "optional" });
+      if (credential?.password && !passwordInput.value && (!username || credential.id === username)) {
+        usernameInput.value = credential.id;
+        passwordInput.value = credential.password;
+      }
+    } catch {}
+  }
+  if (usernameInput.value && passwordInput.value) authSubmit.focus();
+  else (usernameInput.value ? passwordInput : usernameInput).focus();
+}
 
 function setAuthMode(next) {
   authMode = next;
@@ -1863,6 +1993,7 @@ authForm.addEventListener("submit", async event => {
   try {
     if (authMode === "signup") await signUp(username, password, document.querySelector("#displayName").value.trim().slice(0, 32), backupFile);
     else await signIn(username, password, backupFile);
+    rememberAccount(username, password);
     authForm.reset();
     authMessage.textContent = "";
   } catch (error) {
@@ -1928,6 +2059,7 @@ function showAuth() {
   chatView.classList.add("hidden");
   authView.classList.remove("hidden");
   document.querySelector("#authVersion").classList.remove("hidden");
+  prefillAuth();
 }
 
 function chatLastMessage(chat) {
@@ -2291,11 +2423,19 @@ function renderConversation() {
   messageArea.append(divider);
 
   const byId = new Map(chat.messages.map(item => [item.id, item]));
-  chat.messages.slice(-400).forEach(message => {
+  let previousMessage = null;
+  const visible = chat.messages.slice(-400);
+  visible.forEach((message, visibleIndex) => {
+    const grouped = Boolean(previousMessage) && previousMessage.sender === message.sender && !message.replyTo
+      && Math.abs(new Date(message.createdAt) - new Date(previousMessage.createdAt)) < 5 * 60 * 1000;
+    const following = visible[visibleIndex + 1];
+    const lastInRun = !following || following.sender !== message.sender || Boolean(following.replyTo)
+      || Math.abs(new Date(following.createdAt) - new Date(message.createdAt)) >= 5 * 60 * 1000;
+    previousMessage = message;
     const mine = message.sender === currentUser.id;
     const senderInfo = chat.members.find(member => member.id === message.sender);
     const row = document.createElement("div");
-    row.className = `message${mine ? " mine" : ""}`;
+    row.className = `message${mine ? " mine" : ""}${grouped ? " grouped" : ""}`;
     const senderName = mine ? "You" : (senderInfo?.displayName || "Former member");
     const avatar = document.createElement("span");
     avatar.className = "avatar message-avatar";
@@ -2378,13 +2518,24 @@ function renderConversation() {
       : pendingCount
         ? ` · ${recipientCount - pendingCount}/${recipientCount} delivered · waiting for ${pendingCount}`
         : " · sent to everyone";
-    meta.textContent = `${formatTime(message.createdAt)}${deliveryStatus}`;
+    const readCount = recipientIds.filter(id => message.readBy?.includes(id)).length;
+    const readStatus = mine && recipientCount && !pendingCount && readCount
+      ? (readCount === recipientCount ? " · Read ✓✓" : ` · Read by ${readCount}/${recipientCount}`)
+      : "";
+    if (lastInRun) meta.textContent = `${formatTime(message.createdAt)}${deliveryStatus}${readStatus}`;
+    else meta.classList.add("meta-hover");
     const replyButton = document.createElement("button");
     replyButton.type = "button";
     replyButton.textContent = "Reply";
     replyButton.setAttribute("aria-label", "Reply to this message");
     replyButton.addEventListener("click", () => startReply(chat, message));
     meta.append(replyButton);
+    const reactButton = document.createElement("button");
+    reactButton.type = "button";
+    reactButton.textContent = "React";
+    reactButton.setAttribute("aria-label", "React to this message");
+    reactButton.addEventListener("click", event => { event.stopPropagation(); openReactionPicker(reactButton, chat, message); });
+    meta.append(reactButton);
     if (mine) {
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
@@ -2401,11 +2552,106 @@ function renderConversation() {
       });
       meta.append(deleteButton);
     }
-    body.append(head, bubble, meta);
+    const reactionRow = renderReactions(chat, message);
+    const parts = grouped ? [bubble] : [head, bubble];
+    if (reactionRow) parts.push(reactionRow);
+    body.append(...parts, meta);
     row.append(avatar, body);
     messageArea.append(row);
   });
   messageArea.scrollTop = messageArea.scrollHeight;
+  sendReadReceipts(state?.chats.find(item => item.id === chat.id));
+}
+
+async function toggleReaction(chat, message, emoji) {
+  try {
+    await api(`/api/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(message.id)}/react`, { method: "POST", body: { emoji } });
+    await refreshSnapshot();
+  } catch (error) {
+    friendMessage.textContent = error.message;
+  }
+}
+
+function renderReactions(chat, message) {
+  const entries = Object.entries(message.reactions || {}).filter(([, ids]) => ids.length);
+  if (!entries.length) return null;
+  const row = document.createElement("div");
+  row.className = "reaction-row";
+  entries.forEach(([emoji, ids]) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `reaction-chip${ids.includes(currentUser.id) ? " mine" : ""}`;
+    chip.textContent = `${emoji} ${ids.length}`;
+    const names = ids.map(id => id === currentUser.id ? "You" : (chat.members.find(member => member.id === id)?.displayName || "Former member"));
+    chip.title = names.join(", ");
+    chip.setAttribute("aria-label", `${emoji} reaction from ${names.join(", ")}`);
+    chip.addEventListener("click", () => toggleReaction(chat, message, emoji));
+    row.append(chip);
+  });
+  return row;
+}
+
+let reactionPopover = null;
+function closeReactionPicker() {
+  reactionPopover?.remove();
+  reactionPopover = null;
+}
+document.addEventListener("click", event => { if (reactionPopover && !reactionPopover.contains(event.target)) closeReactionPicker(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeReactionPicker(); });
+
+function openReactionPicker(anchor, chat, message) {
+  const reopen = reactionPopover?.dataset.id === message.id;
+  closeReactionPicker();
+  if (reopen) return;
+  const pop = document.createElement("div");
+  pop.className = "reaction-picker";
+  pop.dataset.id = message.id;
+  const pick = emoji => { closeReactionPicker(); toggleReaction(chat, message, emoji); };
+  const quick = document.createElement("div");
+  quick.className = "reaction-quick";
+  ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "🎉"].forEach(emoji => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = emoji;
+    button.addEventListener("click", () => pick(emoji));
+    quick.append(button);
+  });
+  const more = document.createElement("button");
+  more.type = "button";
+  more.className = "reaction-more";
+  more.textContent = "＋";
+  more.title = "More emoji";
+  quick.append(more);
+  const full = document.createElement("div");
+  full.className = "reaction-full hidden";
+  const search = document.createElement("input");
+  search.type = "search";
+  search.placeholder = "Search emoji";
+  const grid = document.createElement("div");
+  grid.className = "reaction-grid";
+  const fill = () => {
+    grid.replaceChildren(...window.discardEmoji.search(search.value).filter(item => reactionPattern.test(item.char)).slice(0, 120).map(item => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = item.char;
+      button.title = `:${item.name}:`;
+      button.addEventListener("click", () => pick(item.char));
+      return button;
+    }));
+  };
+  search.addEventListener("input", fill);
+  more.addEventListener("click", () => { full.classList.toggle("hidden"); fill(); place(); if (!full.classList.contains("hidden")) search.focus(); });
+  full.append(search, grid);
+  pop.append(quick, full);
+  document.body.append(pop);
+  function place() {
+    const rect = anchor.getBoundingClientRect();
+    pop.style.left = `${Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, rect.left - 20))}px`;
+    const below = rect.bottom + 6 + pop.offsetHeight < window.innerHeight;
+    pop.style.top = `${below ? rect.bottom + 6 : Math.max(8, rect.top - pop.offsetHeight - 6)}px`;
+  }
+  place();
+  reactionPopover = pop;
 }
 
 function renderGroupManagement(chat) {
@@ -3122,8 +3368,8 @@ newChatForm.addEventListener("submit", async event => {
 
 messageForm.addEventListener("submit", async event => {
   event.preventDefault();
-  const text = messageInput.value.trim();
-  if (!text || !activeChatId) return;
+  const text = window.discardEmoji.replaceShortcodes(messageInput.value.trim());
+  if (!text || !activeChatId || !allowSend()) return;
   try {
     await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text, ...replyBody() } });
     messageInput.value = "";
@@ -3282,11 +3528,11 @@ async function prepareImage(file) {
 }
 
 async function sendImage(file) {
-  if (!file || !activeChatId) return;
+  if (!file || !activeChatId || !allowSend()) return;
   try {
     friendMessage.textContent = "";
     const image = await prepareImage(file);
-    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text: messageInput.value.trim(), image, ...replyBody() } });
+    await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: { text: window.discardEmoji.replaceShortcodes(messageInput.value.trim()), image, ...replyBody() } });
     messageInput.value = "";
     clearReply();
     await refreshSnapshot();
@@ -3296,7 +3542,7 @@ async function sendImage(file) {
 }
 
 async function sendFile(file) {
-  if (!file || !activeChatId) return;
+  if (!file || !activeChatId || !allowSend()) return;
   try {
     friendMessage.textContent = "";
     if (file.size > maxFileBytes) throw new Error(`Files must be under ${formatBytes(maxFileBytes)}.`);
@@ -3341,6 +3587,28 @@ document.querySelector("#plusSketch").addEventListener("click", () => {
   const chat = state?.chats.find(item => item.id === activeChatId);
   if (chat) startSketchInvite(chat);
 });
+document.querySelector("#plusClicker").addEventListener("click", () => {
+  setPlusMenu(false);
+  window.openVoidForge(currentUser?.id);
+});
+
+const gamesHub = document.querySelector("#gamesHub");
+const hubStatus = document.querySelector("#hubStatus");
+const setGamesHub = open => {
+  gamesHub.classList.toggle("hidden", !open);
+  hubStatus.textContent = "";
+};
+const hubReport = result => { hubStatus.textContent = result.ok ? result.message : result.error; };
+document.querySelector("#gamesToggle").addEventListener("click", () => setGamesHub(true));
+document.querySelector("#hubClose").addEventListener("click", () => setGamesHub(false));
+gamesHub.addEventListener("click", event => { if (event.target === gamesHub) setGamesHub(false); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") setGamesHub(false); });
+document.querySelector("#hubPlayHorizon").addEventListener("click", () => {
+  setGamesHub(false);
+  window.openVoidForge(currentUser?.id);
+});
+document.querySelector("#hubExportHorizon").addEventListener("click", () => hubReport(window.voidForgeTransfer.export(currentUser?.id)));
+document.querySelector("#hubImportHorizon").addEventListener("click", async () => hubReport(await window.voidForgeTransfer.import(currentUser?.id)));
 document.querySelector("#plusFile").addEventListener("click", () => {
   setPlusMenu(false);
   document.querySelector("#imageFile").click();
@@ -3394,7 +3662,7 @@ function renderGifs(items) {
     picture.loading = "lazy";
     picture.title = "Send this GIF";
     picture.addEventListener("click", async () => {
-      if (!activeChatId) return;
+      if (!activeChatId || !allowSend()) return;
       try {
         await api(`/api/chats/${encodeURIComponent(activeChatId)}/messages`, { method: "POST", body: gif.send });
         gifPanel.classList.add("hidden");
@@ -3476,8 +3744,107 @@ document.querySelector("#gifUpload").addEventListener("change", async event => {
   }
 });
 
+const emojiPanel = document.querySelector("#emojiPanel");
+const emojiGrid = document.querySelector("#emojiGrid");
+const emojiSearch = document.querySelector("#emojiSearch");
+const emojiSuggest = document.querySelector("#emojiSuggest");
+let suggestions = [];
+let suggestIndex = 0;
+
+function insertEmoji(char) {
+  const start = messageInput.selectionStart ?? messageInput.value.length;
+  const end = messageInput.selectionEnd ?? start;
+  messageInput.setRangeText(char, start, end, "end");
+  messageInput.focus();
+}
+
+function renderEmojiGrid() {
+  const results = window.discardEmoji.search(emojiSearch.value);
+  emojiGrid.replaceChildren();
+  if (!results.length) {
+    const empty = document.createElement("div");
+    empty.className = "gif-empty";
+    empty.textContent = "No emoji found.";
+    emojiGrid.append(empty);
+    return;
+  }
+  results.forEach(item => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.char;
+    button.title = `:${item.name}:`;
+    button.setAttribute("aria-label", item.name.replace(/_/g, " "));
+    button.addEventListener("click", () => insertEmoji(item.char));
+    emojiGrid.append(button);
+  });
+}
+
+document.querySelector("#emojiToggle").addEventListener("click", () => {
+  emojiPanel.classList.toggle("hidden");
+  if (!emojiPanel.classList.contains("hidden")) {
+    gifPanel.classList.add("hidden");
+    emojiSearch.value = "";
+    renderEmojiGrid();
+    emojiSearch.focus();
+  }
+});
+document.querySelector("#gifToggle").addEventListener("click", () => emojiPanel.classList.add("hidden"));
+emojiSearch.addEventListener("input", renderEmojiGrid);
+
+function hideSuggestions() {
+  suggestions = [];
+  emojiSuggest.classList.add("hidden");
+}
+
+function applySuggestion(item) {
+  const caret = messageInput.selectionStart ?? messageInput.value.length;
+  const before = messageInput.value.slice(0, caret).replace(/:[a-z0-9_+-]{2,}$/i, "");
+  messageInput.value = before + item.char + messageInput.value.slice(caret);
+  messageInput.setSelectionRange(before.length + item.char.length, before.length + item.char.length);
+  hideSuggestions();
+  messageInput.focus();
+}
+
+function updateSuggestions() {
+  const caret = messageInput.selectionStart ?? messageInput.value.length;
+  const match = /(?:^|\s):([a-z0-9_+-]{2,})$/i.exec(messageInput.value.slice(0, caret));
+  suggestions = match ? window.discardEmoji.search(match[1]).slice(0, 8) : [];
+  suggestIndex = 0;
+  emojiSuggest.replaceChildren();
+  emojiSuggest.classList.toggle("hidden", !suggestions.length);
+  suggestions.forEach((item, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("role", "option");
+    button.className = index === 0 ? "active" : "";
+    const char = document.createElement("span");
+    char.className = "emoji-char";
+    char.textContent = item.char;
+    button.append(char, document.createTextNode(`:${item.name}:`));
+    button.addEventListener("mousedown", event => { event.preventDefault(); applySuggestion(item); });
+    emojiSuggest.append(button);
+  });
+}
+
+messageInput.addEventListener("input", updateSuggestions);
+messageInput.addEventListener("blur", () => window.setTimeout(hideSuggestions, 100));
+messageInput.addEventListener("keydown", event => {
+  if (!suggestions.length) return;
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    suggestIndex = (suggestIndex + (event.key === "ArrowDown" ? 1 : suggestions.length - 1)) % suggestions.length;
+    [...emojiSuggest.children].forEach((child, index) => child.classList.toggle("active", index === suggestIndex));
+  } else if (event.key === "Enter" || event.key === "Tab") {
+    applySuggestion(suggestions[suggestIndex]);
+  } else if (event.key === "Escape") {
+    hideSuggestions();
+  } else return;
+  event.preventDefault();
+});
+
 function loadVersion() {
   api("/api/version").then(result => {
     document.querySelector("#versionNote").textContent = `Version ${result.version}`;
   }).catch(() => {});
 }
+
+if (!currentUser) prefillAuth();

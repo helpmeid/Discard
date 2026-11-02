@@ -166,6 +166,17 @@
     #newGroupAvatarLabel { display: block; margin: 6px 0; text-align: center; }
     .message-bubble { padding: 11px 14px; border-radius: 4px 14px 14px 14px; color: var(--bubble-ink); background: var(--bubble); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
     .message.mine .message-bubble { border-radius: 14px 4px 14px 14px; color: #fff; background: var(--accent); }
+    .reaction-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .reaction-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--line, #0002); border-radius: 999px; color: inherit; background: var(--hover, #0000000a); font-size: 12px; cursor: pointer; }
+    .reaction-chip.mine { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+    .reaction-picker { position: fixed; z-index: 400; width: 320px; padding: 8px; border: 1px solid #0002; border-radius: 14px; background: var(--white, #fff); color: var(--ink); box-shadow: 0 10px 30px #0004; }
+    .reaction-quick { display: flex; gap: 2px; flex-wrap: wrap; }
+    .reaction-quick button, .reaction-grid button { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; font-size: 18px; cursor: pointer; }
+    .reaction-quick button:hover, .reaction-grid button:hover { background: var(--hover, #0000000f); }
+    .reaction-full { margin-top: 6px; }
+    .reaction-full.hidden { display: none; }
+    .reaction-full input { width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 6px 8px; }
+    .reaction-grid { display: flex; flex-wrap: wrap; gap: 2px; max-height: 170px; overflow-y: auto; }
     .message-meta { color: #99a19b; font-size: 10px; }
     .message-meta button { margin-left: 7px; padding: 2px 5px; border: 0; border-radius: 4px; color: var(--muted); background: transparent; font-size: 10px; }
     .message-meta button:hover { color: #a34535; background: var(--hover); }
@@ -269,6 +280,18 @@
     .gif-cell img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block; }
     .gif-star { position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border: 0; border-radius: 50%; color: #fff; background: #0009; font-size: 14px; line-height: 1; }
     .gif-star.on { color: #f2c94c; }
+    .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 2px; max-height: 240px; overflow-y: auto; }
+    .emoji-grid button { height: 38px; border: 0; border-radius: 8px; background: transparent; font-size: 22px; cursor: pointer; }
+    .emoji-grid button:hover { background: var(--hover); }
+    .emoji-suggest { max-width: 850px; margin: 0 auto 8px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--white); }
+    .emoji-suggest button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 8px; color: var(--ink); background: transparent; font-size: 13px; text-align: left; cursor: pointer; }
+    .emoji-suggest button .emoji-char { font-size: 20px; }
+    .emoji-suggest button.active, .emoji-suggest button:hover { background: var(--hover); }
+    .message-meta.meta-hover { display: none; }
+    .message:hover .message-meta.meta-hover { display: block; }
+    .message.grouped { margin-top: -9px; }
+    .message.grouped .message-avatar { visibility: hidden; height: 0; }
+    .message.grouped .message-bubble { border-radius: 14px; }
     .gif-empty { grid-column: 1 / -1; padding: 16px 4px; color: var(--muted); font-size: 12px; text-align: center; }
     .message-area.no-anim .message { animation: none; }
     @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -310,6 +333,13 @@
     .settings-note { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
     .lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000c; cursor: zoom-out; }
     .lightbox.hidden { display: none; }
+    .games-hub { width: min(420px, 92vw); text-align: left; justify-items: stretch; }
+    .games-hub h3, .games-hub .profile-sub { text-align: center; }
+    .hub-game { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+    .hub-icon { font-size: 28px; }
+    .hub-text { flex: 1; display: grid; }
+    .hub-text small, .hub-label { color: var(--muted, inherit); opacity: .8; font-size: 12px; }
+    .hub-transfer { display: grid; gap: 6px; justify-items: center; }
     .profile-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #0008; }
     .profile-card { width: min(320px, 92vw); padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel, var(--field)); color: var(--ink); text-align: center; display: grid; gap: 8px; justify-items: center; }
     .profile-card .avatar { width: 72px; height: 72px; font-size: 28px; }
@@ -543,6 +573,14 @@
 <body>
   <div class="theme-backdrop" id="themeBackdrop" aria-hidden="true"></div>
   <div class="profile-modal hidden" id="profileModal"><div class="profile-card" role="dialog" aria-modal="true" aria-label="Profile" id="profileCard"></div></div>
+  <div class="profile-modal hidden" id="gamesHub"><div class="profile-card games-hub" role="dialog" aria-label="Solo games">
+    <h3>🎮 Solo games</h3>
+    <div class="profile-sub">Play on your own. No chat needed.</div>
+    <div class="hub-game"><div class="hub-icon">🕳️</div><div class="hub-text"><b>Event Horizon</b><small>Solo black hole idle game</small></div><button class="profile-btn primary" id="hubPlayHorizon" type="button">Play</button></div>
+    <div class="hub-transfer"><div class="hub-label">Event Horizon save data</div><div class="profile-actions"><button class="profile-btn" id="hubExportHorizon" type="button">Export save</button><button class="profile-btn" id="hubImportHorizon" type="button">Import save</button></div></div>
+    <div class="profile-sub" id="hubStatus" role="status"></div>
+    <div class="profile-actions"><button class="profile-btn" id="hubClose" type="button">Close</button></div>
+  </div></div>
   <div class="profile-modal game-modal hidden" id="gameModal"><div class="profile-card game-card" role="dialog" aria-label="Garlic Fone" id="gameCard"></div></div>
   <div class="profile-modal game-modal hidden" id="partyGameModal"><div class="profile-card game-card" role="dialog" aria-label="Party game" id="partyGameCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
@@ -632,7 +670,7 @@
       </section>
       <div class="account-row"><div class="avatar" id="userAvatar">U</div><div class="account-copy"><div class="account-name" id="userName">Username</div><div class="account-caption" id="userHandle">Your space</div></div></div>
       <div class="section-label">Messages</div>
-      <div class="sidebar-actions"><div class="section-label">Your chats</div><div class="sidebar-action-buttons"><button class="icon-button" id="friendsToggle" type="button" aria-label="Friends" title="Friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></button><button class="icon-button" id="newChatButton" type="button" aria-label="New group chat" title="New group chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
+      <div class="sidebar-actions"><div class="section-label">Your chats</div><div class="sidebar-action-buttons"><button class="icon-button" id="gamesToggle" type="button" aria-label="Games" title="Solo games">🎮</button><button class="icon-button" id="friendsToggle" type="button" aria-label="Friends" title="Friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></button><button class="icon-button" id="newChatButton" type="button" aria-label="New group chat" title="New group chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
       <section class="social-panel hidden" id="friendsPanel" aria-label="Friends">
         <h3>Friends</h3>
         <div class="code-row"><input id="myCode" readonly aria-label="Your friend code"><button type="button" id="copyCode">Copy</button></div><p class="panel-message">Your friend code. Share it so friends can add you.</p>
@@ -653,19 +691,22 @@
       <section class="group-management hidden" id="groupManagement" aria-label="Group management"><div class="group-management-heading"><h3>Group members and ownership</h3><button type="button" id="groupManagementClose">Close</button></div><div class="group-avatar-row hidden" id="groupAvatarRow"><label class="profile-btn">Upload group picture<input id="groupAvatarFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="profile-btn" id="groupAvatarRemove" type="button">Remove picture</button></div><div id="groupMemberList"></div><div class="group-add-members hidden" id="groupAddMembers"><h4>Add friends</h4><div class="member-choices" id="groupAddMemberChoices"></div><p class="group-add-note" id="groupAddNote"></p><button type="button" id="groupAddButton">Add selected people</button></div><div class="group-management-footer"><button type="button" class="danger" id="groupLeaveButton">Leave group</button><button type="button" class="danger" id="groupDeleteButton">Delete group</button></div></section>
       <div class="welcome-empty" id="welcomeEmpty"><div class="welcome-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6a7.5 7.5 0 1 1 17-3.5Z"/><path d="M8 11h8M8 14h5"/></svg></div><h2>Your conversations</h2><p>Add friends to start a direct message, or make a group chat together.</p></div>
       <div class="message-area hidden" id="messageArea" aria-live="polite"></div>
-      <div class="composer-wrap hidden" id="composerWrap"><section class="gif-panel hidden" id="gifPanel" aria-label="GIFs">
+      <div class="composer-wrap hidden" id="composerWrap"><section class="gif-panel emoji-panel hidden" id="emojiPanel" aria-label="Emoji"><input class="gif-search" id="emojiSearch" type="search" placeholder="Search emoji by name" aria-label="Search emoji" autocomplete="off"><div class="emoji-grid" id="emojiGrid"></div></section><div class="emoji-suggest hidden" id="emojiSuggest" role="listbox" aria-label="Emoji suggestions"></div><section class="gif-panel hidden" id="gifPanel" aria-label="GIFs">
         <div class="gif-head"><div class="gif-tabs"><button type="button" class="gif-tab" data-gif-tab="trending" aria-pressed="true">Trending</button><button type="button" class="gif-tab" data-gif-tab="favorites" aria-pressed="false">★ Favorites</button><button type="button" class="gif-tab" data-gif-tab="library" aria-pressed="false">My GIFs</button></div><label class="profile-btn">Add GIF<input id="gifUpload" type="file" accept="image/gif" hidden></label></div>
         <input class="gif-search" id="gifSearch" type="search" placeholder="Search GIPHY" aria-label="Search GIFs" autocomplete="off">
         <div class="gif-grid" id="gifGrid"></div>
         <p class="settings-status" id="gifStatus" aria-live="polite"></p>
-      </section><div class="reply-bar hidden" id="replyBar"><span class="reply-bar-text"></span><button type="button" id="replyCancel" aria-label="Cancel reply">×</button></div><form class="composer" id="messageForm"><button class="attach-button plus-button" id="plusToggle" type="button" title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">+</button><div class="plus-menu hidden" id="plusMenu" role="menu"><button type="button" role="menuitem" id="plusGame">🧄 <span>Garlic Fone<small>Telephone drawing game</small></span></button><button type="button" role="menuitem" id="plusImpostor">🕵️ <span>Impostor<small>Find the player with no word</small></span></button><button type="button" role="menuitem" id="plusSketch">🎨 <span>Sketch & Guess<small>Draw, guess, and uncover</small></span></button><button type="button" role="menuitem" id="plusFile">📎 <span>Send a file<small>Up to 5 MB</small></span></button></div><label class="attach-button" title="Send a file, image or GIF" aria-label="Attach file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
+      </section><div class="reply-bar hidden" id="replyBar"><span class="reply-bar-text"></span><button type="button" id="replyCancel" aria-label="Cancel reply">×</button></div><form class="composer" id="messageForm"><button class="attach-button plus-button" id="plusToggle" type="button" title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">+</button><div class="plus-menu hidden" id="plusMenu" role="menu"><button type="button" role="menuitem" id="plusGame">🧄 <span>Garlic Fone<small>Telephone drawing game</small></span></button><button type="button" role="menuitem" id="plusImpostor">🕵️ <span>Impostor<small>Find the player with no word</small></span></button><button type="button" role="menuitem" id="plusSketch">🎨 <span>Sketch & Guess<small>Draw, guess, and uncover</small></span></button><button type="button" role="menuitem" id="plusClicker">🕳️ <span>Event Horizon<small>Solo black hole idle game</small></span></button><button type="button" role="menuitem" id="plusFile">📎 <span>Send a file<small>Up to 5 MB</small></span></button></div><label class="attach-button" title="Send a file, image or GIF" aria-label="Attach file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="emojiToggle" type="button" title="Emoji" aria-label="Open emoji tab">😀</button><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
     </section>
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.3.3"></script>
-  <script src="app.js?v=3.3.3"></script>
-  <script src="garlic.js?v=3.3.3"></script>
-  <script src="party-games.js?v=3.3.3"></script>
+  <script src="assets.js?v=3.5.1"></script>
+  <script src="emoji.js?v=3.5.1"></script>
+  <script src="chem.js?v=3.5.1"></script>
+  <script src="clicker.js?v=3.5.1"></script>
+  <script src="app.js?v=3.5.1"></script>
+  <script src="garlic.js?v=3.5.1"></script>
+  <script src="party-games.js?v=3.5.1"></script>
 </body>
 </html>

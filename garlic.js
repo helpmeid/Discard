@@ -624,12 +624,6 @@ function buildDrawingPad(options = {}) {
     context.stroke();
     context.globalAlpha = 1;
   };
-  const pickColor = at => {
-    const x = Math.min(canvas.width - 1, Math.max(0, Math.floor(at.x)));
-    const y = Math.min(canvas.height - 1, Math.max(0, Math.floor(at.y)));
-    const [r, g, b] = context.getImageData(x, y, 1, 1).data;
-    setColor(`#${[r, g, b].map(value => value.toString(16).padStart(2, "0")).join("")}`);
-  };
   const floodFill = (startX, startY) => {
     const { width, height } = canvas;
     const image = grab();
@@ -640,15 +634,39 @@ function buildDrawingPad(options = {}) {
     const seed = (y0 * width + x0) * 4;
     const target = [data[seed], data[seed + 1], data[seed + 2]];
     const rgb = [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16));
-    const tolerance = 48;
-    const matches = offset => Math.abs(data[offset] - target[0]) + Math.abs(data[offset + 1] - target[1]) + Math.abs(data[offset + 2] - target[2]) <= tolerance;
+    const distance = offset => Math.abs(data[offset] - target[0]) + Math.abs(data[offset + 1] - target[1]) + Math.abs(data[offset + 2] - target[2]);
     const visited = new Uint8Array(width * height);
     const stack = [[x0, y0]];
+    const open = (x, y) => x >= 0 && y >= 0 && x < width && y < height && !visited[y * width + x] && distance((y * width + x) * 4) <= 60;
+    // Scanline fill: far faster than pushing every pixel on large areas.
     while (stack.length) {
       const [x, y] = stack.pop();
-      if (x < 0 || y < 0 || x >= width || y >= height || visited[y * width + x] || !matches((y * width + x) * 4)) continue;
-      visited[y * width + x] = 1;
-      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+      if (!open(x, y)) continue;
+      let left = x;
+      let right = x;
+      while (open(left - 1, y)) left -= 1;
+      while (open(right + 1, y)) right += 1;
+      for (let cx = left; cx <= right; cx += 1) visited[y * width + cx] = 1;
+      for (const ny of [y - 1, y + 1]) {
+        let inRun = false;
+        for (let cx = left; cx <= right; cx += 1) {
+          const ok = open(cx, ny);
+          if (ok && !inRun) stack.push([cx, ny]);
+          inRun = ok;
+        }
+      }
+    }
+    // Grow the region by two pixels into anti-aliased edge pixels so no light halo is left around lines.
+    for (let pass = 0; pass < 2; pass += 1) {
+      const grown = visited.slice();
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const at = y * width + x;
+          if (visited[at] || distance(at * 4) > 330) continue;
+          if ((x > 0 && visited[at - 1]) || (x < width - 1 && visited[at + 1]) || (y > 0 && visited[at - width]) || (y < height - 1 && visited[at + width])) grown[at] = 1;
+        }
+      }
+      visited.set(grown);
     }
     for (let index = 0; index < visited.length; index += 1) {
       if (!visited[index]) continue;
@@ -657,12 +675,34 @@ function buildDrawingPad(options = {}) {
     }
     context.putImageData(image, 0, 0);
   };
+  // Dropper: a live swatch follows the pointer and shows the color under it; clicking returns to the previous tool.
+  const loupe = gameElement("div", "game-loupe");
+  loupe.style.cssText = "position:fixed;display:none;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #000,0 3px 10px #0006;pointer-events:none;z-index:9999;transform:translate(14px,-48px)";
+  document.body.append(loupe);
+  const colorAt = at => {
+    const x = Math.min(canvas.width - 1, Math.max(0, Math.floor(at.x)));
+    const y = Math.min(canvas.height - 1, Math.max(0, Math.floor(at.y)));
+    const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+    return `#${[r, g, b].map(value => value.toString(16).padStart(2, "0")).join("")}`;
+  };
+  const moveLoupe = event => {
+    if (tool !== "dropper" || !canvas.isConnected) { loupe.style.display = "none"; if (!canvas.isConnected) loupe.remove(); return; }
+    loupe.style.display = "block";
+    loupe.style.left = `${event.clientX}px`;
+    loupe.style.top = `${event.clientY}px`;
+    loupe.style.background = colorAt(point(event));
+  };
+  canvas.addEventListener("pointermove", moveLoupe);
+  canvas.addEventListener("pointerleave", () => { loupe.style.display = "none"; });
+  let toolBeforeDropper = "pen";
   canvas.addEventListener("pointerdown", event => {
     event.preventDefault();
     const start = point(event);
     if (tool === "dropper") {
-      pickColor(start);
-      setTool("pen");
+      const picked = colorAt(start);
+      setTool(toolBeforeDropper);
+      setColor(picked);
+      loupe.style.display = "none";
       return;
     }
     checkpoint();
@@ -791,7 +831,7 @@ function buildDrawingPad(options = {}) {
     hexInput.value = value;
     preview.style.background = value;
     swatches.forEach(item => item.classList.toggle("active", item.dataset.color === value));
-    if (tool === "erase" || tool === "dropper") setTool("pen");
+    if (tool === "erase") setTool("pen");
   }
   const pickFromWheel = event => {
     const rect = wheel.getBoundingClientRect();
@@ -833,7 +873,9 @@ function buildDrawingPad(options = {}) {
   // Right column: tools.
   const toolButtons = {};
   function setTool(next) {
+    if (next === "dropper" && tool !== "dropper") toolBeforeDropper = tool === "erase" ? "pen" : tool;
     tool = next;
+    if (tool !== "dropper" && typeof loupe !== "undefined") loupe.style.display = "none";
     Object.entries(toolButtons).forEach(([name, button]) => button.classList.toggle("active", name === tool));
     canvas.style.cursor = tool === "fill" ? "cell" : "crosshair";
   }
