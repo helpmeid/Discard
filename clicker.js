@@ -675,13 +675,13 @@
     pulse = Math.min(1.4, pulse + (crit ? 1 : 0.5));
     feedText = `Swallowed ${object.n > 1 ? `${fmt(object.n)} × ` : ""}${object.exotic ? "Exotic " : ""}${tier.name}  +${fmt(gain)} kg  +${fmt(spinGain)} Spin${crit ? "  GULP!" : ""}${echoed ? "  ECHO x2!" : ""}${dusted ? "  STARDUST x10 Spin!" : ""}${S.combo && chain > 1 ? `  Chain x${chain}` : ""}`;
     feedAge = 0;
-    floaters.push({ x: view.cx, y: view.cy - view.R * 1.6, text: `+${fmt(gain)} kg`, age: 0, color: crit ? "#ffd54a" : "#ffffff", big: crit });
+    if (tab === "cosmos" && floaters.length < 40) floaters.push({ x: view.cx, y: view.cy - view.R * 1.6, text: `+${fmt(gain)} kg`, age: 0, color: crit ? "#ffd54a" : "#ffffff", big: crit });
     burst(object.x, object.y, object.exotic ? "#ffd54a" : "#ffb98a", crit ? 26 : 10, true);
-    if (echoed) {
+    if (echoed && tab === "cosmos" && rings.length < 20) {
       rings.push({ x: view.cx, y: view.cy, age: 0, life: 0.7, from: view.R, to: view.R * 3.2, color: "94,230,255", width: 3 });
       rings.push({ x: view.cx, y: view.cy, age: -0.12, life: 0.7, from: view.R, to: view.R * 4.2, color: "94,230,255", width: 2 });
     }
-    if (dusted) {
+    if (dusted && tab === "cosmos" && floaters.length < 40) {
       burst(view.cx, view.cy, "#ffd1e6", 30, false);
       burst(view.cx, view.cy, "#ff8fb4", 20, false);
       floaters.push({ x: view.cx, y: view.cy - view.R * 2.4, text: `✨ +${fmt(spinGain)} Spin`, age: 0, color: "#ff8fb4", big: true });
@@ -689,9 +689,10 @@
   };
 
   const triggerNova = targets => {
+    if (tab !== "cosmos") return;
     const { cx, cy, w, h } = view;
     const reach = Math.hypot(w, h);
-    targets.forEach(object => {
+    targets.slice(0, 24).forEach(object => {
       beams.push({ x: object.x, y: object.y, age: 0, life: 0.55 });
       burst(object.x, object.y, "#ffb3c9", 14, true);
     });
@@ -1586,6 +1587,15 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     shake = Math.max(0, shake - realDt * 28);
     flash.a = Math.max(0, flash.a - realDt * 1.6);
+    // Effects only age while the canvas is drawn, so drop them in other menus instead of letting them pile up.
+    if (tab !== "cosmos") {
+      particles.length = 0;
+      floaters.length = 0;
+      rings.length = 0;
+      beams.length = 0;
+      flash.a = 0;
+      shake = 0;
+    }
     if (tab === "cosmos") {
       ctx.save();
       if (shake > 0.1) ctx.translate(rand(-shake, shake), rand(-shake, shake));
