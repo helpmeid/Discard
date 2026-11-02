@@ -641,6 +641,7 @@
   const orbitAccel = d => 42000 * (0.6 + view.R / 60) / (d + 30) ** 1.2;
 
   const burst = (x, y, color, count, attract) => {
+    if (tab !== "cosmos") return;
     for (let index = 0; index < count && particles.length < 500; index += 1) {
       const angle = rand(0, TAU);
       const speed = rand(30, 190);
@@ -1588,15 +1589,8 @@
     shake = Math.max(0, shake - realDt * 28);
     flash.a = Math.max(0, flash.a - realDt * 1.6);
     // Effects only age while the canvas is drawn, so drop them in other menus instead of letting them pile up.
-    if (tab !== "cosmos") {
-      particles.length = 0;
-      floaters.length = 0;
-      rings.length = 0;
-      beams.length = 0;
-      flash.a = 0;
-      shake = 0;
-    }
-    if (tab === "cosmos") {
+    if (tab !== "cosmos") clearEffects();
+    else {
       ctx.save();
       if (shake > 0.1) ctx.translate(rand(-shake, shake), rand(-shake, shake));
       drawBackground(ctx, now / 1000);
@@ -1680,7 +1674,17 @@
   };
 
   // ---------- Tabs ----------
+  const clearEffects = () => {
+    particles.length = 0;
+    floaters.length = 0;
+    rings.length = 0;
+    beams.length = 0;
+    flash.a = 0;
+    shake = 0;
+    pulse = 0;
+  };
   const setTab = next => {
+    clearEffects();
     tab = next;
     refs.tabs.forEach(([name, button]) => button.setAttribute("aria-pressed", String(name === tab)));
     refs.treePanel.classList.toggle("hidden", tab !== "tree");
