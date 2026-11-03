@@ -1927,10 +1927,17 @@ function renderProfile() {
 
 let authMode = "signin";
 const lastUserKey = "discard-last-username";
+const lastPasswordKey = "discard-last-password";
+const autofillOffKey = "discard-autofill-off";
+const autofillOn = () => { try { return !localStorage.getItem(autofillOffKey); } catch { return true; } };
 
-// Only the username is kept by the app; the password is handed to the browser's own password manager.
+// The last username and password are kept in plain text in localStorage so sign-in can be pre-filled.
 function rememberAccount(username, password) {
-  try { localStorage.setItem(lastUserKey, username); } catch {}
+  if (!autofillOn()) return;
+  try {
+    localStorage.setItem(lastUserKey, username);
+    localStorage.setItem(lastPasswordKey, password);
+  } catch {}
   if (window.PasswordCredential && navigator.credentials?.store) {
     try { navigator.credentials.store(new PasswordCredential({ id: username, password, name: username })).catch(() => {}); } catch {}
   }
@@ -1938,10 +1945,18 @@ function rememberAccount(username, password) {
 
 async function prefillAuth() {
   setAuthMode("signin");
+  if (!autofillOn()) {
+    usernameInput.focus();
+    return;
+  }
   let username = "";
   try { username = localStorage.getItem(lastUserKey) || ""; } catch {}
   if (username && !usernameInput.value) usernameInput.value = username;
   const passwordInput = document.querySelector("#password");
+  try {
+    const saved = localStorage.getItem(lastPasswordKey);
+    if (username && saved && !passwordInput.value && usernameInput.value === username) passwordInput.value = saved;
+  } catch {}
   if (window.PasswordCredential && navigator.credentials?.get && !passwordInput.value) {
     try {
       const credential = await navigator.credentials.get({ password: true, mediation: "optional" });
@@ -1954,6 +1969,19 @@ async function prefillAuth() {
   if (usernameInput.value && passwordInput.value) authSubmit.focus();
   else (usernameInput.value ? passwordInput : usernameInput).focus();
 }
+
+const autofillToggle = document.querySelector("#autofillPreference");
+autofillToggle.checked = autofillOn();
+autofillToggle.addEventListener("change", () => {
+  try {
+    if (autofillToggle.checked) localStorage.removeItem(autofillOffKey);
+    else {
+      localStorage.setItem(autofillOffKey, "1");
+      localStorage.removeItem(lastUserKey);
+      localStorage.removeItem(lastPasswordKey);
+    }
+  } catch {}
+});
 
 function setAuthMode(next) {
   authMode = next;
