@@ -3628,10 +3628,6 @@ document.querySelector("#plusUno").addEventListener("click", () => {
   const chat = state?.chats.find(item => item.id === activeChatId);
   if (chat) startUnoInvite(chat);
 });
-document.querySelector("#plusClicker").addEventListener("click", () => {
-  setPlusMenu(false);
-  window.openVoidForge(currentUser?.id);
-});
 
 const gamesHub = document.querySelector("#gamesHub");
 const hubStatus = document.querySelector("#hubStatus");

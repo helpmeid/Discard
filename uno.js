@@ -385,12 +385,19 @@ function unoCardElement(card, onClick, disabled) {
   return element;
 }
 
+const unoLogo = className => {
+  const image = gameElement("img", className);
+  image.src = "uno-logo.jpg";
+  image.alt = "Uno";
+  return image;
+};
+
 function unoHeader(subtitle) {
   const head = gameElement("div", "game-head uno-head");
   const titles = gameElement("div");
   titles.style.flex = "1";
   titles.append(gameElement("h3", "game-head-title", "Uno"), gameElement("div", "game-head-sub", subtitle));
-  head.append(gameElement("span", "game-logo", "🃏"), titles, gameFullscreenButton(unoModal));
+  head.append(unoLogo("uno-logo-small"), titles, gameFullscreenButton(unoModal));
   return head;
 }
 
@@ -410,7 +417,7 @@ function unoPlayerChips(parent, withCounts) {
 
 function unoInviteView() {
   const body = gameElement("div", "game-body game-center");
-  body.append(gameElement("div", "game-big", "🃏"), gameElement("p", "game-text", `${unoName(uno.hostId)} invited you to play Uno!`),
+  body.append(unoLogo("uno-logo-big"), gameElement("p", "game-text", `${unoName(uno.hostId)} invited you to play Uno!`),
     gameElement("p", "game-hint", "Match the top card by color or number. First to empty their hand wins."));
   const actions = gameElement("div", "game-actions");
   actions.append(gameButton("Join game", () => {
@@ -429,7 +436,7 @@ function unoInviteView() {
 function unoLobbyView() {
   const body = gameElement("div", "game-body game-center");
   const host = unoHost();
-  body.append(gameElement("div", "game-big", "🃏"), gameElement("p", "game-text", host ? "Invite your chat to play" : "Waiting for the host to start"),
+  body.append(unoLogo("uno-logo-big"), gameElement("p", "game-text", host ? "Invite your chat to play" : "Waiting for the host to start"),
     gameElement("p", "game-hint", "Play a card that matches the top card's color or number. Special cards skip, reverse, or make others draw. 2 to 8 players."));
   unoPlayerChips(body, false);
   if (!host && !uno.confirmed) body.append(gameElement("p", "game-hint", "Connecting to the host…"));

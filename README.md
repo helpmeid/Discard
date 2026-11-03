@@ -8,7 +8,7 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 
 **Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
 
-**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js`, `party-games.js` and `uno.js` beside it).
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js`, `party-games.js`, `uno.js` and `uno-logo.jpg` beside it).
 
 ## Run a local test server
 
