@@ -421,7 +421,8 @@
     .uno-body .uno-board { margin: 0; border-radius: 0; border: 0; min-height: 440px; grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr); align-content: space-between; }
     .uno-seat-me { gap: 6px; width: 100%; }
     .uno-msg, .uno-turntext, .uno-notice { margin: 0; text-shadow: 0 1px 3px #000; }
-    .uno-msg { font-size: 12px; opacity: .8; } .uno-turntext { font-weight: 800; font-size: 15px; }
+    .uno-msg { font-size: 12px; color: #fff; opacity: .9; } .uno-turntext { font-weight: 800; font-size: 15px; color: #fff; }
+    .uno-seat small, .uno-pile small { color: #fff; opacity: .85; }
     .uno-seat-me .game-actions { margin: 4px 0 0; }
     .uno-seat-me .profile-btn { background: #000a; border-color: #ffffff33; color: #fff; }
     .uno-seat-me .profile-btn.primary { background: #7b3cff; }
@@ -438,6 +439,21 @@
     .uno-orbit::before { transform: translate(80px, -9px) rotate(90deg); }
     .uno-ring.rev .uno-orbit::before { content: "➤"; transform: translate(80px, 9px) rotate(-90deg); }
     .uno-ring.rev { animation-direction: normal; }
+    @keyframes unoFly { 0% { left: 50%; top: 54%; opacity: 1; transform: scale(.8); } 85% { opacity: 1; } 100% { left: var(--x1); top: var(--y1); opacity: 0; transform: scale(.6) rotate(25deg); } }
+    @keyframes unoPulse { 0%, 100% { box-shadow: 0 0 0 0 #f2b705aa; } 50% { box-shadow: 0 0 0 8px #f2b70500; } }
+    .uno-body .uno-board { display: flex; flex-direction: column; min-height: 0; padding: 12px 8px 14px; }
+    .uno-arena { position: relative; width: 100%; height: 380px; }
+    .uno-arena > .uno-center { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); }
+    .uno-seat-circle { position: absolute; transform: translate(-50%, -50%); width: 110px; }
+    .uno-seat-circle .uno-backs { transform: none; margin: 0; padding-left: 0; }
+    .uno-seat-circle .uno-back { width: 22px; height: 33px; margin-left: -13px; }
+    .uno-seat-circle .uno-back:first-child { margin-left: 0; }
+    .uno-seat-circle .uno-seat-chip { font-size: 12px; }
+    .uno-seat-circle.small { width: 80px; font-size: 10px; }
+    .uno-seat-circle.small .uno-back { width: 16px; height: 24px; margin-left: -10px; }
+    .uno-seat-circle.small .uno-seat-chip { padding-right: 8px; }
+    .uno-fly { position: absolute; z-index: 3; margin: 0; pointer-events: none; transform-origin: center; animation: unoFly .8s ease-in both; transform: none; }
+    .uno-must { animation: unoPulse 1s infinite; }
     .uno-pile, .uno-dir { font-size: 14px; font-weight: 700; opacity: .85; }
     .uno-dir { font-size: 22px; }
     .uno-swatch { padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }

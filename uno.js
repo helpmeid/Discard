@@ -123,7 +123,7 @@ function unoPlayable(card, hand) {
   const rules = uno.rules || defaultUnoRules;
   if (uno.pending) {
     const kind = unoDrawKind(card);
-    return Boolean(kind) && (rules.stack === "any" || kind === uno.pendingKind);
+    return Boolean(kind) && (rules.stack === "any" || (rules.stack === "same" && kind === uno.pendingKind));
   }
   if (card === "wd") return !rules.strictWild4 || !hand.some(other => other[0] === uno.color);
   if (card[0] === "w") return true;
@@ -233,16 +233,12 @@ function unoHostPlay(player, card, color) {
   } else if (unoDrawKind(card)) {
     const victim = next();
     const count = card === "wd" ? 4 : 2;
-    if (uno.rules.stack === "off") {
-      uno.hands[victim].push(...unoTake(count));
-      msg += ` ${unoName(victim)} draws ${count} and is skipped.`;
-      unoAdvance(2);
-    } else {
-      uno.pending += count;
-      uno.pendingKind = unoDrawKind(card);
-      msg += ` ${unoName(victim)} must stack a draw card or draw ${uno.pending}.`;
-      unoAdvance();
-    }
+    uno.pending += count;
+    uno.pendingKind = unoDrawKind(card);
+    msg += uno.rules.stack === "off"
+      ? ` ${unoName(victim)} must press draw and take ${uno.pending}.`
+      : ` ${unoName(victim)} must stack a +2/+4 or draw ${uno.pending}.`;
+    unoAdvance();
   } else {
     unoAdvance();
   }
@@ -578,7 +574,10 @@ function unoPlayView() {
   const finished = uno.phase === "finished";
   const mine = unoMyTurn();
   const board = gameElement("div", "uno-board");
-  const seat = (id, area) => {
+  const arena = gameElement("div", "uno-arena");
+  board.append(arena);
+  const seatSpots = {};
+  const seat = (id, area, spot) => {
     const wrap = gameElement("div", `uno-seat uno-seat-${area}${uno.phase === "play" && uno.players[uno.turn] === id ? " uno-turn" : ""}`);
     const avatar = gameElement("span", "avatar");
     const person = id === state.me.id ? myProfile() : viewPerson(id);
@@ -590,7 +589,7 @@ function unoPlayView() {
     wrap.append(chip);
     if (id !== state.me.id) {
       const backs = gameElement("div", "uno-backs");
-      const shown = Math.min(count, 10);
+      const shown = Math.min(count, 5);
       for (let index = 0; index < shown; index += 1) {
         const back = gameElement("span", "uno-back");
         back.style.setProperty("--fan", `${(index - (shown - 1) / 2) * 7}deg`);
@@ -598,15 +597,21 @@ function unoPlayView() {
       }
       wrap.append(backs, gameElement("small", "", `${count} card${count === 1 ? "" : "s"}`));
     }
-    board.append(wrap);
+    if (spot) {
+      wrap.style.left = `${spot.x}%`;
+      wrap.style.top = `${spot.y}%`;
+      seatSpots[id] = spot;
+      arena.append(wrap);
+    } else board.append(wrap);
     return wrap;
   };
   // Seats run clockwise from you: the next player sits on your left, the last on your right.
   const myIndex = Math.max(0, uno.players.indexOf(state.me.id));
   const others = uno.players.map((_, offset) => uno.players[(myIndex + offset + 1) % uno.players.length]).filter(id => id !== state.me.id);
+  // Opponents are spread in an arc around the middle, starting on your left and going over the top.
   others.forEach((id, index) => {
-    const last = others.length - 1;
-    seat(id, others.length === 1 ? "top" : index === 0 ? "left" : index === last ? "right" : "top");
+    const angle = Math.PI - ((index + 1) * Math.PI) / (others.length + 1);
+    seat(id, others.length > 3 ? "circle small" : "circle", { x: 50 + 40 * Math.cos(angle), y: 54 - 38 * Math.sin(angle) });
   });
   const center = gameElement("div", "uno-center");
   const ring = gameElement("div", `uno-ring uno-ring-${uno.color}${uno.dir === 1 ? "" : " rev"}`);
@@ -619,7 +624,17 @@ function unoPlayView() {
   topCard.classList.add("uno-top");
   topCard.style.setProperty("--tilt", `${(uno.top.charCodeAt(0) + uno.top.charCodeAt(1)) % 14 - 7}deg`);
   center.append(ring, pile, topCard, gameElement("span", `uno-swatch uno-${uno.color}`, unoColorNames[uno.color]));
-  board.append(center);
+  arena.append(center);
+  others.forEach(id => {
+    const gained = (uno.counts?.[id] ?? 0) - (unoSeenCounts[id] ?? Infinity);
+    for (let index = 0; index < Math.min(gained, 6); index += 1) {
+      const fly = gameElement("span", "uno-back uno-fly");
+      fly.style.setProperty("--x1", `${seatSpots[id].x}%`);
+      fly.style.setProperty("--y1", `${seatSpots[id].y}%`);
+      fly.style.animationDelay = `${index * 0.15}s`;
+      arena.append(fly);
+    }
+  });
   const meSeat = seat(state.me.id, "me");
   body.append(board);
   meSeat.append(gameElement("p", "uno-msg", uno.msg || ""));
@@ -681,7 +696,7 @@ function unoPlayView() {
   }
   const actions = gameElement("div", "game-actions");
   if (!finished) {
-    const draw = gameButton(uno.pending ? `Draw ${uno.pending} cards` : "Draw a card", unoDrawCard, "profile-btn primary");
+    const draw = gameButton(uno.pending ? `Draw ${uno.pending} cards` : "Draw a card", unoDrawCard, `profile-btn primary${mine && uno.pending ? " uno-must" : ""}`);
     draw.disabled = !mine || Boolean(uno.drew);
     const pass = gameButton("Pass", unoPass);
     pass.disabled = !mine || !uno.drew || Boolean(uno.pending);
