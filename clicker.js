@@ -2286,6 +2286,15 @@
       });
     }
   };
+  // Stop the game when another Discard tab takes over the account.
+  // Only save if this tab still owns the session; a stolen tab must not overwrite it.
+  window.closeVoidForgeForTakeover = canSave => {
+    window.removeEventListener("pagehide", save);
+    if (!root || root.classList.contains("hidden")) return;
+    if (canSave) save();
+    cancelAnimationFrame(raf);
+    root.classList.add("hidden");
+  };
   window.voidForgeTransfer = transfer;
 
   window.openVoidForge = userId => {
