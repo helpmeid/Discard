@@ -365,6 +365,18 @@
     .game-modal.fullscreen { inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 30% 20%, #3b2a6ecc, #0b0a1be6); backdrop-filter: blur(6px); pointer-events: auto; z-index: 90; }
     .game-modal.fullscreen .game-head { cursor: default; }
     .game-modal.fullscreen .game-head::after { content: none; }
+    .uno-head { background: linear-gradient(135deg, #d6281f, #f2b705 45%, #1b8f3a 75%, #1769d1); }
+    .uno-table { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0; }
+    .uno-swatch { padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }
+    .uno-hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 10px 0; }
+    .uno-card { display: inline-grid; place-items: center; width: 46px; height: 68px; padding: 0; border: 3px solid #fff; border-radius: 9px; color: #fff; font-size: 20px; font-weight: 800; box-shadow: 0 2px 8px #0005; text-shadow: 0 1px 2px #0006; cursor: default; }
+    button.uno-card:not(:disabled) { cursor: pointer; transition: transform .12s; }
+    button.uno-card:not(:disabled):hover { transform: translateY(-6px); }
+    button.uno-card:disabled { opacity: .45; }
+    .uno-pick { width: auto; height: 34px; padding: 0 12px; font-size: 13px; cursor: pointer; }
+    .uno-r { background: #d6281f; } .uno-y { background: #e6a800; } .uno-g { background: #1b8f3a; } .uno-b { background: #1769d1; }
+    .uno-w { background: linear-gradient(135deg, #d6281f 25%, #e6a800 25% 50%, #1b8f3a 50% 75%, #1769d1 75%); }
+    .game-chip.uno-turn { outline: 2px solid #f2b705; }
     .game-modal.hidden { display: none; }
     .profile-card.game-card { display: block; gap: 0; width: min(400px, 94vw); max-height: 72vh; overflow-y: auto; padding: 0; border: 0; border-radius: 22px; text-align: left; box-shadow: 0 30px 80px #0009, 0 0 0 1px #ffffff14; animation: gamePop .25s ease both; }
     @keyframes gamePop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
@@ -583,6 +595,7 @@
   </div></div>
   <div class="profile-modal game-modal hidden" id="gameModal"><div class="profile-card game-card" role="dialog" aria-label="Garlic Fone" id="gameCard"></div></div>
   <div class="profile-modal game-modal hidden" id="partyGameModal"><div class="profile-card game-card" role="dialog" aria-label="Party game" id="partyGameCard"></div></div>
+  <div class="profile-modal game-modal hidden" id="unoModal"><div class="profile-card game-card" role="dialog" aria-label="Uno" id="unoCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
   <div class="auth-version" id="authVersion"></div>
   <main id="authView" class="auth-view">
@@ -697,17 +710,18 @@
         <input class="gif-search" id="gifSearch" type="search" placeholder="Search GIPHY" aria-label="Search GIFs" autocomplete="off">
         <div class="gif-grid" id="gifGrid"></div>
         <p class="settings-status" id="gifStatus" aria-live="polite"></p>
-      </section><div class="reply-bar hidden" id="replyBar"><span class="reply-bar-text"></span><button type="button" id="replyCancel" aria-label="Cancel reply">×</button></div><form class="composer" id="messageForm"><button class="attach-button plus-button" id="plusToggle" type="button" title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">+</button><div class="plus-menu hidden" id="plusMenu" role="menu"><button type="button" role="menuitem" id="plusGame">🧄 <span>Garlic Fone<small>Telephone drawing game</small></span></button><button type="button" role="menuitem" id="plusImpostor">🕵️ <span>Impostor<small>Find the player with no word</small></span></button><button type="button" role="menuitem" id="plusSketch">🎨 <span>Sketch & Guess<small>Draw, guess, and uncover</small></span></button><button type="button" role="menuitem" id="plusClicker">🕳️ <span>Event Horizon<small>Solo black hole idle game</small></span></button><button type="button" role="menuitem" id="plusFile">📎 <span>Send a file<small>Up to 5 MB</small></span></button></div><label class="attach-button" title="Send a file, image or GIF" aria-label="Attach file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="emojiToggle" type="button" title="Emoji" aria-label="Open emoji tab">😀</button><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
+      </section><div class="reply-bar hidden" id="replyBar"><span class="reply-bar-text"></span><button type="button" id="replyCancel" aria-label="Cancel reply">×</button></div><form class="composer" id="messageForm"><button class="attach-button plus-button" id="plusToggle" type="button" title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">+</button><div class="plus-menu hidden" id="plusMenu" role="menu"><button type="button" role="menuitem" id="plusGame">🧄 <span>Garlic Fone<small>Telephone drawing game</small></span></button><button type="button" role="menuitem" id="plusImpostor">🕵️ <span>Impostor<small>Find the player with no word</small></span></button><button type="button" role="menuitem" id="plusSketch">🎨 <span>Sketch & Guess<small>Draw, guess, and uncover</small></span></button><button type="button" role="menuitem" id="plusUno">🃏 <span>Uno<small>Match colors, empty your hand</small></span></button><button type="button" role="menuitem" id="plusClicker">🕳️ <span>Event Horizon<small>Solo black hole idle game</small></span></button><button type="button" role="menuitem" id="plusFile">📎 <span>Send a file<small>Up to 5 MB</small></span></button></div><label class="attach-button" title="Send a file, image or GIF" aria-label="Attach file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="emojiToggle" type="button" title="Emoji" aria-label="Open emoji tab">😀</button><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
     </section>
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.5.4"></script>
-  <script src="emoji.js?v=3.5.4"></script>
-  <script src="chem.js?v=3.5.4"></script>
-  <script src="clicker.js?v=3.5.4"></script>
-  <script src="app.js?v=3.5.4"></script>
-  <script src="garlic.js?v=3.5.4"></script>
-  <script src="party-games.js?v=3.5.4"></script>
+  <script src="assets.js?v=3.5.5"></script>
+  <script src="emoji.js?v=3.5.5"></script>
+  <script src="chem.js?v=3.5.5"></script>
+  <script src="clicker.js?v=3.5.5"></script>
+  <script src="app.js?v=3.5.5"></script>
+  <script src="garlic.js?v=3.5.5"></script>
+  <script src="party-games.js?v=3.5.5"></script>
+  <script src="uno.js?v=3.5.5"></script>
 </body>
 </html>

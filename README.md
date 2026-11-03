@@ -2,13 +2,13 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.5.4**
+**Version 3.5.5**
 
 ## How to play
 
 **Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
 
-**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js` and `party-games.js` beside it).
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js`, `party-games.js` and `uno.js` beside it).
 
 ## Run a local test server
 
@@ -52,6 +52,8 @@ Open a chat, press **+**, and choose **🕵️ Impostor** or **🎨 Sketch & Gue
 **Impostor** needs at least 3 players. Everyone except one player gets the secret word. Share clues, vote for who seems suspicious, and see the reveal.
 
 **Sketch & Guess** rotates the artist through the chat. Draw the word while others guess; the sketch is shown live, with letter hints appearing over time. Earlier correct guesses earn more points. Choose the word category and number of rounds in the lobby.
+
+**Uno** (press **+** and choose **🃏 Uno**, 2 to 8 players) is a card game: play a card matching the top card's color or number. Skip, Reverse, Draw 2, Wild and Wild Draw 4 cards work as usual; if you cannot play, draw a card (and play it if it fits, or pass). Playing your second-to-last card announces "UNO!". First to empty their hand wins. The host's browser holds the deck and everyone's hands, so players need to stay online.
 
 ## Appearance
 
