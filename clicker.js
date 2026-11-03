@@ -1940,11 +1940,11 @@
   };
 
   // Spine stars follow a winding path; side stars orbit their spine star and keystones sit off to the side.
-  const starPos = (branch, node) => {
+  const starPos = (branch, node, calm) => {
     const j = Number(node.id.slice(branch.id.length).match(/^\d+/)[0]);
     const suffix = node.id.slice(branch.id.length + String(j).length);
-    const trunk = trunkPoint(j);
-    const heading = trunkHeading(j);
+    const trunk = trunkPoint(j, calm);
+    const heading = trunkHeading(j, calm);
     const flip = j % 2 ? -1 : 1;
     const place = (offset, dist) => [trunk[0] + Math.cos(heading + offset) * dist, trunk[1] + Math.sin(heading + offset) * dist];
     if (suffix === "a") return place(-flip * 0.95, 132);
@@ -1953,16 +1953,25 @@
     return trunk;
   };
   // The trunk meanders, bending left and right in long swells, so each branch spreads over the map.
-  const trunkHeading = j => Math.sin(j * 0.42) * 1.15 + Math.sin(j * 0.13) * 0.3;
-  const trunkCache = [[0, 0]];
-  const trunkPoint = j => {
-    while (trunkCache.length <= j) {
-      const i = trunkCache.length;
-      const [px, py] = trunkCache[i - 1];
-      const h = trunkHeading(i - 1);
-      trunkCache.push([px + Math.cos(h) * STEP, py + Math.sin(h) * STEP]);
+  // In the giant tree the meander is damped so neighbouring branches do not run into each other.
+  const trunkHeading = (j, calm) => (Math.sin(j * 0.42) * 1.15 + Math.sin(j * 0.13) * 0.3) * (calm ? 0.25 : 1);
+  const trunkCaches = [[[0, 0]], [[0, 0]]];
+  const trunkPoint = (j, calm) => {
+    const cache = trunkCaches[calm ? 1 : 0];
+    while (cache.length <= j) {
+      const i = cache.length;
+      const [px, py] = cache[i - 1];
+      const h = trunkHeading(i - 1, calm);
+      cache.push([px + Math.cos(h) * STEP, py + Math.sin(h) * STEP]);
     }
-    return trunkCache[j];
+    return cache[j];
+  };
+  const GIANT_RADIUS = 560;
+  const giantAngle = k => -Math.PI / 2 + k * TAU / BRANCHES.length;
+  const giantPoint = (k, x, y) => {
+    const angle = giantAngle(k);
+    const gx = x + GIANT_RADIUS;
+    return [gx * Math.cos(angle) - y * Math.sin(angle), gx * Math.sin(angle) + y * Math.cos(angle)];
   };
   const mapView = { x: 0, y: 0, zoom: 0.9 };
   const applyView = () => {
@@ -1974,7 +1983,7 @@
     const rect = refs.sky.getBoundingClientRect();
     const px = (clientX ?? rect.left + rect.width / 2) - rect.left;
     const py = (clientY ?? rect.top + rect.height / 2) - rect.top;
-    const next = clamp(mapView.zoom * factor, 0.25, 2);
+    const next = clamp(mapView.zoom * factor, game?.giant ? 0.06 : 0.25, 2);
     mapView.x = px - (px - mapView.x) * next / mapView.zoom;
     mapView.y = py - (py - mapView.y) * next / mapView.zoom;
     mapView.zoom = next;
@@ -1989,20 +1998,28 @@
   const buildTree = () => {
     if (!refs.sky) return;
     const branch = BRANCHES[branchIdx];
+    const giant = Boolean(game.giant);
     refs.branchBtns.forEach(([k, button]) => button.classList.toggle("on", k === branchIdx));
+    refs.giantBtn.classList.toggle("on", giant);
+    refs.giantBtn.textContent = giant ? "🌌 One giant tree: On" : "🌌 One giant tree: Off";
     refs.sky.style.setProperty("--c", branch.color);
     refs.sky.querySelector(".vf-map")?.remove();
     Object.keys(rows).forEach(id => delete rows[id]);
-    const nodes = NODES.filter(node => node.branch === branch && (node.stage || 0) <= game.stage);
+    const nodes = NODES.filter(node => (giant || node.branch === branch) && (node.stage || 0) <= game.stage);
     mapRoot = make("div", "vf-map");
     const svgNs = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNs, "svg");
     const start = make("div", "vf-start");
-    const origin = [-STEP * 0.8, 0];
+    const origin = giant ? [0, 0] : [-STEP * 0.8, 0];
+    if (giant) start.style.setProperty("--c", "#ffffff");
     start.style.left = `${origin[0]}px`;
     start.style.top = `${origin[1]}px`;
     const pos = {};
-    nodes.forEach(node => { pos[node.id] = starPos(branch, node); });
+    nodes.forEach(node => {
+      pos[node.id] = giant
+        ? giantPoint(BRANCHES.indexOf(node.branch), ...starPos(node.branch, node, true))
+        : starPos(branch, node);
+    });
     nodes.forEach(node => {
       const [x, y] = pos[node.id];
       const [px, py] = node.parent === "root" ? origin : (pos[node.parent] || origin);
@@ -2011,6 +2028,7 @@
       line.setAttribute("y1", py);
       line.setAttribute("x2", x);
       line.setAttribute("y2", y);
+      if (giant) line.style.setProperty("--c", node.branch.color);
       svg.append(line);
       rows[node.id] = { line };
     });
@@ -2022,6 +2040,7 @@
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
       el.setAttribute("aria-label", node.name);
+      if (giant) el.style.setProperty("--c", node.branch.color);
       const ic = make("span", "ic", node.icon);
       const lv = make("span", "lv");
       el.append(ic, lv, make("span", "nm", node.name));
@@ -2035,6 +2054,11 @@
     });
     refs.sky.prepend(mapRoot);
     updateTree();
+    if (giant) {
+      mapView.zoom = 0.3;
+      centerOn(0, 0);
+      return;
+    }
     let target = [-STEP * 0.4, 0];
     nodes.forEach(node => { if (level(node) > 0 && node.big && !node.keystone) target = pos[node.id]; });
     mapView.zoom = 0.9;
@@ -2044,6 +2068,14 @@
   const pickBranch = k => {
     branchIdx = k;
     selected = null;
+    if (game.giant && mapRoot) {
+      refs.branchBtns.forEach(([index, button]) => button.classList.toggle("on", index === k));
+      refs.sky.style.setProperty("--c", BRANCHES[k].color);
+      mapView.zoom = 0.6;
+      centerOn(...giantPoint(k, STEP * 3, 0));
+      updateTree();
+      return;
+    }
     buildTree();
   };
 
@@ -2127,6 +2159,16 @@
       bsel.append(button);
       return [k, button];
     });
+    refs.giantBtn = make("button", "vf-bpick vf-giant");
+    refs.giantBtn.type = "button";
+    refs.giantBtn.style.setProperty("--c", "#b89bff");
+    refs.giantBtn.addEventListener("click", () => {
+      game.giant = !game.giant;
+      selected = null;
+      save();
+      buildTree();
+    });
+    bsel.prepend(refs.giantBtn);
     refs.sky = make("div", "vf-sky");
     refs.detail = make("div", "vf-pick");
     const zoomBox = make("div", "vf-zoomb");

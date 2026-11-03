@@ -2,13 +2,13 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.5.6**
+**Version 3.5.7**
 
 ## How to play
 
 **Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
 
-**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js`, `party-games.js`, `uno.js` and `uno-logo.png` beside it).
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js`, `party-games.js`, `hangman.js`, `uno.js` and `uno-logo.png` beside it).
 
 ## Run a local test server
 
@@ -54,6 +54,12 @@ Open a chat, press **+**, and choose **🕵️ Impostor** or **🎨 Sketch & Gue
 **Sketch & Guess** rotates the artist through the chat. Draw the word while others guess; the sketch is shown live, with letter hints appearing over time. Earlier correct guesses earn more points. Choose the word category and number of rounds in the lobby.
 
 **Uno** (press **+** and choose **🃏 Uno**, 2 to 8 players) is a card game: play a card matching the top card's color or number. Skip, Reverse, Draw 2, Wild and Wild Draw 4 cards work as usual; if you cannot play, draw a card (and play it if it fits, or pass). Playing your second-to-last card announces "UNO!". First to empty their hand wins. The host's browser holds the deck and everyone's hands, so players need to stay online.
+
+**Uno** has house rules the host sets in the lobby: stacking draw cards (off, +2 on +2 and +4 on +4 only, or any draw card on any draw card), Wild +4 only when you have no card of the current color, draw until you can play, and the starting hand size (3 to 10).
+
+**Hangman** (press **+** and choose **🔤 Hangman**, 2 to 8 players): each round one player secretly picks a word (and an optional hint) and everyone else guesses letters or the whole word together. Six wrong guesses lose the round. The word-picker rotates every round. You score 1 point per letter you find and 3 for solving the word; if nobody solves it the word-picker gets 2. The host's screen can see the word, since the host runs the game.
+
+**Event Horizon** has a **🌌 One giant tree** button above the skill tree that merges every branch into a single big tree (toggle it off to go back to one branch at a time). Your upgrades are the same either way.
 
 ## Appearance
 

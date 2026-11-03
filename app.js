@@ -184,7 +184,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.5.6";
+const APP_VERSION = "3.5.7";
 document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
@@ -902,6 +902,10 @@ function handleData(from, data) {
     garlicHandle(from, data);
     return;
   }
+  if (data.t.startsWith("hang-")) {
+    hangHandle(from, data);
+    return;
+  }
   if (data.t.startsWith("uno-")) {
     unoHandle(from, data);
     return;
@@ -1208,7 +1212,7 @@ document.addEventListener("visibilitychange", () => sendReadReceipts(state?.chat
 function showMessageNotification(chat, from, text, image, file) {
   if (from === state.me.id || !state.me.preferences?.notifications) return;
   if (isMuted(chat.id) || isMuted(from)) return;
-  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#vfRoot"].some(selector => {
+  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot"].some(selector => {
     const panel = document.querySelector(selector);
     return panel && !panel.classList.contains("hidden");
   });
@@ -3622,6 +3626,11 @@ document.querySelector("#plusSketch").addEventListener("click", () => {
   setPlusMenu(false);
   const chat = state?.chats.find(item => item.id === activeChatId);
   if (chat) startSketchInvite(chat);
+});
+document.querySelector("#plusHangman").addEventListener("click", () => {
+  setPlusMenu(false);
+  const chat = state?.chats.find(item => item.id === activeChatId);
+  if (chat) startHangmanInvite(chat);
 });
 document.querySelector("#plusUno").addEventListener("click", () => {
   setPlusMenu(false);

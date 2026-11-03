@@ -11,6 +11,14 @@ const unoColors = ["r", "y", "g", "b"];
 const unoColorNames = { r: "Red", y: "Yellow", g: "Green", b: "Blue" };
 const unoCardPattern = /^(?:[rygb](?:[0-9]|s|r|d)|w[wd])$/;
 const declinedUnoGames = new Set();
+const defaultUnoRules = { stack: "off", strictWild4: false, drawUntil: false, hand: 7 };
+const unoStackModes = { off: "No stacking", same: "+2 on +2, +4 on +4 only", any: "Any draw card on any draw card" };
+const cleanUnoRules = input => ({
+  stack: Object.hasOwn(unoStackModes, input?.stack) ? input.stack : "off",
+  strictWild4: input?.strictWild4 === true,
+  drawUntil: input?.drawUntil === true,
+  hand: Number.isInteger(input?.hand) ? Math.min(Math.max(input.hand, 3), 10) : 7
+});
 let uno = null;
 let unoPicking = null;
 let unoLastRetry = 0;
@@ -77,7 +85,7 @@ function startUnoInvite(chat) {
     renderUno();
     return;
   }
-  uno = { id: randomId(16), chatId: chat.id, hostId: state.me.id, players: [state.me.id], phase: "lobby" };
+  uno = { id: randomId(16), chatId: chat.id, hostId: state.me.id, players: [state.me.id], phase: "lobby", rules: { ...defaultUnoRules } };
   unoInviteMissing();
   unoModal.classList.remove("hidden");
   renderUno();
@@ -95,7 +103,15 @@ function unoLeave() {
 
 // ---- host game logic ----
 
-function unoPlayable(card) {
+const unoDrawKind = card => (card === "wd" ? "wd" : card[0] !== "w" && card[1] === "d" ? "d" : null);
+
+function unoPlayable(card, hand) {
+  const rules = uno.rules || defaultUnoRules;
+  if (uno.pending) {
+    const kind = unoDrawKind(card);
+    return Boolean(kind) && (rules.stack === "any" || kind === uno.pendingKind);
+  }
+  if (card === "wd") return !rules.strictWild4 || !hand.some(other => other[0] === uno.color);
   if (card[0] === "w") return true;
   return card[0] === uno.color || (uno.top[0] !== "w" && card[1] === uno.top[1]);
 }
@@ -123,7 +139,9 @@ function unoStartGame() {
   if (!unoHost() || uno.phase !== "lobby" || uno.players.length < 2) return;
   uno.pile = unoShuffle(unoDeck());
   uno.hands = {};
-  uno.players.forEach(id => { uno.hands[id] = unoTake(7); });
+  uno.pending = 0;
+  uno.pendingKind = null;
+  uno.players.forEach(id => { uno.hands[id] = unoTake(uno.rules.hand); });
   // The first face-up card must be a plain number so the opening turn has no special effect.
   let first = unoTake(1)[0];
   while (!/^[rygb][0-9]$/.test(first)) {
@@ -147,7 +165,8 @@ function unoPublish() {
   uno.counts = Object.fromEntries(uno.players.map(id => [id, uno.hands[id].length]));
   uno.hand = uno.hands[state.me.id] || [];
   uno.players.filter(id => id !== state.me.id).forEach(id => unoSend(id, {
-    t: "uno-state", gameId: uno.id, phase: uno.phase, players: uno.players, counts: uno.counts, hand: uno.hands[id],
+    t: "uno-state", gameId: uno.id, phase: uno.phase, players: uno.players, counts: uno.counts, hand: uno.hands[id], rules: uno.rules,
+    pending: uno.pending, pendingKind: uno.pendingKind,
     top: uno.top, color: uno.color, dir: uno.dir, turn: uno.turn, drew: uno.players[uno.turn] === id ? uno.drew : null, winner: uno.winner, msg: uno.msg
   }));
   renderUno();
@@ -157,7 +176,7 @@ function unoHostPlay(player, card, color) {
   if (uno.phase !== "play" || uno.players[uno.turn] !== player) return;
   const hand = uno.hands[player];
   const index = hand.indexOf(card);
-  if (index < 0 || (uno.drew && uno.drew !== card) || !unoPlayable(card)) return;
+  if (index < 0 || (uno.drew && uno.drew !== card) || !unoPlayable(card, hand)) return;
   if (card[0] === "w" && !unoColors.includes(color)) return;
   hand.splice(index, 1);
   uno.discard.push(card);
@@ -185,12 +204,19 @@ function unoHostPlay(player, card, color) {
   } else if (card[1] === "s") {
     msg += ` ${unoName(next())} is skipped.`;
     unoAdvance(2);
-  } else if (card[1] === "d" || card === "wd") {
+  } else if (unoDrawKind(card)) {
     const victim = next();
     const count = card === "wd" ? 4 : 2;
-    uno.hands[victim].push(...unoTake(count));
-    msg += ` ${unoName(victim)} draws ${count} and is skipped.`;
-    unoAdvance(2);
+    if (uno.rules.stack === "off") {
+      uno.hands[victim].push(...unoTake(count));
+      msg += ` ${unoName(victim)} draws ${count} and is skipped.`;
+      unoAdvance(2);
+    } else {
+      uno.pending += count;
+      uno.pendingKind = unoDrawKind(card);
+      msg += ` ${unoName(victim)} must stack a draw card or draw ${uno.pending}.`;
+      unoAdvance();
+    }
   } else {
     unoAdvance();
   }
@@ -200,26 +226,39 @@ function unoHostPlay(player, card, color) {
 
 function unoHostDraw(player) {
   if (uno.phase !== "play" || uno.players[uno.turn] !== player || uno.drew) return;
-  const [card] = unoTake(1);
   const who = unoName(player);
-  if (!card) {
-    uno.msg = `${who} could not draw and passes.`;
+  if (uno.pending) {
+    const count = uno.pending;
+    uno.hands[player].push(...unoTake(count));
+    uno.pending = 0;
+    uno.pendingKind = null;
+    uno.msg = `${who} drew ${count} cards and is skipped.`;
     unoAdvance();
-  } else {
+    unoPublish();
+    return;
+  }
+  let drawn = 0;
+  let playable = null;
+  do {
+    const [card] = unoTake(1);
+    if (!card) break;
+    drawn += 1;
     uno.hands[player].push(card);
-    if (unoPlayable(card)) {
-      uno.drew = card;
-      uno.msg = `${who} drew a card.`;
-    } else {
-      uno.msg = `${who} drew a card and passes.`;
-      unoAdvance();
-    }
+    if (unoPlayable(card, uno.hands[player])) playable = card;
+  } while (!playable && uno.rules.drawUntil);
+  const cards = `${drawn} card${drawn === 1 ? "" : "s"}`;
+  if (playable) {
+    uno.drew = playable;
+    uno.msg = `${who} drew ${cards}.`;
+  } else {
+    uno.msg = drawn ? `${who} drew ${cards} and passes.` : `${who} could not draw and passes.`;
+    unoAdvance();
   }
   unoPublish();
 }
 
 function unoHostPass(player) {
-  if (uno.phase !== "play" || uno.players[uno.turn] !== player || !uno.drew) return;
+  if (uno.phase !== "play" || uno.players[uno.turn] !== player || !uno.drew || uno.pending) return;
   uno.msg = `${unoName(player)} passes.`;
   unoAdvance();
   unoPublish();
@@ -229,7 +268,7 @@ function unoHandleLeave(from) {
   if (!unoHost() || !uno.players.includes(from)) return;
   if (uno.phase === "lobby") {
     uno.players = uno.players.filter(id => id !== from);
-    unoBroadcast({ t: "uno-lobby", gameId: uno.id, players: uno.players });
+    unoBroadcast({ t: "uno-lobby", gameId: uno.id, players: uno.players, rules: uno.rules });
     renderUno();
     return;
   }
@@ -290,7 +329,7 @@ function unoHandle(from, data) {
         uno.players.push(from);
         renderUno();
       }
-      unoBroadcast({ t: "uno-lobby", gameId: uno.id, players: uno.players });
+      unoBroadcast({ t: "uno-lobby", gameId: uno.id, players: uno.players, rules: uno.rules });
       return true;
     }
     case "uno-leave":
@@ -308,6 +347,7 @@ function unoHandle(from, data) {
       const players = cleanUnoPlayers(data.players);
       if (!players || !players.includes(state.me.id) || !players.includes(from)) return true;
       uno.players = players;
+      uno.rules = cleanUnoRules(data.rules);
       uno.confirmed = true;
       renderUno();
       return true;
@@ -322,6 +362,9 @@ function unoHandle(from, data) {
         || data.turn < 0 || data.turn >= players.length || ![1, -1].includes(data.dir)) return true;
       Object.assign(uno, {
         players, hand, counts, phase: data.phase, top: data.top, color: data.color, dir: data.dir, turn: data.turn,
+        rules: cleanUnoRules(data.rules),
+        pending: Number.isInteger(data.pending) ? Math.min(Math.max(data.pending, 0), 200) : 0,
+        pendingKind: ["d", "wd"].includes(data.pendingKind) ? data.pendingKind : null,
         drew: typeof data.drew === "string" && unoCardPattern.test(data.drew) ? data.drew : null,
         winner: players.includes(data.winner) ? data.winner : null,
         msg: typeof data.msg === "string" ? data.msg.slice(0, 120) : "", confirmed: true
@@ -433,12 +476,62 @@ function unoInviteView() {
   return body;
 }
 
+function unoRulesView(host) {
+  const box = gameElement("div", "game-settings");
+  box.append(gameElement("div", "game-step-label", "House rules"));
+  const change = patch => {
+    uno.rules = cleanUnoRules({ ...uno.rules, ...patch });
+    unoBroadcast({ t: "uno-lobby", gameId: uno.id, players: uno.players, rules: uno.rules });
+    renderUno();
+  };
+  if (!host) {
+    const rules = uno.rules || defaultUnoRules;
+    [`Stacking: ${unoStackModes[rules.stack]}`, `Wild +4: ${rules.strictWild4 ? "only if you have no card of the current color" : "play any time"}`,
+      `Drawing: ${rules.drawUntil ? "keep drawing until you can play" : "draw one card"}`, `Starting hand: ${rules.hand} cards`]
+      .forEach(line => box.append(gameElement("p", "game-hint", line)));
+    return box;
+  }
+  const row = (label, control) => {
+    const wrap = gameElement("label", "party-setting-row");
+    wrap.append(gameElement("span", "", label), control);
+    box.append(wrap);
+  };
+  const stack = gameElement("select", "game-number");
+  Object.entries(unoStackModes).forEach(([value, text]) => {
+    const option = gameElement("option", "", text);
+    option.value = value;
+    stack.append(option);
+  });
+  stack.value = uno.rules.stack;
+  stack.addEventListener("change", () => change({ stack: stack.value }));
+  row("Stack +2 / +4", stack);
+  const check = (key, label) => {
+    const input = gameElement("input");
+    input.type = "checkbox";
+    input.checked = uno.rules[key];
+    input.addEventListener("change", () => change({ [key]: input.checked }));
+    row(label, input);
+  };
+  check("strictWild4", "Wild +4 only if no card of the current color");
+  check("drawUntil", "Draw until you can play");
+  const hand = gameElement("input", "game-number");
+  hand.type = "number";
+  hand.min = "3";
+  hand.max = "10";
+  hand.value = String(uno.rules.hand);
+  hand.setAttribute("aria-label", "Starting hand size");
+  hand.addEventListener("change", () => change({ hand: Number(hand.value) || 7 }));
+  row("Starting hand", hand);
+  return box;
+}
+
 function unoLobbyView() {
   const body = gameElement("div", "game-body game-center");
   const host = unoHost();
   body.append(unoLogo("uno-logo-big"), gameElement("p", "game-text", host ? "Invite your chat to play" : "Waiting for the host to start"),
     gameElement("p", "game-hint", "Play a card that matches the top card's color or number. Special cards skip, reverse, or make others draw. 2 to 8 players."));
   unoPlayerChips(body, false);
+  body.append(unoRulesView(host));
   if (!host && !uno.confirmed) body.append(gameElement("p", "game-hint", "Connecting to the host…"));
   const actions = gameElement("div", "game-actions");
   if (host) {
@@ -470,7 +563,7 @@ function unoPlayView() {
   }
   const hand = gameElement("div", "uno-hand");
   uno.hand.forEach(card => {
-    const playable = mine && unoPlayable(card) && (!uno.drew || uno.drew === card);
+    const playable = mine && unoPlayable(card, uno.hand) && (!uno.drew || uno.drew === card);
     hand.append(unoCardElement(card, () => {
       if (card[0] === "w") {
         unoPicking = card;
@@ -495,10 +588,10 @@ function unoPlayView() {
   }
   const actions = gameElement("div", "game-actions");
   if (!finished) {
-    const draw = gameButton("Draw a card", unoDrawCard, "profile-btn primary");
+    const draw = gameButton(uno.pending ? `Draw ${uno.pending} cards` : "Draw a card", unoDrawCard, "profile-btn primary");
     draw.disabled = !mine || Boolean(uno.drew);
     const pass = gameButton("Pass", unoPass);
-    pass.disabled = !mine || !uno.drew;
+    pass.disabled = !mine || !uno.drew || Boolean(uno.pending);
     actions.append(draw, pass);
   }
   actions.append(gameButton(finished ? "Close" : "Leave game", finished ? () => { if (unoHost()) unoBroadcast({ t: "uno-end", gameId: uno.id }); unoEndLocal(); } : unoLeave));
