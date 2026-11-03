@@ -346,6 +346,12 @@
     .profile-card h3 { margin: 4px 0 0; font-size: 18px; }
     .profile-card .profile-sub { color: var(--muted, inherit); font-size: 13px; opacity: .8; word-break: break-all; }
     .profile-card .profile-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+    .update-card { width: min(420px, 94vw); text-align: left; justify-items: stretch; }
+    .update-card h3 { text-align: center; }
+    .update-list { max-height: 60vh; overflow-y: auto; display: grid; gap: 12px; }
+    .update-list h4 { margin: 0 0 4px; font-size: 14px; }
+    .update-list ul { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 3px; }
+    .update-card .profile-btn { justify-self: center; }
     .clickable { cursor: pointer; }
     .close-chat { width: 30px; height: 30px; padding: 0; font-size: 20px; line-height: 1; }
     .game-modal { inset: auto 16px 16px auto; z-index: 60; display: block; background: none; pointer-events: none; }
@@ -369,6 +375,8 @@
     .uno-logo-small { flex: none; height: 34px; width: auto; }
     .uno-logo-big { display: block; height: 90px; width: auto; margin: 6px auto; border-radius: 12px; }
     .uno-table { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0; }
+    .uno-pile, .uno-dir { font-size: 14px; font-weight: 700; opacity: .85; }
+    .uno-dir { font-size: 22px; }
     .uno-swatch { padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }
     .uno-hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 10px 0; }
     .uno-card { display: inline-grid; place-items: center; width: 46px; height: 68px; padding: 0; border: 3px solid #fff; border-radius: 9px; color: #fff; font-size: 20px; font-weight: 800; box-shadow: 0 2px 8px #0005; text-shadow: 0 1px 2px #0006; cursor: default; }
@@ -613,6 +621,7 @@
   </div></div>
   <div class="profile-modal game-modal hidden" id="gameModal"><div class="profile-card game-card" role="dialog" aria-label="Garlic Fone" id="gameCard"></div></div>
   <div class="profile-modal game-modal hidden" id="partyGameModal"><div class="profile-card game-card" role="dialog" aria-label="Party game" id="partyGameCard"></div></div>
+  <div class="profile-modal hidden" id="updateLogModal"><div class="profile-card update-card" role="dialog" aria-label="Update log"><h3>Update log</h3><div class="update-list" id="updateLogList"></div><button type="button" class="profile-btn primary" id="updateLogClose">Close</button></div></div>
   <div class="profile-modal game-modal hidden" id="unoModal"><div class="profile-card game-card" role="dialog" aria-label="Uno" id="unoCard"></div></div>
   <div class="profile-modal game-modal hidden" id="hangModal"><div class="profile-card game-card" role="dialog" aria-label="Hangman" id="hangCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
@@ -695,6 +704,7 @@
         <label class="setting-row"><span>Compact chat list</span><span class="setting-check"><input id="compactPreference" type="checkbox"></span></label>
         <label class="setting-row"><span>Message notifications</span><span class="setting-check"><input id="notifications" type="checkbox"></span></label>
         <label class="setting-row"><span>Auto fill sign-in<br><small style="color:var(--muted)">Off clears the saved username and password</small></span><span class="setting-check"><input id="autofillPreference" type="checkbox"></span></label>
+        <div class="setting-row"><span>Update log<br><small style="color:var(--muted)">See what's new in this version</small></span><span class="setting-check"><button type="button" class="profile-btn" id="updateLogOpen">View</button></span></div>
         <label class="setting-row"><span>Disguise tab as Minga</span><span class="setting-check"><input id="tabDisguise" type="checkbox"></span></label>
         <div class="setting-row"><span>Keybind<br><small style="color:var(--muted)">Toggles a full Minga cover over the page</small></span><span class="setting-check"><button type="button" class="profile-btn" id="disguiseKeybind">Not set</button></span></div>
         <div class="backup-row"><button class="profile-btn" id="exportButton" type="button">Export backup</button><button class="profile-btn" id="deleteAccount" type="button">Delete account</button></div>
@@ -734,14 +744,14 @@
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.5.7"></script>
-  <script src="emoji.js?v=3.5.7"></script>
-  <script src="chem.js?v=3.5.7"></script>
-  <script src="clicker.js?v=3.5.7"></script>
-  <script src="app.js?v=3.5.7"></script>
-  <script src="garlic.js?v=3.5.7"></script>
-  <script src="party-games.js?v=3.5.7"></script>
-  <script src="hangman.js?v=3.5.7"></script>
-  <script src="uno.js?v=3.5.7"></script>
+  <script src="assets.js?v=3.5.8"></script>
+  <script src="emoji.js?v=3.5.8"></script>
+  <script src="chem.js?v=3.5.8"></script>
+  <script src="clicker.js?v=3.5.8"></script>
+  <script src="app.js?v=3.5.8"></script>
+  <script src="garlic.js?v=3.5.8"></script>
+  <script src="party-games.js?v=3.5.8"></script>
+  <script src="hangman.js?v=3.5.8"></script>
+  <script src="uno.js?v=3.5.8"></script>
 </body>
 </html>

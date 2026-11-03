@@ -184,7 +184,13 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.5.7";
+const APP_VERSION = "3.5.8";
+const UPDATE_LOG = [
+  { version: "3.5.8", notes: ["New update log (you're looking at it).", "Uno: hands are sorted, the draw pile and play direction are shown, and the host can start a rematch.", "Uno: new Speed rule lets you jump in with an identical card out of turn.", "Event Horizon: fixed the giant upgrade tree and moved it to a new Settings tab."] },
+  { version: "3.5.7", notes: ["Added Hangman.", "Uno house rules: stacking, strict Wild +4, draw until playable, starting hand size.", "Event Horizon giant upgrade tree."] },
+  { version: "3.5.5", notes: ["Added Uno to chat games."] },
+  { version: "3.5.4", notes: ["Message notifications now show while a game is open."] }
+];
 document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
@@ -3230,6 +3236,19 @@ document.querySelector("#settingsToggle").addEventListener("click", () => {
   if (!settingsPanel.classList.contains("hidden") && currentUser?.preferences) applyPreferences(currentUser.preferences);
 });
 
+const updateLogModal = document.querySelector("#updateLogModal");
+document.querySelector("#updateLogList").replaceChildren(...UPDATE_LOG.map(entry => {
+  const section = document.createElement("div");
+  const title = document.createElement("h4");
+  title.textContent = `Version ${entry.version}`;
+  const list = document.createElement("ul");
+  entry.notes.forEach(note => { const item = document.createElement("li"); item.textContent = note; list.append(item); });
+  section.append(title, list);
+  return section;
+}));
+document.querySelector("#updateLogOpen").addEventListener("click", () => updateLogModal.classList.remove("hidden"));
+document.querySelector("#updateLogClose").addEventListener("click", () => updateLogModal.classList.add("hidden"));
+updateLogModal.addEventListener("click", event => { if (event.target === updateLogModal) updateLogModal.classList.add("hidden"); });
 document.querySelector("#settingsClose").addEventListener("click", () => settingsPanel.classList.add("hidden"));
 
 function particleColor(prefs, index) {
