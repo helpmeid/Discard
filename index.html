@@ -60,6 +60,8 @@
     .primary-button { width: 100%; height: 48px; margin-top: 8px; border: 0; border-radius: 8px; color: white; background: var(--accent); font-weight: 700; transition: background .16s, transform .16s; }
     .primary-button:hover { background: var(--green-dark); transform: translateY(-1px); }
     .auth-message { min-height: 20px; margin: 12px 0 0; color: #a34535; font-size: 12px; line-height: 1.5; }
+    .auth-unlock { width: 100%; min-height: 42px; margin-top: 4px; border: 1px solid var(--accent); border-radius: 8px; color: var(--accent); background: var(--white); font-size: 13px; font-weight: 700; }
+    .auth-unlock:disabled { cursor: wait; opacity: 0.6; }
     .local-note { padding-top: 17px; margin-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }
     .chat-view { height: 100vh; height: 100dvh; overflow: hidden; display: grid; grid-template-columns: 290px minmax(0, 1fr); background: var(--white); }
     .sidebar { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; padding: 26px 18px 18px; border-right: 2px solid var(--line); background: var(--page-background, var(--paper)); }
@@ -720,6 +722,7 @@
           <div class="field"><label for="importFile">Restore from a backup file (optional; Discard Official backups restore at sign in)</label><input id="importFile" type="file" accept="application/json,.json"></div>
           <button class="primary-button" id="authSubmit" type="submit">Sign in</button>
           <p class="auth-message" id="authMessage" role="alert" aria-live="polite"></p>
+          <button type="button" id="unlockAccountButton" class="auth-unlock hidden">🔓 Unlock Account</button>
         </form>
         <div class="local-note">Discard is peer to peer: messages go straight between you and your friends. Both of you need to be online for a message to arrive; otherwise it waits and sends when you are both online. Your account and password are stored only on this computer. The password keeps others out of the app but does not encrypt your saved data, and it cannot be reset if you forget it.</div>
       </div>
@@ -823,14 +826,14 @@
   </main>
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
-  <script src="assets.js?v=3.5.8"></script>
-  <script src="emoji.js?v=3.5.8"></script>
-  <script src="chem.js?v=3.5.8"></script>
-  <script src="clicker.js?v=3.5.8"></script>
-  <script src="app.js?v=3.5.8"></script>
-  <script src="garlic.js?v=3.5.8"></script>
-  <script src="party-games.js?v=3.5.8"></script>
-  <script src="hangman.js?v=3.5.8"></script>
-  <script src="uno.js?v=3.5.8"></script>
+  <script src="assets.js?v=3.5.9"></script>
+  <script src="emoji.js?v=3.5.9"></script>
+  <script src="chem.js?v=3.5.9"></script>
+  <script src="clicker.js?v=3.5.9"></script>
+  <script src="app.js?v=3.5.9"></script>
+  <script src="garlic.js?v=3.5.9"></script>
+  <script src="party-games.js?v=3.5.9"></script>
+  <script src="hangman.js?v=3.5.9"></script>
+  <script src="uno.js?v=3.5.9"></script>
 </body>
 </html>
