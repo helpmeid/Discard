@@ -184,8 +184,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.5.9";
+const APP_VERSION = "3.5.10";
 const UPDATE_LOG = [
+  { version: "3.5.10", notes: ["Unlock Account now closes old tabs when allowed or signs them out without reloading.", "Fixed unnecessary browser reload warnings when no Garlic Fone game is running."] },
   { version: "3.5.9", notes: ["Sign-in: Unlock Account button signs out other tabs after verifying your password.", "Improved account-lock cleanup and recovery on Chromebooks."] },
   { version: "3.5.8", notes: ["New update log (you're looking at it).", "Uno: hands are sorted, the draw pile and play direction are shown, and the host can start a rematch.", "Uno: new Speed rule lets you jump in with an identical card out of turn.", "Event Horizon: fixed the giant upgrade tree and moved it to a new Settings tab."] },
   { version: "3.5.7", notes: ["Added Hangman.", "Uno house rules: stacking, strict Wild +4, draw until playable, starting hand size.", "Event Horizon giant upgrade tree."] },
@@ -1784,9 +1785,26 @@ async function signOutForTakeover() {
   } else {
     dirty.clear(); // Never let an old tab overwrite the new tab's account data.
   }
+  // Close running game panels before switching to the signed-out screen.
+  // The black-hole game should not save old progress over a newer session.
+  window.closeVoidForgeForTakeover?.(ownsAccountSession());
+  if (typeof endGameLocal === "function") endGameLocal();
+  if (typeof partyEndLocal === "function") partyEndLocal();
+  if (typeof unoEndLocal === "function") unoEndLocal();
+  if (typeof hangEndLocal === "function") hangEndLocal();
+  document.querySelector("#gamesHub")?.classList.add("hidden");
+  document.querySelector("#updateLogModal")?.classList.add("hidden");
+  peerBlocked = true;
   try { peer?.destroy(); } catch {}
   releaseLocalAccountLock();
-  location.reload();
+  state = null;
+  currentUser = null;
+  window.discardAccountTakeoverClosing = true;
+  // Chrome only permits closing tabs opened by script. Never reload as a fallback:
+  // reloading can show an unwanted "Reload site?" confirmation.
+  try { window.close(); } catch {}
+  showAuth();
+  authMessage.textContent = "This tab was signed out because your account was unlocked in another tab. You can close it.";
 }
 
 function checkAccountTakenOver() {
@@ -1834,6 +1852,9 @@ async function databaseForCredentials(username, password) {
 }
 
 async function enterApp() {
+  leavingAccount = false;
+  peerBlocked = false;
+  window.discardAccountTakeoverClosing = false;
   currentUser = accountUser();
   refreshStorageLimit();
   startPeer();
