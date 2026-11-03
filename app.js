@@ -184,8 +184,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.5.8";
+const APP_VERSION = "3.5.9";
 const UPDATE_LOG = [
+  { version: "3.5.9", notes: ["Sign-in: Unlock Account button signs out other tabs after verifying your password.", "Improved account-lock cleanup and recovery on Chromebooks."] },
   { version: "3.5.8", notes: ["New update log (you're looking at it).", "Uno: hands are sorted, the draw pile and play direction are shown, and the host can start a rematch.", "Uno: new Speed rule lets you jump in with an identical card out of turn.", "Event Horizon: fixed the giant upgrade tree and moved it to a new Settings tab."] },
   { version: "3.5.7", notes: ["Added Hangman.", "Uno house rules: stacking, strict Wild +4, draw until playable, starting hand size.", "Event Horizon giant upgrade tree."] },
   { version: "3.5.5", notes: ["Added Uno to chat games."] },
@@ -444,7 +445,7 @@ async function refreshStorageLimit() {
 }
 
 async function flushSave() {
-  if (!state) return;
+  if (!state || !ownsAccountSession()) return;
   if (saving) {
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(flushSave, 100);
@@ -691,6 +692,7 @@ function isOnline(id) {
 }
 
 function sendTo(id, payload) {
+  if (!ownsAccountSession()) return false;
   const entry = conns.get(id);
   if (!entry?.conn.open || !officialTrusted(id)) return false;
   try {
@@ -900,6 +902,7 @@ function addFriend(id, profile) {
 }
 
 function handleData(from, data) {
+  if (!ownsAccountSession()) return;
   const entry = conns.get(from);
   if (entry) entry.lastSeen = Date.now();
   if (!data || typeof data !== "object" || typeof data.t !== "string") return;
@@ -1743,14 +1746,91 @@ async function hashPassword(password, salt) {
   return toBase64(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 200000, hash: "SHA-256" }, base, 256));
 }
 
-function lockAccount(db) {
-  if (!navigator.locks) return Promise.resolve(true);
+// Only one tab may use a local account at a time. Tabs coordinate a safe handoff
+// through BroadcastChannel, with Web Locks takeover for an unresponsive old tab.
+const accountControl = typeof BroadcastChannel === "function" ? new BroadcastChannel("discard-account-control") : null;
+let lockedAccountDb = null;
+let releaseHeldAccountLock = null;
+let activeSessionToken = null;
+let leavingAccount = false;
+const accountSessionKey = db => `discard-active-session-${db}`;
+const accountDelay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function ownsAccountSession() {
+  if (!lockedAccountDb || !activeSessionToken) return true;
+  try { return localStorage.getItem(accountSessionKey(lockedAccountDb)) === activeSessionToken; }
+  catch { return true; }
+}
+
+function releaseLocalAccountLock() {
+  const release = releaseHeldAccountLock;
+  releaseHeldAccountLock = null;
+  if (lockedAccountDb && ownsAccountSession()) {
+    try { localStorage.removeItem(accountSessionKey(lockedAccountDb)); } catch {}
+  }
+  activeSessionToken = null;
+  lockedAccountDb = null;
+  if (release) release();
+}
+
+async function signOutForTakeover() {
+  if (!lockedAccountDb || leavingAccount) return;
+  leavingAccount = true;
+  // Save before releasing the lock, so the new tab loads the latest messages.
+  if (ownsAccountSession()) {
+    window.clearTimeout(saveTimer);
+    for (let i = 0; i < 40 && saving; i += 1) await accountDelay(50);
+    await flushSave().catch(() => {});
+  } else {
+    dirty.clear(); // Never let an old tab overwrite the new tab's account data.
+  }
+  try { peer?.destroy(); } catch {}
+  releaseLocalAccountLock();
+  location.reload();
+}
+
+function checkAccountTakenOver() {
+  if (!lockedAccountDb || leavingAccount || ownsAccountSession()) return;
+  void signOutForTakeover();
+}
+
+accountControl?.addEventListener("message", event => {
+  if (event.data?.type === "release-account" && event.data.db === lockedAccountDb) {
+    void signOutForTakeover();
+  }
+});
+window.addEventListener("storage", event => {
+  if (lockedAccountDb && event.key === accountSessionKey(lockedAccountDb)) checkAccountTakenOver();
+});
+// Suspended tabs may miss events; check again when they resume.
+window.addEventListener("focus", checkAccountTakenOver);
+window.setInterval(checkAccountTakenOver, 1500);
+
+function lockAccount(db, { force = false } = {}) {
+  if (lockedAccountDb === db && releaseHeldAccountLock && ownsAccountSession()) return Promise.resolve(true);
+  if (!navigator.locks) return Promise.resolve(!force);
   return new Promise(resolve => {
-    navigator.locks.request(`discard-${db}`, { ifAvailable: true }, lock => {
-      resolve(Boolean(lock));
-      return lock ? new Promise(() => {}) : undefined;
-    });
+    const options = force ? { steal: true } : { ifAvailable: true };
+    navigator.locks.request(`discard-${db}`, options, lock => {
+      if (!lock) { resolve(false); return; }
+      lockedAccountDb = db;
+      activeSessionToken = randomId(24);
+      try { localStorage.setItem(accountSessionKey(db), activeSessionToken); } catch {}
+      resolve(true);
+      return new Promise(release => { releaseHeldAccountLock = release; });
+    }).catch(() => resolve(false));
   });
+}
+
+async function databaseForCredentials(username, password) {
+  const key = username.toLowerCase();
+  if (key === OFFICIAL_USERNAME.toLowerCase()) {
+    try { await unlockOfficial(password); } catch { throw badLogin(); }
+    return officialDb;
+  }
+  const account = readAccounts().find(item => item.key === key);
+  if (!account || await hashPassword(password, fromBase64(account.salt)) !== account.hash) throw badLogin();
+  return account.db;
 }
 
 async function enterApp() {
@@ -1772,19 +1852,15 @@ function showUpdateLogIfNew() {
 }
 
 async function signIn(username, password, backupFile) {
-  const key = username.toLowerCase();
-  const official = key === OFFICIAL_USERNAME.toLowerCase();
-  let db = officialDb;
-  if (official) {
-    try { await unlockOfficial(password); } catch { throw badLogin(); }
-  } else {
-    const account = readAccounts().find(item => item.key === key);
-    if (!account || await hashPassword(password, fromBase64(account.salt)) !== account.hash) throw badLogin();
-    db = account.db;
-  }
+  const official = username.toLowerCase() === OFFICIAL_USERNAME.toLowerCase();
+  const db = await databaseForCredentials(username, password);
   if (backupFile && !official) throw new Error("Restoring a backup while signing in only works for the official account. Use Create account for other backups.");
   const imported = backupFile ? cleanImported(JSON.parse(await backupFile.text()), true) : null;
-  if (!await lockAccount(db)) throw new Error("This account is already open in another tab.");
+  if (!await lockAccount(db)) {
+    const error = new Error("This account is already open in another tab.");
+    error.code = "ACCOUNT_LOCKED";
+    throw error;
+  }
   idb.use(db);
   if (imported) {
     const { chats, ...meta } = imported;
@@ -1994,6 +2070,8 @@ async function prefillAuth() {
   else (usernameInput.value ? passwordInput : usernameInput).focus();
 }
 
+const unlockAccountButton = document.querySelector("#unlockAccountButton");
+let lockedSignInUsername = null;
 const autofillToggle = document.querySelector("#autofillPreference");
 autofillToggle.checked = autofillOn();
 autofillToggle.addEventListener("change", () => {
@@ -2017,6 +2095,8 @@ function setAuthMode(next) {
   authSubmit.textContent = creating ? "Create account" : "Sign in";
   document.querySelector("#password").autocomplete = creating ? "new-password" : "current-password";
   authMessage.textContent = "";
+  lockedSignInUsername = null;
+  unlockAccountButton.classList.add("hidden");
 }
 
 document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.mode)));
@@ -2024,6 +2104,8 @@ document.querySelectorAll("[data-mode]").forEach(button => button.addEventListen
 authForm.addEventListener("submit", async event => {
   event.preventDefault();
   authMessage.textContent = "";
+  lockedSignInUsername = null;
+  unlockAccountButton.classList.add("hidden");
   const username = usernameInput.value.trim();
   const password = document.querySelector("#password").value;
   const backupFile = document.querySelector("#importFile").files[0] || null;
@@ -2055,8 +2137,50 @@ authForm.addEventListener("submit", async event => {
   } catch (error) {
     state = null;
     authMessage.textContent = error.message || "Could not open your account on this computer.";
+    if (error.code === "ACCOUNT_LOCKED") {
+      lockedSignInUsername = username.toLowerCase();
+      unlockAccountButton.classList.remove("hidden");
+    }
   } finally {
     authSubmit.disabled = false;
+  }
+});
+
+unlockAccountButton.addEventListener("click", async () => {
+  const username = usernameInput.value.trim();
+  const password = document.querySelector("#password").value;
+  if (!lockedSignInUsername || username.toLowerCase() !== lockedSignInUsername) {
+    authMessage.textContent = "Enter your account details and try signing in again.";
+    unlockAccountButton.classList.add("hidden");
+    return;
+  }
+  authSubmit.disabled = true;
+  unlockAccountButton.disabled = true;
+  authMessage.textContent = "Unlocking your account and signing out other tabs…";
+  try {
+    // Verify the password again before allowing a session to be taken over.
+    const db = await databaseForCredentials(username, password);
+    accountControl?.postMessage({ type: "release-account", db });
+    let acquired = false;
+    for (let attempt = 0; attempt < 10 && !acquired; attempt += 1) {
+      acquired = await lockAccount(db);
+      if (!acquired) await accountDelay(300);
+    }
+    // A crashed or suspended tab may not process the logout message.
+    // Web Locks can take its lock; the shared session token fences out stale tabs.
+    if (!acquired) acquired = await lockAccount(db, { force: true });
+    if (!acquired) throw new Error("Could not unlock the account. Close other Discard tabs and try again.");
+    await signIn(username, password, document.querySelector("#importFile").files[0] || null);
+    rememberAccount(username, password);
+    authForm.reset();
+    authMessage.textContent = "";
+    lockedSignInUsername = null;
+    unlockAccountButton.classList.add("hidden");
+  } catch (error) {
+    authMessage.textContent = error.message || "Could not unlock the account.";
+  } finally {
+    authSubmit.disabled = false;
+    unlockAccountButton.disabled = false;
   }
 });
 
@@ -3455,6 +3579,7 @@ document.querySelector("#chatSearch").addEventListener("input", renderChatList);
 document.querySelector("#signOutButton").addEventListener("click", async () => {
   window.clearTimeout(saveTimer);
   await flushSave();
+  releaseLocalAccountLock();
   location.reload();
 });
 
