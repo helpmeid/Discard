@@ -371,6 +371,14 @@
   @keyframes vfIn { from { opacity: 0; transform: translateY(6px); } }
   .vf-panel { position: absolute; left: 0; right: 0; top: 47px; bottom: 0; z-index: 5; background: #05030ce8; backdrop-filter: blur(5px); }
   .vf-panel.hidden { display: none; }
+  .vf-settings { max-width: 560px; margin: 24px auto; padding: 0 16px; color: #fff; }
+  .vf-settings h3 { margin: 0 0 14px; }
+  .vf-setrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px; border: 1px solid #ffffff22; border-radius: 12px; background: #140c2a; }
+  .vf-setrow small { display: block; margin-top: 4px; opacity: .7; }
+  .vf-switch { min-width: 64px; }
+  .vf-switch::before { content: "Off"; }
+  .vf-switch[aria-pressed="true"] { background: #b89bff; color: #120a2a; }
+  .vf-switch[aria-pressed="true"]::before { content: "On"; }
   .vf-up { position: absolute; inset: 0; display: flex; flex-direction: column; background: #05030c; }
   .vf-bsel { display: flex; gap: 8px; padding: 10px 14px; overflow-x: auto; flex: none; scrollbar-width: none; background: #0a061aee; border-bottom: 1px solid #ffffff12; }
   .vf-bpick { position: relative; flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; border: 1px solid #ffffff22; background: #140c2a; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -1720,6 +1728,8 @@
     refs.tabs.forEach(([name, button]) => button.setAttribute("aria-pressed", String(name === tab)));
     refs.treePanel.classList.toggle("hidden", tab !== "tree");
     refs.catPanel.classList.toggle("hidden", tab !== "catalog");
+    refs.setPanel.classList.toggle("hidden", tab !== "settings");
+    if (tab === "settings") refs.giantToggle.setAttribute("aria-pressed", String(Boolean(game.giant)));
     if (tab === "tree") buildTree();
     if (tab === "catalog") buildCatalog();
     drag = null;
@@ -2000,12 +2010,12 @@
     const branch = BRANCHES[branchIdx];
     const giant = Boolean(game.giant);
     refs.branchBtns.forEach(([k, button]) => button.classList.toggle("on", k === branchIdx));
-    refs.giantBtn.classList.toggle("on", giant);
-    refs.giantBtn.textContent = giant ? "🌌 One giant tree: On" : "🌌 One giant tree: Off";
+    refs.bsel.style.display = giant ? "none" : "";
+    if (refs.giantToggle) refs.giantToggle.setAttribute("aria-pressed", String(giant));
     refs.sky.style.setProperty("--c", branch.color);
     refs.sky.querySelector(".vf-map")?.remove();
     Object.keys(rows).forEach(id => delete rows[id]);
-    const nodes = NODES.filter(node => (giant || node.branch === branch) && (node.stage || 0) <= game.stage);
+    const nodes = NODES.filter(node => !node.root && (giant || node.branch === branch) && (node.stage || 0) <= game.stage);
     mapRoot = make("div", "vf-map");
     const svgNs = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNs, "svg");
@@ -2100,7 +2110,7 @@
     const top = make("div", "vf-top");
     top.append(make("h2", "", "🕳️ Event Horizon"));
     const tabs = make("div", "vf-tabs");
-    refs.tabs = [["cosmos", "🌌 Cosmos"], ["tree", "⬆️ Upgrades"], ["catalog", "📖 Catalog"]].map(([name, label]) => {
+    refs.tabs = [["cosmos", "🌌 Cosmos"], ["tree", "⬆️ Upgrades"], ["catalog", "📖 Catalog"], ["settings", "⚙️ Settings"]].map(([name, label]) => {
       const button = make("button", "vf-tab", label);
       button.type = "button";
       button.addEventListener("click", () => setTab(name));
@@ -2159,16 +2169,7 @@
       bsel.append(button);
       return [k, button];
     });
-    refs.giantBtn = make("button", "vf-bpick vf-giant");
-    refs.giantBtn.type = "button";
-    refs.giantBtn.style.setProperty("--c", "#b89bff");
-    refs.giantBtn.addEventListener("click", () => {
-      game.giant = !game.giant;
-      selected = null;
-      save();
-      buildTree();
-    });
-    bsel.prepend(refs.giantBtn);
+    refs.bsel = bsel;
     refs.sky = make("div", "vf-sky");
     refs.detail = make("div", "vf-pick");
     const zoomBox = make("div", "vf-zoomb");
@@ -2200,7 +2201,25 @@
     refs.treePanel.append(up);
 
     refs.catPanel = make("div", "vf-panel hidden");
-    root.append(refs.canvas, top, hud, bottom, refs.treePanel, refs.catPanel);
+    refs.setPanel = make("div", "vf-panel hidden");
+    const setBox = make("div", "vf-settings");
+    setBox.append(make("h3", "", "⚙️ Settings"));
+    const giantRow = make("div", "vf-setrow");
+    const giantText = make("div");
+    giantText.append(make("b", "", "🌌 One giant upgrade tree"), make("small", "", "Show every upgrade branch in a single huge tree instead of separate branch tabs."));
+    refs.giantToggle = make("button", "vf-btn vf-switch");
+    refs.giantToggle.type = "button";
+    refs.giantToggle.addEventListener("click", () => {
+      game.giant = !game.giant;
+      selected = null;
+      refs.giantToggle.setAttribute("aria-pressed", String(Boolean(game.giant)));
+      save();
+      if (tab === "tree") buildTree();
+    });
+    giantRow.append(giantText, refs.giantToggle);
+    setBox.append(giantRow);
+    refs.setPanel.append(setBox);
+    root.append(refs.canvas, top, hud, bottom, refs.treePanel, refs.catPanel, refs.setPanel);
     document.body.append(root);
     initStars();
   };
