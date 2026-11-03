@@ -577,14 +577,51 @@ function unoPlayView() {
   const body = gameElement("div", "game-body game-center");
   const finished = uno.phase === "finished";
   const mine = unoMyTurn();
-  unoPlayerChips(body, true);
-  const table = gameElement("div", "uno-table");
-  const pile = gameElement("span", "uno-pile", `🂠 ${uno.pileCount ?? 0}`);
-  pile.title = "Cards left in the draw pile";
-  table.append(pile, unoCardElement(uno.top));
-  const swatch = gameElement("span", `uno-swatch uno-${uno.color}`, unoColorNames[uno.color]);
-  table.append(swatch, gameElement("span", "uno-dir", uno.dir === 1 ? "↻" : "↺"));
-  body.append(table);
+  const board = gameElement("div", "uno-board");
+  const seat = (id, area) => {
+    const wrap = gameElement("div", `uno-seat uno-seat-${area}${uno.phase === "play" && uno.players[uno.turn] === id ? " uno-turn" : ""}`);
+    const avatar = gameElement("span", "avatar");
+    const person = id === state.me.id ? myProfile() : viewPerson(id);
+    setAvatar(avatar, person.displayName, person.avatar);
+    const count = uno.counts?.[id] ?? 0;
+    const chip = gameElement("div", "uno-seat-chip");
+    if (id !== state.me.id && count > (unoSeenCounts[id] ?? Infinity)) chip.classList.add("uno-chip-draw");
+    chip.append(avatar, gameElement("span", "", `${unoName(id)}${id === uno.hostId ? " 👑" : ""}`));
+    wrap.append(chip);
+    if (id !== state.me.id) {
+      const backs = gameElement("div", "uno-backs");
+      const shown = Math.min(count, 10);
+      for (let index = 0; index < shown; index += 1) {
+        const back = gameElement("span", "uno-back");
+        back.style.setProperty("--fan", `${(index - (shown - 1) / 2) * 7}deg`);
+        backs.append(back);
+      }
+      wrap.append(backs, gameElement("small", "", `${count} card${count === 1 ? "" : "s"}`));
+    }
+    board.append(wrap);
+    return wrap;
+  };
+  // Seats run clockwise from you: the next player sits on your left, the last on your right.
+  const myIndex = Math.max(0, uno.players.indexOf(state.me.id));
+  const others = uno.players.map((_, offset) => uno.players[(myIndex + offset + 1) % uno.players.length]).filter(id => id !== state.me.id);
+  others.forEach((id, index) => {
+    const last = others.length - 1;
+    seat(id, others.length === 1 ? "top" : index === 0 ? "left" : index === last ? "right" : "top");
+  });
+  const center = gameElement("div", "uno-center");
+  const ring = gameElement("div", `uno-ring uno-ring-${uno.color}${uno.dir === 1 ? "" : " rev"}`);
+  ring.append(gameElement("span", "uno-orbit", "➤"), gameElement("span", "uno-orbit o2", "➤"), gameElement("span", "uno-orbit o3", "➤"));
+  const pile = gameElement("span", "uno-pile");
+  pile.title = `${uno.pileCount ?? 0} cards left in the draw pile`;
+  pile.append(gameElement("span", "uno-back"), gameElement("span", "uno-back"), gameElement("small", "", String(uno.pileCount ?? 0)));
+  center.append(gameElement("span", `uno-swirl uno-ring-${uno.color}`));
+  const topCard = unoCardElement(uno.top);
+  topCard.classList.add("uno-top");
+  topCard.style.setProperty("--tilt", `${(uno.top.charCodeAt(0) + uno.top.charCodeAt(1)) % 14 - 7}deg`);
+  center.append(ring, pile, topCard, gameElement("span", `uno-swatch uno-${uno.color}`, unoColorNames[uno.color]));
+  board.append(center);
+  const meSeat = seat(state.me.id, "me");
+  body.append(board);
   body.append(gameElement("p", "game-hint", uno.msg || ""));
   if (finished) {
     body.append(gameElement("p", "game-text", uno.winner === state.me.id ? "🎉 You won!" : `${unoName(uno.winner)} won!`));
@@ -628,7 +665,7 @@ function unoPlayView() {
     }
     hand.append(element);
   });
-  body.append(hand);
+  meSeat.append(hand);
   if (unoNotice) body.append(gameElement("p", "uno-notice", unoNotice));
   if (unoPicking && mine) {
     const picker = gameElement("div", "game-actions");

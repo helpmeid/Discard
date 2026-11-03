@@ -191,7 +191,7 @@ const UPDATE_LOG = [
   { version: "3.5.5", notes: ["Added Uno to chat games."] },
   { version: "3.5.4", notes: ["Message notifications now show while a game is open."] }
 ];
-document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
+document.querySelector("#authVersionText").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
 document.querySelectorAll('link[rel~="icon"]').forEach(link => link.remove());
@@ -1759,6 +1759,16 @@ async function enterApp() {
   startPeer();
   applyPreferences({ ...defaultPreferences, ...currentUser.preferences });
   await openChatView();
+  showUpdateLogIfNew();
+}
+
+function showUpdateLogIfNew() {
+  const key = `discard-seen-version-${currentUser.username.toLowerCase()}`;
+  try {
+    if (localStorage.getItem(key) === APP_VERSION) return;
+    localStorage.setItem(key, APP_VERSION);
+  } catch {}
+  document.querySelector("#updateLogModal").classList.remove("hidden");
 }
 
 async function signIn(username, password, backupFile) {
@@ -3247,6 +3257,7 @@ document.querySelector("#updateLogList").replaceChildren(...UPDATE_LOG.map(entry
   return section;
 }));
 document.querySelector("#updateLogOpen").addEventListener("click", () => updateLogModal.classList.remove("hidden"));
+document.querySelector("#authUpdateLog").addEventListener("click", () => updateLogModal.classList.remove("hidden"));
 document.querySelector("#updateLogClose").addEventListener("click", () => updateLogModal.classList.add("hidden"));
 updateLogModal.addEventListener("click", event => { if (event.target === updateLogModal) updateLogModal.classList.add("hidden"); });
 document.querySelector("#settingsClose").addEventListener("click", () => settingsPanel.classList.add("hidden"));

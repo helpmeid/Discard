@@ -125,6 +125,7 @@
     .empty-list { padding: 14px 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
     .sidebar-bottom { padding: 14px 7px 0; border-top: 1px solid var(--line); }
     .auth-version { position: fixed; left: 12px; bottom: 10px; z-index: 5; color: var(--muted); font-size: 11px; pointer-events: none; }
+    .auth-version .link-button { pointer-events: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
     .auth-version.hidden { display: none; }
     .version-note { margin: -6px 0 10px; color: var(--muted); font-size: 10px; }
     .storage-note { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #738078; font-size: 11px; }
@@ -380,6 +381,42 @@
     .uno-card.uno-drawn { animation: unoDraw .45s cubic-bezier(.2, .8, .3, 1) backwards; }
     .game-chip.uno-chip-draw { animation: unoChipDraw .5s ease; }
     .uno-notice { margin: 0; color: #f2b705; font-size: 13px; font-weight: 700; }
+    @keyframes unoSpin { to { transform: rotate(360deg); } }
+    @keyframes unoGlow { 0%, 100% { box-shadow: 0 0 10px 1px var(--glow); } 50% { box-shadow: 0 0 26px 6px var(--glow); } }
+    @keyframes unoLand { from { transform: translateY(-40px) rotate(30deg) scale(1.3); opacity: 0; } to { transform: rotate(var(--tilt, 0deg)); opacity: 1; } }
+    .uno-board { display: grid; grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr); grid-template-areas: ". top ." "left center right" "me me me"; gap: 8px 12px; align-items: center; margin: 6px 0; padding: 12px; border-radius: 22px; background: radial-gradient(ellipse at center, #1b8f3a55, #0b3a1a66 70%); border: 1px solid #ffffff1f; }
+    .uno-seat { display: grid; justify-items: center; gap: 4px; min-width: 0; font-size: 12px; }
+    .uno-seat-top { grid-area: top; } .uno-seat-left { grid-area: left; } .uno-seat-right { grid-area: right; } .uno-seat-me { grid-area: me; }
+    .uno-seat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--field); font-weight: 700; max-width: 100%; }
+    .uno-seat-chip .avatar { width: 26px; height: 26px; flex-basis: 26px; border-radius: 50%; font-size: 11px; }
+    .uno-seat.uno-turn .uno-seat-chip { outline: 2px solid #f2b705; box-shadow: 0 0 14px #f2b705aa; }
+    .uno-backs { display: flex; justify-content: center; }
+    .uno-back { width: 16px; height: 24px; margin-left: -8px; border-radius: 4px; border: 2px solid #fff; background: linear-gradient(135deg, #1b1b1b, #d6281f); box-shadow: 0 1px 3px #0006; }
+    .uno-backs .uno-back:first-child { margin-left: 0; }
+    .uno-seat-me .uno-hand { margin: 2px 0 0; }
+    .uno-center { grid-area: center; position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; width: 190px; height: 150px; flex-wrap: wrap; align-content: center; }
+    .uno-ring { position: absolute; inset: 0; margin: auto; width: 150px; height: 150px; border-radius: 50%; border: 2px dashed var(--glow); animation: unoSpin 9s linear infinite, unoGlow 2.4s ease-in-out infinite; pointer-events: none; }
+    .uno-ring.rev { animation-direction: reverse, normal; }
+    .uno-ring-r { --glow: #d6281f; } .uno-ring-y { --glow: #e6a800; } .uno-ring-g { --glow: #1b8f3a; } .uno-ring-b { --glow: #1769d1; }
+    .uno-orbit { position: absolute; left: 50%; top: 50%; width: 0; height: 0; font-size: 16px; color: var(--glow); }
+    .uno-orbit::before { content: "➤"; position: absolute; transform: translate(70px, -9px); }
+    .uno-orbit.o2 { transform: rotate(120deg); } .uno-orbit.o3 { transform: rotate(240deg); }
+    .uno-ring.rev .uno-orbit::before { content: "⮜"; }
+    .uno-center > :not(.uno-ring) { position: relative; z-index: 1; }
+    .uno-top { animation: unoLand .4s ease-out both; transform: rotate(var(--tilt, 0deg)); width: 56px; height: 82px; font-size: 24px; }
+    .uno-center .uno-swatch { position: absolute; bottom: -4px; }
+    @media (max-width: 480px) { .uno-center { width: 130px; height: 130px; } .uno-ring { width: 110px; height: 110px; } .uno-orbit::before { transform: translate(50px, -9px); } }
+    @keyframes unoSwirl { to { transform: rotate(360deg); } }
+    .uno-board { background: radial-gradient(ellipse at center, #7a1d2a 0%, #3d0d16 55%, #1a050a 100%); border-color: #ff6b7a33; box-shadow: inset 0 0 60px #000a; }
+    .uno-back { width: 30px; height: 44px; margin-left: -18px; border-radius: 5px; border: 2px solid #fff; background: radial-gradient(circle at 50% 50%, #1a1a1a 0 38%, #fff 39% 43%, #d6281f 44% 60%, #0b0b0b 61%); transform: rotate(var(--fan, 0deg)); transform-origin: 50% 120%; }
+    .uno-seat-left .uno-backs { transform: rotate(90deg); margin: 28px 0; }
+    .uno-seat-right .uno-backs { transform: rotate(-90deg); margin: 28px 0; }
+    .uno-swirl { position: absolute; width: 112px; height: 112px; border-radius: 50%; background: conic-gradient(from 0deg, var(--glow), #fff3, var(--glow), #0006, var(--glow)); filter: blur(5px); opacity: .85; animation: unoSwirl 3.5s linear infinite; z-index: 0; }
+    .uno-pile { position: relative; width: 32px; height: 46px; display: block; }
+    .uno-pile .uno-back { position: absolute; left: 0; top: 0; margin: 0; transform: none; }
+    .uno-pile .uno-back + .uno-back { left: 3px; top: -3px; }
+    .uno-pile small { position: absolute; left: 0; right: 0; bottom: -16px; text-align: center; font-size: 11px; font-weight: 700; }
+    .uno-seat-me .uno-seat-chip { background: #000a; }
     .uno-pile, .uno-dir { font-size: 14px; font-weight: 700; opacity: .85; }
     .uno-dir { font-size: 22px; }
     .uno-swatch { padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }
@@ -630,7 +667,7 @@
   <div class="profile-modal game-modal hidden" id="unoModal"><div class="profile-card game-card" role="dialog" aria-label="Uno" id="unoCard"></div></div>
   <div class="profile-modal game-modal hidden" id="hangModal"><div class="profile-card game-card" role="dialog" aria-label="Hangman" id="hangCard"></div></div>
   <div class="lightbox hidden" id="lightbox"><img alt="Full size image"></div>
-  <div class="auth-version" id="authVersion"></div>
+  <div class="auth-version" id="authVersion"><span id="authVersionText"></span> · <button type="button" class="link-button" id="authUpdateLog">Update log</button></div>
   <main id="authView" class="auth-view">
     <section class="auth-main">
       <div class="auth-card">
