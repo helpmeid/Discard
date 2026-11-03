@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.5.9**
+**Version 3.5.10**
 
 ## How to play
 
@@ -25,7 +25,7 @@ Then open [http://localhost:8000](http://localhost:8000). Stop the server with `
 Unread chats show a red count in the chat list and a red dot on the browser tab icon. Press **Pin** in a chat's header to keep it at the top of your list.
 Enable **Message notifications** in Settings to see incoming message alerts while a game is covering your chat.
 
-If sign-in says your account is already open in another tab, use **Unlock Account** after entering your password. It signs out other Discard tabs sharing the same browser storage and then signs you in. This does not affect accounts on other Chromebooks, and it does not delete saved messages.
+If sign-in says your account is already open in another tab, use **Unlock Account** after entering your password. It closes old tabs when Chrome permits it, or signs them out without reloading, and then signs you in. This does not affect accounts on other Chromebooks, and it does not delete saved messages.
 
 1. Open `index.html`. Choose **Create account** (username + password, optional display name) or **Sign in**. Accounts and passwords live only on your computer, and you can have several on one computer.
 2. Open **Friends** and copy your **friend code**. Send it to a friend, and paste theirs into "Paste a friend code".
