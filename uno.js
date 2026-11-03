@@ -614,7 +614,7 @@ function unoPlayView() {
   const pile = gameElement("span", "uno-pile");
   pile.title = `${uno.pileCount ?? 0} cards left in the draw pile`;
   pile.append(gameElement("span", "uno-back"), gameElement("span", "uno-back"), gameElement("small", "", String(uno.pileCount ?? 0)));
-  center.append(gameElement("span", `uno-swirl uno-ring-${uno.color}`));
+  center.append(gameElement("span", `uno-swirl uno-ring-${uno.color}${uno.dir === 1 ? "" : " rev"}`));
   const topCard = unoCardElement(uno.top);
   topCard.classList.add("uno-top");
   topCard.style.setProperty("--tilt", `${(uno.top.charCodeAt(0) + uno.top.charCodeAt(1)) % 14 - 7}deg`);
