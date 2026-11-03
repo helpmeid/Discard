@@ -184,7 +184,7 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.5.3";
+const APP_VERSION = "3.5.4";
 document.querySelector("#authVersion").textContent = `Version ${APP_VERSION}`;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
@@ -1204,7 +1204,11 @@ document.addEventListener("visibilitychange", () => sendReadReceipts(state?.chat
 function showMessageNotification(chat, from, text, image, file) {
   if (from === state.me.id || !state.me.preferences?.notifications) return;
   if (isMuted(chat.id) || isMuted(from)) return;
-  const viewing = !document.hidden && document.hasFocus() && chat.id === activeChatId;
+  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#vfRoot"].some(selector => {
+    const panel = document.querySelector(selector);
+    return panel && !panel.classList.contains("hidden");
+  });
+  const viewing = !document.hidden && document.hasFocus() && chat.id === activeChatId && !gameOpen;
   if (viewing) return;
   const sender = viewPerson(from).displayName;
   const body = text.trim() ? text.slice(0, 140) : image ? "Sent a photo" : `Sent ${file?.name || "a file"}`;
