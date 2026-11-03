@@ -417,6 +417,15 @@
     .uno-pile .uno-back + .uno-back { left: 3px; top: -3px; }
     .uno-pile small { position: absolute; left: 0; right: 0; bottom: -16px; text-align: center; font-size: 11px; font-weight: 700; }
     .uno-seat-me .uno-seat-chip { background: #000a; }
+    .game-body.uno-body { padding: 0; }
+    .uno-body .uno-board { margin: 0; border-radius: 0; border: 0; min-height: 440px; grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr); align-content: space-between; }
+    .uno-seat-me { gap: 6px; width: 100%; }
+    .uno-msg, .uno-turntext, .uno-notice { margin: 0; text-shadow: 0 1px 3px #000; }
+    .uno-msg { font-size: 12px; opacity: .8; } .uno-turntext { font-weight: 800; font-size: 15px; }
+    .uno-seat-me .game-actions { margin: 4px 0 0; }
+    .uno-seat-me .profile-btn { background: #000a; border-color: #ffffff33; color: #fff; }
+    .uno-seat-me .profile-btn.primary { background: #7b3cff; }
+    .uno-seat-me .profile-btn:disabled { opacity: .5; }
     .uno-pile, .uno-dir { font-size: 14px; font-weight: 700; opacity: .85; }
     .uno-dir { font-size: 22px; }
     .uno-swatch { padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }

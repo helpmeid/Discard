@@ -574,7 +574,7 @@ function unoLobbyView() {
 }
 
 function unoPlayView() {
-  const body = gameElement("div", "game-body game-center");
+  const body = gameElement("div", "game-body game-center uno-body");
   const finished = uno.phase === "finished";
   const mine = unoMyTurn();
   const board = gameElement("div", "uno-board");
@@ -622,12 +622,12 @@ function unoPlayView() {
   board.append(center);
   const meSeat = seat(state.me.id, "me");
   body.append(board);
-  body.append(gameElement("p", "game-hint", uno.msg || ""));
+  meSeat.append(gameElement("p", "uno-msg", uno.msg || ""));
   if (finished) {
-    body.append(gameElement("p", "game-text", uno.winner === state.me.id ? "🎉 You won!" : `${unoName(uno.winner)} won!`));
+    meSeat.append(gameElement("p", "uno-turntext", uno.winner === state.me.id ? "🎉 You won!" : `${unoName(uno.winner)} won!`));
   } else {
     const turnName = uno.players[uno.turn];
-    body.append(gameElement("p", "game-text", mine ? (uno.drew ? "You drew a playable card. Play it or pass." : "Your turn") : `${unoName(turnName)}'s turn`));
+    meSeat.append(gameElement("p", "uno-turntext", mine ? (uno.drew ? "You drew a playable card. Play it or pass." : "Your turn") : `${unoName(turnName)}'s turn`));
   }
   const hand = gameElement("div", "uno-hand");
   const fresh = {};
@@ -666,7 +666,7 @@ function unoPlayView() {
     hand.append(element);
   });
   meSeat.append(hand);
-  if (unoNotice) body.append(gameElement("p", "uno-notice", unoNotice));
+  if (unoNotice) meSeat.append(gameElement("p", "uno-notice", unoNotice));
   if (unoPicking && mine) {
     const picker = gameElement("div", "game-actions");
     picker.append(gameElement("span", "game-hint", "Choose a color:"));
@@ -677,7 +677,7 @@ function unoPlayView() {
       picker.append(choice);
     });
     picker.append(gameButton("Cancel", () => { unoPicking = null; renderUno(); }));
-    body.append(picker);
+    meSeat.append(picker);
   }
   const actions = gameElement("div", "game-actions");
   if (!finished) {
@@ -689,7 +689,7 @@ function unoPlayView() {
   }
   if (finished && unoHost() && uno.players.length >= 2) actions.append(gameButton("Play again", unoStartGame, "profile-btn primary"));
   actions.append(gameButton(finished ? "Close" : "Leave game", finished ? () => { if (unoHost()) unoBroadcast({ t: "uno-end", gameId: uno.id }); unoEndLocal(); } : unoLeave));
-  body.append(actions);
+  meSeat.append(actions);
   return body;
 }
 
