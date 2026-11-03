@@ -8,7 +8,7 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 
 **Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
 
-**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep `app.js`, `assets.js`, `emoji.js`, `chem.js`, `clicker.js`, `garlic.js`, `party-games.js`, `hangman.js`, `uno.js` and `uno-logo.png` beside it).
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep all companion JavaScript files and images beside it, including `oakhaven-core.js`, `oakhaven.js`, and `game-time.js`).
 
 ## Run a local test server
 
@@ -43,9 +43,17 @@ Because there is no central server, offline members may retain an older copy unt
 
 Open any chat, press the **+** at the left of the message bar and choose **🧄 Garlic Fone** to invite everyone in it to a telephone-pictionary game (2-8 players). Everyone writes a phrase, then the chains rotate: draw what you read, describe what you see, and so on. At the end each chain is revealed step by step. The host picks the number of rounds in the lobby (one per player by default, or 2 to 12; extra rounds loop the chains back around) and sets the time limits (presets or custom seconds per round type, or no limit; defaults are 40s to write, 90s to draw, 45s to describe) and a countdown bar shows the time left, and a step bar shows how far through the game you are. When time runs out your work is submitted automatically. The drawing pad has a fill bucket, an opacity slider and an eraser, and **Ctrl+Z** undoes and **Ctrl+Shift+Z** redoes (Cmd on Mac). Leaving mid-game asks for confirmation, and closing or reloading the tab always asks "are you sure?". The host's browser runs the game, so everyone must stay online, and invites only reach people who are online. The host can **Skip waiting** for slow players.
 
-## Solo games
+## Games
 
-Press the **🎮** button above your chat list to open the solo games area. You can play **Event Horizon**, a black hole idle game, without being in a chat. Use **Export save** to download your progress as a file and **Import save** to load one back in (it replaces your current progress after a confirmation). The same Export and Import buttons are at the top of the game.
+Press the **🎮** button above your chat list to open **Games**, the home for main games. Chat minigames such as Uno stay in the chat's **+** menu. Each main game shows active foreground playtime for the current local account, starting with this update (past playtime cannot be recovered). Time is stored on this browser/device; it is not cloud-synced. Oakhaven excludes pause, party waiting, hidden tabs, defeat, and completion. Event Horizon counts time while its game panel is open and the page has focus; idle production is unchanged.
+
+**Event Horizon**, the black hole idle game, is still available. Use **Export save** to download progress and **Import save** to restore it after confirmation. These transfers contain Event Horizon progress, not the new playtime counters.
+
+**Oakhaven: Ash & Oath** is a short, original action RPG **vertical slice**, not the planned 8–10 hour game. Choose solo or two-player couch play, train with Old Man Garrow, and fight corrupted boars and the two-phase Huntsman in the Howling Mire. Player 1 uses WASD / F attack / G heavy / Space roll / R block / E interact. Player 2 uses arrows / J attack / K heavy / L roll / I block / O interact. Movement sets attack direction; solo also supports mouse aiming, left-click strikes, and right-click blocking. Keyboard play needs no mouse. Escape opens the menu; Tab and Enter navigate/activate menu controls. Rebind each player's controls in the game menu; duplicate and reserved keys are rejected. The cursor is hidden over the arena during play. Enable reduced effects to suppress shake and hit flashes. Progress within an expedition is not saved yet; bindings, effect preference, and playtime are saved locally per account.
+
+Online co-op is **experimental**: open Oakhaven, select a Discard friend, and invite them. They open Games → Oakhaven to accept. Two players share a host-controlled world; guest uses Player 1 keybinds to control the second character. Both must be online and on compatible versions. Invites expire after 60 seconds; active connections time out after 15 seconds without traffic. No reconnect, host migration, or mixed couch-plus-online mode yet. The party flow has simulated transport tests; real two-device WebRTC play and Chromebook performance still need manual verification. See [OAKHAVEN.md](OAKHAVEN.md) for exact scope, architecture, campaign plan, and acceptance checks.
+
+Run simulation and adapter checks with `node --test tests/*.test.cjs` (Node 22+; no dependency installation). `tests/oakhaven-browser.html` is an isolated manual UI fixture using a synthetic local account and no network friends.
 
 ## Other chat games
 

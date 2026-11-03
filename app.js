@@ -908,6 +908,10 @@ function handleData(from, data) {
   if (entry) entry.lastSeen = Date.now();
   if (!data || typeof data !== "object" || typeof data.t !== "string") return;
   if (!officialTrusted(from) && data.t !== "proof") return;
+  if (data.t.startsWith("oak-")) {
+    window.oakhavenHandle?.(from, data);
+    return;
+  }
   if (data.t.startsWith("game-")) {
     garlicHandle(from, data);
     return;
@@ -1222,7 +1226,7 @@ document.addEventListener("visibilitychange", () => sendReadReceipts(state?.chat
 function showMessageNotification(chat, from, text, image, file) {
   if (from === state.me.id || !state.me.preferences?.notifications) return;
   if (isMuted(chat.id) || isMuted(from)) return;
-  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot"].some(selector => {
+  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot", "#oakRoot"].some(selector => {
     const panel = document.querySelector(selector);
     return panel && !panel.classList.contains("hidden");
   });
@@ -1788,6 +1792,7 @@ async function signOutForTakeover() {
   // Close running game panels before switching to the signed-out screen.
   // The black-hole game should not save old progress over a newer session.
   window.closeVoidForgeForTakeover?.(ownsAccountSession());
+  window.closeOakhaven?.();
   if (typeof endGameLocal === "function") endGameLocal();
   if (typeof partyEndLocal === "function") partyEndLocal();
   if (typeof unoEndLocal === "function") unoEndLocal();

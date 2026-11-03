@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Oakhaven isolated browser test</title>
+<style>body{font:16px system-ui;background:#eee}button{padding:10px}.hidden{display:none}</style>
+<div id="gamesHub"><h1>Games · isolated test fixture</h1><button id="hubPlayOakhaven">Play Oakhaven</button><div id="oakInviteStatus"></div><p data-playtime="oakhaven"></p></div>
+<script>
+// Synthetic account only; no production credentials, PeerJS, or friend messages.
+const currentUser={id:'oakhaven-test'},state={me:{id:'test-player'},friends:{}};
+const viewPerson=id=>({displayName:id});const connectTo=()=>{};const sendTo=()=>false;
+</script>
+<script src="../oakhaven-core.js"></script><script src="../oakhaven.js"></script><script src="../game-time.js"></script></html>
