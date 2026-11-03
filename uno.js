@@ -387,7 +387,7 @@ function unoCardElement(card, onClick, disabled) {
 
 const unoLogo = className => {
   const image = gameElement("img", className);
-  image.src = "uno-logo.jpg";
+  image.src = "uno-logo.png";
   image.alt = "Uno";
   return image;
 };
