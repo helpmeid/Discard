@@ -62,8 +62,9 @@ function endGameLocal() {
 
 const gameInProgress = () => Boolean(game) && (game.phase === "task" || game.phase === "wait");
 
-// The browser asks for confirmation whenever the tab is closed or reloaded.
+// Only warn about leaving an active Garlic Fone game, never during account takeover.
 window.addEventListener("beforeunload", event => {
+  if (window.discardAccountTakeoverClosing || !gameInProgress()) return;
   event.preventDefault();
   event.returnValue = "";
 });
