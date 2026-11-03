@@ -11,12 +11,12 @@ const unoColors = ["r", "y", "g", "b"];
 const unoColorNames = { r: "Red", y: "Yellow", g: "Green", b: "Blue" };
 const unoCardPattern = /^(?:[rygb](?:[0-9]|s|r|d)|w[wd])$/;
 const declinedUnoGames = new Set();
-const defaultUnoRules = { stack: "off", strictWild4: false, drawUntil: false, jumpIn: false, hand: 7 };
-const unoStackModes = { off: "No stacking", same: "+2 on +2, +4 on +4 only", any: "Any draw card on any draw card" };
+const defaultUnoRules = { stack: "any", strictWild4: false, drawUntil: true, jumpIn: false, hand: 7 };
+const unoStackModes = { off: "No stacking", same: "+2 on +2, +4 on +4 only", any: "+2 and +4 on each other (no skips or reverses)" };
 const cleanUnoRules = input => ({
-  stack: Object.hasOwn(unoStackModes, input?.stack) ? input.stack : "off",
+  stack: Object.hasOwn(unoStackModes, input?.stack) ? input.stack : "any",
   strictWild4: input?.strictWild4 === true,
-  drawUntil: input?.drawUntil === true,
+  drawUntil: input?.drawUntil !== false,
   jumpIn: input?.jumpIn === true,
   hand: Number.isInteger(input?.hand) ? Math.min(Math.max(input.hand, 3), 10) : 7
 });
