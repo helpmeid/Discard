@@ -375,6 +375,11 @@
     .uno-logo-small { flex: none; height: 34px; width: auto; }
     .uno-logo-big { display: block; height: 90px; width: auto; margin: 6px auto; border-radius: 12px; }
     .uno-table { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0; }
+    @keyframes unoDraw { 0% { transform: translate(-90px, -70px) rotate(-25deg) scale(.5); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; opacity: 1; } }
+    @keyframes unoChipDraw { 0%, 100% { transform: none; } 35% { transform: scale(1.18); box-shadow: 0 0 0 3px #f2b705; } }
+    .uno-card.uno-drawn { animation: unoDraw .45s cubic-bezier(.2, .8, .3, 1) backwards; }
+    .game-chip.uno-chip-draw { animation: unoChipDraw .5s ease; }
+    .uno-notice { margin: 0; color: #f2b705; font-size: 13px; font-weight: 700; }
     .uno-pile, .uno-dir { font-size: 14px; font-weight: 700; opacity: .85; }
     .uno-dir { font-size: 22px; }
     .uno-swatch { padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }
@@ -382,7 +387,7 @@
     .uno-card { display: inline-grid; place-items: center; width: 46px; height: 68px; padding: 0; border: 3px solid #fff; border-radius: 9px; color: #fff; font-size: 20px; font-weight: 800; box-shadow: 0 2px 8px #0005; text-shadow: 0 1px 2px #0006; cursor: default; }
     button.uno-card:not(:disabled) { cursor: pointer; transition: transform .12s; }
     button.uno-card:not(:disabled):hover { transform: translateY(-6px); }
-    button.uno-card:disabled { opacity: .45; }
+    button.uno-card:disabled { opacity: 1; cursor: default; }
     .uno-pick { width: auto; height: 34px; padding: 0 12px; font-size: 13px; cursor: pointer; }
     .uno-r { background: #d6281f; } .uno-y { background: #e6a800; } .uno-g { background: #1b8f3a; } .uno-b { background: #1769d1; }
     .uno-w { background: linear-gradient(135deg, #d6281f 25%, #e6a800 25% 50%, #1b8f3a 50% 75%, #1769d1 75%); }

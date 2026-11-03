@@ -23,6 +23,17 @@ const cleanUnoRules = input => ({
 let uno = null;
 let unoPicking = null;
 let unoLastRetry = 0;
+let unoSeenHand = null;
+let unoSeenCounts = {};
+let unoNotice = "";
+let unoNoticeTimer = null;
+
+function unoSetNotice(text) {
+  unoNotice = text;
+  window.clearTimeout(unoNoticeTimer);
+  unoNoticeTimer = window.setTimeout(() => { unoNotice = ""; if (uno) renderUno(); }, 2000);
+  renderUno();
+}
 
 function unoDeck() {
   const deck = [];
@@ -468,6 +479,7 @@ function unoPlayerChips(parent, withCounts) {
     const person = id === state.me.id ? myProfile() : viewPerson(id);
     setAvatar(avatar, person.displayName, person.avatar);
     const count = withCounts && uno.counts ? ` · ${uno.counts[id] ?? 0} 🂠` : "";
+    if (withCounts && uno.counts && id !== state.me.id && (uno.counts[id] ?? 0) > (unoSeenCounts[id] ?? Infinity)) chip.classList.add("uno-chip-draw");
     chip.append(avatar, gameElement("span", "", `${unoName(id)}${id === uno.hostId ? " 👑" : ""}${count}`));
     row.append(chip);
   });
@@ -581,19 +593,43 @@ function unoPlayView() {
     body.append(gameElement("p", "game-text", mine ? (uno.drew ? "You drew a playable card. Play it or pass." : "Your turn") : `${unoName(turnName)}'s turn`));
   }
   const hand = gameElement("div", "uno-hand");
+  const fresh = {};
+  const before = unoSeenHand;
+  if (before) {
+    const had = {};
+    before.forEach(card => { had[card] = (had[card] || 0) + 1; });
+    uno.hand.forEach(card => {
+      if (had[card] > 0) had[card] -= 1;
+      else fresh[card] = (fresh[card] || 0) + 1;
+    });
+  }
+  let delay = 0;
   unoSorted(uno.hand).forEach(card => {
     const jump = !finished && !mine && uno.rules?.jumpIn && !uno.pending && card === uno.top && card[0] !== "w";
-    const playable = jump || (mine && unoPlayable(card, uno.hand) && (!uno.drew || uno.drew === card));
-    hand.append(unoCardElement(card, () => {
+    const element = unoCardElement(card, () => {
+      if (finished) return;
+      const legal = jump || (mine && unoPlayable(card, uno.hand) && (!uno.drew || uno.drew === card));
+      if (!legal) {
+        unoSetNotice(mine ? (uno.drew ? "You can only play the card you drew." : "You can't play that card.") : "It's not your turn.");
+        return;
+      }
       if (card[0] === "w") {
         unoPicking = card;
         renderUno();
       } else {
         unoPlayCard(card);
       }
-    }, !playable));
+    }, finished);
+    if (fresh[card] > 0) {
+      fresh[card] -= 1;
+      element.classList.add("uno-drawn");
+      element.style.animationDelay = `${delay * 0.12}s`;
+      delay += 1;
+    }
+    hand.append(element);
   });
   body.append(hand);
+  if (unoNotice) body.append(gameElement("p", "uno-notice", unoNotice));
   if (unoPicking && mine) {
     const picker = gameElement("div", "game-actions");
     picker.append(gameElement("span", "game-hint", "Choose a color:"));
@@ -638,6 +674,13 @@ function renderUno() {
     body.append(actions);
   } else body = unoPlayView();
   unoCard.replaceChildren(unoHeader(subtitle), body);
+  if (uno.phase === "play" || uno.phase === "finished") {
+    unoSeenHand = [...(uno.hand || [])];
+    unoSeenCounts = { ...(uno.counts || {}) };
+  } else {
+    unoSeenHand = null;
+    unoSeenCounts = {};
+  }
 }
 
 setupGameWindow(unoModal, unoCard, "discard-game-corner");
