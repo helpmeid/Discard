@@ -236,6 +236,17 @@
     }
     const boss=m.encounters.find(e=>e.group==='boss');
     if(boss)boss.units=chapter===2?[['brute',56,37]]:chapter===4?[['huntsman',56,37],['soldier',53,35],['archer',59,38]]:chapter===3?[['huntsman',56,37],['hound',53,35]]:boss.units;
+    // Regional finales rotate combat archetypes; the Huntsman is no longer every mission's boss.
+    if(boss){
+      const finales=[
+        [['huntsman',56,37]],
+        [['brute',56,37],['archer',53,36]],
+        [['soldier',56,37],['soldier',54,35],['archer',58,37]],
+        [['brute',56,37],['hound',54,35],['hound',58,37]]
+      ];
+      if(chapter===4&&mission===3)boss.units=[['huntsman',56,37],['brute',53,36],['archer',58,37]];
+      else boss.units=finales[(chapter+mission)%finales.length].map(unit=>[...unit]);
+    }
     if(chapter===1)m.encounters.find(e=>e.group==='orchard').units.push(['hound',14,18]);
     if(chapter===2)m.encounters.find(e=>e.group==='ridge').units.push(['brute',50,30]);
     if(chapter===3)m.encounters.find(e=>e.group==='quarry').units.push(['archer',42,15]);
