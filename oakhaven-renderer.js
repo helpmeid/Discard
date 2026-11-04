@@ -99,8 +99,10 @@
           b(point[0],point[1]-.27,point[2],.2,.09,.17,trim);
         }else if(style.type==='axe'){
           limb(grip,point,.065,.068,shaftColor);
-          b(point[0]-.18,point[1]-.28,point[2],.4,.4,.16,style.color);
-          b(point[0]-.39,point[1]-.27,point[2],.13,.28,.11,'#d8e1db');
+          // Broad axe head attached to the TOP of the wooden haft, not floating beside it.
+          b(point[0],point[1]-.12,point[2],.33,.12,.18,'#625444');
+          b(point[0]-.18,point[1]-.13,point[2],.38,.32,.16,style.color);
+          b(point[0]-.39,point[1]-.13,point[2],.12,.43,.11,'#e1e5db');
         }else if(style.type==='mace'){
           limb(grip,point,.075,.076,shaftColor);
           b(point[0],point[1]-.21,point[2],.36,.36,.31,style.color);
