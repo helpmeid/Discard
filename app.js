@@ -188,6 +188,23 @@ window.setDiscardGameActivity = name => {
   refreshSnapshot();
 };
 function friendGame(id){const a=gameActivity.get(id);return a&&isOnline(id)&&Date.now()-a.at<120000?a.game:'';}
+const otherGameModals=[['gameModal','Garlic Fone'],['partyGameModal','Party Games'],['unoModal','Uno'],['hangModal','Hangman']];
+function watchGamePresence(){
+  const sync=()=>{
+    const playing=otherGameModals.find(([id])=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden')&&!el.hidden;});
+    if(playing&&myGameActivity!==playing[1])window.setDiscardGameActivity(playing[1]);
+    else if(!playing&&otherGameModals.some(([,name])=>name===myGameActivity))window.setDiscardGameActivity('');
+  };
+  for(const [id] of otherGameModals){
+    const el=document.getElementById(id);
+    if(el)new MutationObserver(sync).observe(el,{attributes:true,attributeFilter:['class','hidden','style']});
+  }
+  sync();
+}
+watchGamePresence();
+window.setInterval(()=>{
+  if(state&&myGameActivity)for(const id of Object.keys(state.friends))sendTo(id,{t:'activity',game:myGameActivity});
+},45000);
 let activeChatId = null;
 let refreshing = false;
 let renderedKeys = {};
@@ -2616,7 +2633,7 @@ function renderConversation() {
   if (chat.isGroup) {
     const manage = document.createElement("button");
     manage.type = "button";
-    manage.textContent = "Manage group";
+    manage.textContent = `Members (${chat.members.length})`;
     manage.setAttribute("aria-expanded", String(!groupManagement.classList.contains("hidden")));
     manage.addEventListener("click", () => {
       groupManagement.classList.toggle("hidden");
