@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.7.3";
+const APP_VERSION = "3.7.4";
 const UPDATE_LOG = [
+  { version: "3.7.4", notes: ["Oakhaven: fix equipment changes, double-click an inventory item to equip, show equip feedback, synchronize equipment changes online, and add unique weapon SVG icons."] },
   { version: "3.7.3", notes: ["Fix Oakhaven browser caching: bump all Oakhaven script tags; build 17 individual mission maps from fresh terrain instead of copying the Ashen Road; validate all 18 objective routes."] },
   { version: "3.7.2", notes: ["Oakhaven: all 18 missions have unique traversable terrain layouts, varied boss parties instead of repeated Huntsman fights, dynamically named finales, reduced scenery load, and fixed blocked objective paths."] },
   { version: "3.7.1", notes: ["Oakhaven regions now have distinct playable terrain layouts, obstacle formations, water crossings, routes and landmarks, rather than reusing the same original level geometry."] },
