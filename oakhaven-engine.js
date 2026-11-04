@@ -6,6 +6,16 @@
   const actions=['up','down','left','right','attack','heavy','ranged','roll','block','heal','interact','a1','a2','a3','jump','heavyJump'];
   const defaults=[{up:'KeyW',down:'KeyS',left:'KeyA',right:'KeyD',attack:'KeyF',heavy:'KeyG',ranged:'KeyQ',roll:'Space',block:'KeyR',heal:'KeyH',interact:'KeyE',a1:'Digit1',a2:'Digit2',a3:'Digit3'},{up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',attack:'KeyJ',heavy:'KeyK',ranged:'KeyU',roll:'KeyL',block:'KeyI',heal:'KeyP',interact:'KeyO',a1:'Semicolon',a2:'Quote',a3:'Slash'}];
   const items={splinter:{id:'splinter',name:'Oakhaven Splinter',slot:'weapon',rarity:'Common',damage:16,speed:1,reach:1.7,description:'The sword your father left behind.'},garrow:{id:'garrow',name:'Garrow’s Regret',slot:'weapon',rarity:'Rare',damage:23,speed:1.08,reach:1.9,description:'A perfect parry restores dodge readiness.'},cragbreaker:{id:'cragbreaker',name:'Cragbreaker',slot:'weapon',rarity:'Epic',damage:38,speed:.7,reach:2.15,description:'Heavy strikes shatter enemy poise.'},travel:{id:'travel',name:'Watchtower Mail',slot:'armor',rarity:'Common',armor:.12,description:'Light enough to keep you moving.'},warden:{id:'warden',name:'Freed Warden’s Coat',slot:'armor',rarity:'Rare',armor:.24,description:'A gift from the people you rescued.'},cinder:{id:'cinder',name:'Cinder-Spark Bow',slot:'ranged',rarity:'Rare',damage:24,description:'Charged shots burst into sparks.'}};
+  Object.assign(items,{
+    scoutdagger:{id:'scoutdagger',name:'Scout’s Quickknife',slot:'weapon',rarity:'Common',damage:11,speed:1.8,reach:1.2,power:5,description:'Dagger · very fast; short reach'},
+    ashaxe:{id:'ashaxe',name:'Ashwood Axe',slot:'weapon',rarity:'Common',damage:21,speed:0.84,reach:1.6,power:7,description:'Axe · slow and powerful'},
+    longblade:{id:'longblade',name:'Wayfarer Longsword',slot:'weapon',rarity:'Common',damage:18,speed:1.17,reach:2,power:8,description:'Longsword · balanced'},
+    mirefang:{id:'mirefang',name:'Mirefang Daggers',slot:'weapon',rarity:'Rare',damage:16,speed:1.65,reach:1.3,power:14,description:'Twin daggers · rapid strikes'},
+    ridgepike:{id:'ridgepike',name:'Ridge Pike',slot:'weapon',rarity:'Rare',damage:21,speed:0.95,reach:2.7,power:14,description:'Spear · extra long reach'},
+    ironmace:{id:'ironmace',name:'Ironbreaker Mace',slot:'weapon',rarity:'Rare',damage:29,speed:0.75,reach:1.55,power:15,description:'Mace · heavy crushing blows'},
+    dukeblade:{id:'dukeblade',name:'Duke’s Fallen Greatsword',slot:'weapon',rarity:'Epic',damage:40,speed:0.58,reach:2.35,power:24,description:'Greatsword · devastating but slow'},
+    veilrapier:{id:'veilrapier',name:'Veil Rapier',slot:'weapon',rarity:'Epic',damage:23,speed:1.55,reach:2.3,power:23,description:'Rapier · swift extended strikes'}
+  });
   const mapCache={},map=s=>mapCache[s.mapId]||(mapCache[s.mapId]=W.build(s.mapId));
   Object.assign(defaults[0],{ranged:'KeyT',roll:'KeyR',block:'ShiftLeft',heal:'KeyE',interact:'KeyC',jump:'Space',heavyJump:'KeyQ',inventory:'KeyI',map:'KeyM'});
   Object.assign(defaults[1],{block:'ShiftRight',jump:'Period',heavyJump:'Comma',inventory:'Backslash',map:'BracketRight'});
@@ -70,7 +80,7 @@
         if(s.loot.length<32)s.loot.push({id:'l'+s.next++,kind:'item',item:reward.id,owner:hero.id,x,z,life:120});
         if(s.loot.length<32)s.loot.push({id:'l'+s.next++,kind:'gold',owner:hero.id,value:10+Math.floor(seed*11),x:x+.25,z:z+.25,life:120});
       });
-      notice(s,'CHEST OPENED · Pick up your personal loot from the ground!');
+      notice(s,'CHEST OPENED · Walk near the glowing drops to collect your personal loot!');
       particles(s,target.x,target.z,'#f4d17b',26);
     }
     if(target.kind==='cage'){if(s.enemies.some(e=>e.hp>0&&dist(e,target)<5)){notice(s,'Defeat the nearby guards first.');return;}s.rescued.push(target.id);p.xp+=25;p.gold+=10;notice(s,'Villager freed · '+s.rescued.length+' / 3');if(s.rescued.length===3){s.quest=3;s.message='Find the Huntsman in the ruined ridge sanctuary.';}}
@@ -136,7 +146,7 @@
     for(const e of s.enemies)tickEnemy(s,e,dt);
     const bodies=[...s.players.filter(p=>!p.dead),...s.enemies.filter(e=>e.hp>0)];for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){const a=bodies[i],b=bodies[j];if(a.action?.kind==='roll'||b.action?.kind==='roll')continue;const d=dist(a,b),min=.65;if(d<min){const v=unit(a.x-b.x||.01,a.z-b.z);slide(map(s),a,v.x*(min-d)*.5,v.z*(min-d)*.5);slide(map(s),b,-v.x*(min-d)*.5,-v.z*(min-d)*.5);}}
     tickBolts(s,dt);s.enemies=s.enemies.filter(e=>e.hp>0);
-    s.loot=s.loot.filter(l=>{l.life-=dt;const p=s.players.find(p=>!p.dead&&(!l.owner||l.owner===p.id)&&dist(p,l)<.85);if(!p)return l.life>0;if(l.kind==='food')p.hp=Math.min(p.maxHp,p.hp+25);else if(l.kind==='item'){if(!p.inventory.includes(l.item)){p.inventory.push(l.item);notice(s,'LOOT · '+items[l.item].name+' · I to equip');}else {p.gold+=6;notice(s,'Duplicate gear salvaged · +6 crowns');}}else p.gold+=l.value;return false;});
+    s.loot=s.loot.filter(l=>{l.life-=dt;const nearest=s.players.filter(p=>!p.dead&&(!l.owner||l.owner===p.id)).sort((a,b)=>dist(a,l)-dist(b,l))[0];if(nearest&&dist(nearest,l)<2.1){const d=dist(nearest,l)||1,step=Math.min(d,dt*5);l.x+=(nearest.x-l.x)/d*step;l.z+=(nearest.z-l.z)/d*step;}const p=nearest&&dist(nearest,l)<1.05?nearest:null;if(!p)return l.life>0;if(l.kind==='food')p.hp=Math.min(p.maxHp,p.hp+25);else if(l.kind==='item'){if(!p.inventory.includes(l.item)){p.inventory.push(l.item);notice(s,'LOOT · '+items[l.item].name+' · I to equip');}else {p.gold+=6;notice(s,'Duplicate gear salvaged · +6 crowns');}}else p.gold+=l.value;return false;});
     if(s.quest===0&&!s.enemies.some(e=>e.group==='orchard')){s.quest=1;s.message='Cross the mill stream. Defeat the camp guards.';notice(s,'OBJECTIVE UPDATED · The mill crossing');}
     if(s.quest===1&&!s.enemies.some(e=>e.group==='crossing')){s.quest=2;s.message='Free the three villagers. Interact at their cages.';notice(s,'Rescue the villagers · 0 / 3');}
   }
