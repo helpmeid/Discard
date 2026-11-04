@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.7.6";
+const APP_VERSION = "3.7.7";
 const UPDATE_LOG = [
+  { version: "3.7.7", notes: ["Oakhaven: more visually different mission terrain, improved axe proportions, weapon-weight stamina costs, and visible quest-specific pickups including gunpowder, scrolls, supplies and traps."] },
   { version: "3.7.6", notes: ["Oakhaven equipped weapons now render in distinct shapes, two-handed swords, spears, axes and maces hide shields, and guarding uses the held weapon with its own stamina cost."] },
   { version: "3.7.5", notes: ["Oakhaven now displays its loaded build version on the password screen, inventory, and HUD to diagnose stale installations; refreshed all script caches."] },
   { version: "3.7.4", notes: ["Oakhaven: fix equipment changes, double-click an inventory item to equip, show equip feedback, synchronize equipment changes online, and add unique weapon SVG icons."] },
