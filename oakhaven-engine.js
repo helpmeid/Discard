@@ -137,20 +137,20 @@
   }
   function tickEnemy(s,e,dt){
     if(e.hp<=0)return;e.flash=Math.max(0,e.flash-dt);e.timer=Math.max(-1,e.timer-dt);e.pack=Math.max(-1,e.pack-dt);e.repath=Math.max(-1,e.repath-dt);slide(map(s),e,e.kx*dt,e.kz*dt);e.kx*=.82;e.kz*=.82;
-    const live=s.players.filter(p=>!p.dead),p=live.sort((a,b)=>dist(a,e)-dist(b,e))[0];if(!p)return;const d=dist(e,p),v=unit(p.x-e.x,p.z-e.z),boss=e.kind==='huntsman',ranged=e.kind==='archer'||boss&&e.phase===1;
-    if(boss&&e.hp<e.maxHp*.5&&e.phase===1){e.phase=2;e.state='stagger';e.timer=1.5;impact(s,e.x,e.z,4);notice(s,'The Huntsman breaks his crossbow. Keep your shield ready.');}
+    const live=s.players.filter(p=>!p.dead),p=live.sort((a,b)=>dist(a,e)-dist(b,e))[0];if(!p)return;const d=dist(e,p),v=unit(p.x-e.x,p.z-e.z),boss=e.group==='boss',chapter=s.chapter||0,ranged=e.kind==='archer'||boss&&(chapter===0||chapter===1||chapter===3)&&e.phase===1;
+    if(boss&&e.hp<e.maxHp*.5&&e.phase===1){e.phase=2;e.state='stagger';e.timer=1.5;impact(s,e.x,e.z,4);notice(s,['The Huntsman breaks his crossbow. Keep your shield ready.','The Mire Huntsman summons the pack!','The Iron Warden abandons his shield and charges!','The Spymaster releases a cloud of poisonous fog!','The Obsidian Duke ignites his blade!'][chapter]);if(chapter===1&&s.enemies.length<24){for(const [dx,dz] of [[-2,-2],[2,2]])s.enemies.push(spawn(s,'hound',clamp(e.x+dx,2,60),clamp(e.z+dz,2,44),'reinforcements'));}if(chapter===3){s.poisonUntil=s.time+12;}}
     if(e.state==='stagger'){if(e.timer<=0){e.state='recover';e.timer=.5;}return;}
     if(d>10&&e.state==='idle')return;if(e.group==='boss'&&s.rescued.length<3)return;
     if(e.state==='windup'){
-      if(e.timer<=0){e.attackAt=s.time;if(ranged){for(let i=boss?-1:0;i<=(boss?1:0);i++){const angle=Math.atan2(e.fz,e.fx)+i*.14;if(s.bolts.length<48)s.bolts.push({id:s.next++,x:e.x+e.fx*.5,z:e.z+e.fz*.5,y:e.y+1,dx:Math.cos(angle),dz:Math.sin(angle),speed:12,life:1.5,team:'enemy',damage:e.damage});}e.state='recover';e.timer=boss?.75:1;}
+      if(e.timer<=0){e.attackAt=s.time;if(ranged){const shots=boss&&chapter===3?5:boss?3:1;for(let i=0;i<shots;i++){const angle=Math.atan2(e.fz,e.fx)+(i-(shots-1)/2)*(chapter===3?.25:.14);if(s.bolts.length<48)s.bolts.push({id:s.next++,x:e.x+e.fx*.5,z:e.z+e.fz*.5,y:e.y+1,dx:Math.cos(angle),dz:Math.sin(angle),speed:chapter===3?16:12,life:1.5,team:'enemy',damage:e.damage});}e.state='recover';e.timer=boss?.75:1;}
         else if(e.kind==='boar'||e.kind==='hound'){e.state='charge';e.timer=.28;e.hit=false;}
-        else{const reach=e.reach,arc=e.kind==='brute'?-1:.35;for(const hero of s.players){const u=unit(hero.x-e.x,hero.z-e.z);if(!hero.dead&&dist(hero,e)<reach+.22&&u.x*e.fx+u.z*e.fz>arc)hurt(s,hero,e.damage,e);}if(e.kind==='brute')impact(s,e.x,e.z,3,'#b0a17c');e.state='recover';e.timer=boss?.6:1;}}
+        else{const reach=e.reach+(boss&&chapter===4?1:0),arc=e.kind==='brute'?-1:.35;for(const hero of s.players){const u=unit(hero.x-e.x,hero.z-e.z);if(!hero.dead&&dist(hero,e)<reach+.22&&u.x*e.fx+u.z*e.fz>arc)hurt(s,hero,e.damage*(boss&&chapter===4?1.35:1),e);}if(e.kind==='brute'||boss&&chapter>=2)impact(s,e.x,e.z,3,'#b0a17c');if(boss&&chapter===4){ring(s,e.x,e.z,3,'#e5915d');particles(s,e.x,e.z,'#e77748',24);}e.state='recover';e.timer=boss?.6:1;}}
       return;
     }
     if(e.state==='charge'){slide(map(s),e,e.fx*9*dt,e.fz*9*dt);if(!e.hit)for(const hero of s.players)if(!hero.dead&&dist(hero,e)<1){hurt(s,hero,e.damage,e);e.hit=true;}if(e.timer<=0){e.state='recover';e.timer=.85;}return;}
     if(e.state==='recover'){if(e.timer<=0)e.state='approach';return;}
     e.fx=v.x;e.fz=v.z;
-    if(d<(ranged?8:e.reach+.15)&&map(s).lineClear(e.x,e.z,p.x,p.z)){e.state='windup';e.timer=e.tell;e.windup=e.tell;e.hit=false;return;}
+    if(d<(ranged?8:e.reach+.15+(boss&&chapter===4?1:0))&&map(s).lineClear(e.x,e.z,p.x,p.z)){e.state='windup';e.timer=e.tell*(boss&&chapter===2?.8:1);e.windup=e.tell;e.hit=false;return;}
     e.state='approach';if(e.repath<=0){e.route=W.pathfind(map(s),e.x,e.z,p.x,p.z);e.repath=.9;}
     let movement=v;if(e.route.length){const n=e.route[0];if(dist(e,n)<.25)e.route.shift();else movement=unit(n.x-e.x,n.z-e.z);}
     slide(map(s),e,movement.x*e.speed*dt,movement.z*e.speed*dt);
@@ -166,7 +166,7 @@
     for(const p of s.players){const a=inputs[s.players.indexOf(p)]||{};if(a.attack||a.heavy)p.queue={kind:a.heavy?'heavy':'melee',until:s.time+.2};if(s.freeze>0){p.buffer||={};for(const key of ['roll','ranged','heal','a1','a2','a3','jump','heavyJump'])if(a[key])p.buffer[key]=s.time+.3;}}
     s.labels=s.labels.filter(p=>(p.life-=dt)>0);s.corpses=s.corpses.filter(p=>(p.life-=dt)>0);s.rings=s.rings.filter(p=>(p.life-=dt)>0);s.particles=s.particles.filter(p=>(p.life-=dt)>0);for(const p of s.particles){p.x+=p.vx*dt;p.z+=p.vz*dt;p.y+=p.vy*dt;p.vy-=8*dt;}s.shake=Math.max(0,s.shake-dt*.6);if(s.freeze>0){s.freeze-=dt;return;}
     if(s.slow>0){s.slow-=dt;dt*=.3;}for(let i=0;i<s.players.length;i++){const p=s.players[i],a={...(inputs[i]||{})};for(const [key,until]of Object.entries(p.buffer||{}))if(until>=s.time)a[key]=true;p.buffer={};tickPlayer(s,p,a,dt);}for(const q of map(s).stations||[])if(!s.stations.includes(q.id)&&s.players.some(p=>!p.dead&&dist(p,q)<3)){s.stations.push(q.id);notice(s,'WAYSTONE DISCOVERED · '+q.name);ring(s,q.x,q.z,1.5,'#a8cfd2');}if(s.mapId==='camp'){tickBolts(s,dt);return;}
-    for(const e of s.enemies)tickEnemy(s,e,dt);
+    for(const e of [...s.enemies])tickEnemy(s,e,dt);if(s.poisonUntil>s.time&&s.mapId==='forest'){for(const hero of s.players)if(!hero.dead&&hero.iframes<=0&&s.time-(hero.lastPoison||0)>2){hero.lastPoison=s.time;hurt(s,hero,4,{x:hero.x+1,z:hero.z},true);}}
     const bodies=[...s.players.filter(p=>!p.dead),...s.enemies.filter(e=>e.hp>0)];for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){const a=bodies[i],b=bodies[j];if(a.action?.kind==='roll'||b.action?.kind==='roll')continue;const d=dist(a,b),min=.65;if(d<min){const v=unit(a.x-b.x||.01,a.z-b.z);slide(map(s),a,v.x*(min-d)*.5,v.z*(min-d)*.5);slide(map(s),b,-v.x*(min-d)*.5,-v.z*(min-d)*.5);}}
     tickBolts(s,dt);s.enemies=s.enemies.filter(e=>e.hp>0);
     s.loot=s.loot.filter(l=>{l.life-=dt;if(l.pickupDelay>0){l.pickupDelay=Math.max(0,l.pickupDelay-dt);return true;}const nearest=s.players.filter(p=>!p.dead&&(!l.owner||l.owner===p.id)).sort((a,b)=>dist(a,l)-dist(b,l))[0];if(nearest&&dist(nearest,l)<2.1){const d=dist(nearest,l)||1,step=Math.min(d,dt*5);l.x+=(nearest.x-l.x)/d*step;l.z+=(nearest.z-l.z)/d*step;}const p=nearest&&dist(nearest,l)<1.05?nearest:null;if(!p)return l.life>0;if(l.kind==='food')p.hp=Math.min(p.maxHp,p.hp+25);else if(l.kind==='item'){if(!p.inventory.includes(l.item)){p.inventory.push(l.item);notice(s,'LOOT · '+items[l.item].name+' · I to equip');}else {p.gold+=6;notice(s,'Duplicate gear salvaged · +6 crowns');}}else p.gold+=l.value;return false;});
