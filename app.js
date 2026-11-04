@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.8.5";
+const APP_VERSION = "3.8.6";
 const UPDATE_LOG = [
+  { version: "3.8.6", notes: ["Oakhaven online parties now support up to four heroes, with invitations, ready checks, synchronized combat, and party chat."] },
   { version: "3.8.5", notes: ["Oakhaven party chat stays visible when you click back into the game, letting you move and fight while reading messages; click the message input to type, Esc to unfocus, or × to hide chat."] },
   { version: "3.8.4", notes: ["Oakhaven inventory retains its scroll position when selecting and equipping items; enemies stagger less frequently with higher poise thresholds and recovery."] },
   { version: "3.8.3", notes: ["Increase combat challenge across Easy, Medium, Hard and Impossible: stronger enemy health and attacks, plus scaled player damage."] },
