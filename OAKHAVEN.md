@@ -1,5 +1,19 @@
 # Oakhaven: Ash & Oath — implementation ledger
 
+## Current revision: original stylized 3D rebuild
+
+The user's updated direction replaces the pixel/2D presentation. The current version uses a native WebGL low-poly renderer with an angled orthographic camera, depth-tested 3D terrain, buildings/ruins/bridge/water, foliage and stone detail. Characters have modeled heads/faces/helmets, tunics, breastplates, shoulder armor, animated legs, boots, capes, swords and shields. Garrow has a face/beard/staff; beasts have bodies, legs, ears, snouts and tusks. No Minecraft assets, characters, branding, models or story are used.
+
+A 30-second in-engine opening stages Oakhaven before the invasion, nightfall/fire/smoke, the Duke confronting the mentor with a ground-shock effect, the mentor falling, and the eight-year time jump. Subtitles and changing camera targets tell the story; E skips it. This is a procedural cinematic, not a rendered video or voiced performance. Simulation inputs/combat are suspended during the intro. All party members follow the host's cinematic clock.
+
+Training is now optional: press E at camp to begin. The expedition is expanded to 1280×800 simulation units with an eastward woodland trail, boars, a timber crossing/marauder camp, then the southeastern Huntsman ruin. Distant enemies wait until approached. Three-hit light combos culminate in a stronger hit; heavy strikes, rolls, parries and impact effects remain. Dropped gold/health pickups and a pre-boss heal support the longer mission. Simple circle obstacles block major buildings/ponds. This is still one short mission, not a finished dungeon campaign or feature-equivalent recreation of Minecraft Dungeons.
+
+The renderer is `oakhaven-3d.js`, loaded before the browser adapter by index.html, so the existing loader's dependency discovery includes it without loader changes. No additional engine/CDN/model requests are needed. WebGL/hardware acceleration is required; unavailable rendering shows an explanatory menu message. Resolution is capped at 1600×1000; static geometry is cached; scenery has a test-enforced 20,000 triangle budget per environment. CPU geometry previews were generated and inspected for camp, village and crossing. Those previews verify geometry/projection, not an actual browser GPU driver or measured Chromebook framerate.
+
+Current automated verification: 24 passing tests cover mesh coordinates/budgets, modeled character proportions, camera projection, title/cinematic/world render paths, batched render submission with mocked WebGL, cutscene timing/skip/input suppression, loot healing, combos, three mission stages, stamina/parries/knockback, pause/rebind/playtime and simulated online parties. All JS syntax checks pass. Real browser rendering, real WebRTC and low-end hardware remain unverified. Audio is limited to synthesized strike/damage sounds with a toggle; there is no music or voice acting. No campaign save or full loot/equipment system exists. Network snapshot version is now 2; both online players must reopen their loaders to get the same revision.
+
+The sections below preserve the initial slice's design history and longer campaign plan. Where they describe pixel graphics, a mandatory training gate, a single boar/boss arena or silent combat, the current revision above supersedes them.
+
 This branch is a prototype vertical slice. No 8–10 hour campaign, polished art pass, complete inventory, or production-ready online mode is claimed.
 
 ## Built in this slice
