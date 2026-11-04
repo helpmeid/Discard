@@ -38,7 +38,7 @@
     let dx=(a.right?1:0)-(a.left?1:0),dz=(a.down?1:0)-(a.up?1:0),v=unit(dx+dz,dz-dx);const manual=!!(dx||dz),look=Number.isFinite(a.lookX)&&Number.isFinite(a.lookZ)?unit(a.lookX,a.lookZ):null;if(manual){p.route=[];p.target=null;p.moveTarget=null;}
     if(p.target&&!manual){const e=s.enemies.find(e=>e.id===p.target&&e.hp>0);if(!e)p.target=null;else{const d=dist(p,e);if(d<items[p.gear.weapon].reach+.1){p.route=[];v={x:0,z:0};p.queue={kind:'melee',until:s.time+.18};p.fx=(e.x-p.x)/(d||1);p.fz=(e.z-p.z)/(d||1);}else if(!p.route.length||s.time>(p.repath||0)){p.route=W.pathfind(map(s),p.x,p.z,e.x,e.z);p.repath=s.time+.6;}}}
     if(!manual&&p.route.length){const node=p.route[0],d=dist(p,node);if(d<.18)p.route.shift();else v=unit(node.x-p.x,node.z-p.z);}
-    if(!p.action){if(look){p.fx=look.x;p.fz=look.z;}else if(Math.hypot(v.x,v.z)>.01){p.fx=v.x;p.fz=v.z;}}
+    if(!p.action){if(look&&!p.target){p.fx=look.x;p.fz=look.z;}else if(Math.hypot(v.x,v.z)>.01){p.fx=v.x;p.fz=v.z;}}
     p.blocking=!!a.block&&!p.action;p.blockTime=p.blocking?(p.wasBlocking?p.blockTime+dt:0):99;p.wasBlocking=p.blocking;
     if(a.roll&&p.rollCD<=0&&p.stamina>=30&&(!p.action||p.action.kind!=='roll')){p.action={kind:'roll',age:0,duration:.28,fx:p.fx,fz:p.fz};p.rollCD=1.5;p.stamina-=30;p.iframes=.32;p.queue=null;}
     if(a.heal&&p.potionCD<=0&&p.hp<p.maxHp){p.hp=Math.min(p.maxHp,p.hp+Math.round(p.maxHp*.6));p.potionCD=22;particles(s,p.x,p.z,'#a5d6a1',20);label(s,p.x,p.z,'HEALED','#acd4a0');}
