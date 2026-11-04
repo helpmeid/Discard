@@ -91,7 +91,40 @@
   const railStations=travelPoints; // Save/input compatibility for existing worlds.
   function waystones(m){m.stations=travelPoints.filter(s=>s.map===m.id);for(const q of m.stations){m.interactables.push({...q,kind:'station'});m.prop('waystone',q.x,q.z,{name:q.name});}if(m.id==='camp')m.line([[12,19],[14,17],[17,15]],1.1);}
   function borders(m){for(const t of m.tiles)if(t.x===0||t.z===0||t.x===m.width-1||t.z===m.depth-1)t.walk=false;const add=(x,z,rotation)=>{if(m.tile(x,z)?.type==='water')return;m.prop('borderWall',x,z,{rotation,height:m.id==='camp'?1.05:.8});};for(let x=1;x<m.width-1;x+=1.5){add(x,.65,0);add(x,m.depth-.65,0);}for(let z=1;z<m.depth-1;z+=1.5){add(.65,z,Math.PI/2);add(m.width-.65,z,Math.PI/2);}}
-  function build(id){const m=id==='forest'?forest():id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
+  function chapterWorld(m,chapter){
+    const themes=[
+      {title:'The Ashen Road',seed:31},
+      {title:'The Howling Mire',seed:43},
+      {title:'The Iron Crags',seed:59},
+      {title:'The Whispering Veil',seed:71},
+      {title:'The Obsidian Citadel',seed:83}
+    ];
+    const theme=themes[chapter]||themes[0];
+    m.title=theme.title;
+    m.seed=theme.seed;
+    if(!chapter)return m;
+    // Retain the tested navigation graph, but each region gains its own landmarks, ground, encounters and hazards.
+    for(const tile of m.tiles){
+      if(!tile.walk||tile.type==='bridge'||tile.type==='water')continue;
+      const n=hash(tile.x,tile.z,theme.seed);
+      if(chapter===1&&tile.type==='grass'&&n<.32)tile.type='earth';
+      if(chapter===2&&tile.type==='grass'&&n<.46)tile.type='stone';
+      if(chapter===3&&tile.type==='grass'&&n<.27)tile.type='earth';
+      if(chapter===4&&tile.type==='grass'&&n<.64)tile.type='stone';
+    }
+    if(chapter===1){for(const [x,z]of [[13,27],[18,32],[36,13],[43,37]])m.prop('tent',x,z,{solid:false,rotation:.3});}
+    if(chapter===2){for(const [x,z]of [[12,27],[21,35],[43,9],[49,25]])m.prop('ruinArch',x,z,{solid:false});}
+    if(chapter===3){for(const [x,z]of [[10,29],[20,9],[40,32],[51,22]])m.prop('ruin',x,z,{solid:false,rotation:.2});}
+    if(chapter===4){for(const [x,z]of [[17,8],[36,11],[46,36],[56,28]])m.prop('banner',x,z,{tone:1});}
+    const boss=m.encounters.find(e=>e.group==='boss');
+    if(boss)boss.units=chapter===2?[['brute',56,37]]:chapter===4?[['huntsman',56,37],['soldier',53,35],['archer',59,38]]:chapter===3?[['huntsman',56,37],['hound',53,35]]:boss.units;
+    if(chapter===1)m.encounters.find(e=>e.group==='orchard').units.push(['hound',14,18]);
+    if(chapter===2)m.encounters.find(e=>e.group==='ridge').units.push(['brute',50,30]);
+    if(chapter===3)m.encounters.find(e=>e.group==='quarry').units.push(['archer',42,15]);
+    if(chapter===4)m.encounters.find(e=>e.group==='crossing').units.push(['brute',38,26]);
+    return m;
+  }
+  function build(id,chapter=0){const m=id==='forest'?chapterWorld(forest(),chapter):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
   function pathfind(m,sx,sz,tx,tz){
     const start=m.tile(sx,sz),goal=m.tile(tx,tz);if(!start||!goal||!m.canWalk(goal.x+.5,goal.z+.5))return[];
     const key=(x,z)=>z*m.width+x,source=key(start.x,start.z),target=key(goal.x,goal.z),cost=new Float32Array(m.width*m.depth).fill(Infinity),parent=new Int32Array(cost.length).fill(-1),open=[{k:source,x:start.x,z:start.z,f:0}],seen=new Uint8Array(cost.length);cost[source]=0;
