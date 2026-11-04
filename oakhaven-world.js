@@ -102,6 +102,7 @@
     const theme=themes[chapter]||themes[0];
     m.title=theme.title;
     m.seed=theme.seed;
+    m.theme=['forest','mire','crags','veil','citadel'][chapter];
     if(!chapter&&!mission)return m;
     // Retain the tested navigation graph, but each region gains its own landmarks, ground, encounters and hazards.
     for(const tile of m.tiles){
@@ -263,6 +264,7 @@
   function distinctMissionWorld(chapter,mission){
     const base=forest(false),m=new Map('forest',64,48);
     m.seed=101+chapter*61+mission*17;
+    m.theme=['forest','mire','crags','veil','citadel'][chapter];
     m.spawn={x:6.5,z:12};
     m.encounters=base.encounters.map(g=>({group:g.group,units:g.units.map(u=>[...u])}));
     m.interactables=base.interactables.map(q=>({...q}));
