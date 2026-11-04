@@ -137,6 +137,36 @@
       [[12,24,'banner'],[30,10,'ruinArch'],[48,24,'banner']]
     ];
     for(const [x,z,kind] of landmarks[chapter]||[])m.prop(kind,x+mission*1.3,z,{solid:false});
+    // Level geometry: each chapter has a unique traversable footprint and route network.
+    // Keep important quest positions accessible, but rebuild the ground and solid obstacles.
+    if(chapter>0){
+      const layouts={
+        1:{main:[[6,12],[9,19],[16,25],[23,19],[29,19],[34,24],[40,25],[47,31],[56,37]],branches:[[[16,25],[13,33],[12,39]],[[23,19],[19,12],[22,8]],[[34,24],[43,15],[46,13]],[[40,25],[43,35]]],water:[[7,27,8,5],[28,13,7,5],[47,19,7,6]],barriers:[[20,31,5,5],[37,8,6,4]]},
+        2:{main:[[6,12],[15,11],[23,19],[29,20],[35,24],[42,25],[47,30],[56,37]],branches:[[[15,11],[21,8],[30,8]],[[35,24],[39,18],[46,13]],[[42,25],[43,35]],[[23,19],[14,30],[12,39]]],water:[[9,25,5,5]],barriers:[[17,22,7,5],[29,30,8,4],[46,18,6,4]]},
+        3:{main:[[6,12],[12,16],[17,22],[25,19],[34,24],[39,29],[47,30],[56,37]],branches:[[[17,22],[13,30],[12,39]],[[25,19],[20,11],[22,8]],[[34,24],[42,13],[46,13]],[[39,29],[42,35]]],water:[[22,27,7,4],[38,16,5,5]],barriers:[[9,24,5,5],[26,10,6,5],[48,23,4,5]]},
+        4:{main:[[6,12],[12,14],[20,18],[27,21],[34,24],[40,27],[49,33],[56,37]],branches:[[[20,18],[22,8]],[[27,21],[33,13],[46,13]],[[34,24],[41,35]],[[12,14],[12,39]]],water:[[24,29,7,4]],barriers:[[15,25,7,4],[30,7,7,6],[44,18,6,7]]}
+      };
+      const design=layouts[chapter];
+      // Replace the old orchard/mill scenery with region-specific level geometry.
+      m.props=[];
+      for(const tile of m.tiles){tile.height=0;tile.walk=true;tile.type=chapter===2||chapter===4?'stone':chapter===1?'earth':'grass';}
+      const walls=design.barriers.map(([x,z,w,h])=>({x,z,w,h}));
+      for(const [x,z,w,h]of design.water)m.rect(x,z,w,h,{height:-.25,type:'water',walk:false});
+      for(const [x,z,w,h]of design.barriers)m.rect(x,z,w,h,{height:.9,type:'stone',walk:false});
+      for(const pts of [design.main,...design.branches])m.line(pts,2.45,chapter===2||chapter===4?'stone':'path');
+      // A few bridges cross the new waterways at deliberate choke points.
+      const bridgeAt={1:[[29,19],[48,28]],2:[[12,29]],3:[[24,29],[41,18]],4:[[26,30]]};
+      for(const [x,z]of bridgeAt[chapter]||[])m.rect(x-2,z-1,5,3,{height:0,type:'bridge',walk:true});
+      // Reopen objectives and encounters so missions never spawn actors in impassable rocks.
+      const sites=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];
+      for(const site of sites)m.rect(Math.floor(site.x)-2,Math.floor(site.z)-2,5,5,{height:0,type:chapter===2||chapter===4?'stone':'earth',walk:true});
+      // Broad recognizable landmarks for each biome; solids form cover without sealing paths.
+      const landmarks={1:['tent','well','campfire','tent'],2:['ruinArch','rock','anvil','ruinArch'],3:['ruin','lantern','banner','ruin'],4:['banner','ruinArch','watchtower','banner']};
+      const where=[[14,37],[27,7],[41,12],[51,26]];
+      for(let k=0;k<4;k++){const [x,z]=where[k],kind=landmarks[chapter][k];m.prop(kind,x,z,{solid:false,rotation:(chapter+k)*.25});}
+      m.prop('banner',53,34,{solid:false,tone:chapter});
+      m.prop('cage',30,27,{solid:false});m.prop('cage',36,28,{solid:false});m.prop('cage',41,25,{solid:false});
+    }
     if(chapter===1){for(const [x,z]of [[13,27],[18,32],[36,13],[43,37]])m.prop('tent',x,z,{solid:false,rotation:.3});}
     if(chapter===2){for(const [x,z]of [[12,27],[21,35],[43,9],[49,25]])m.prop('ruinArch',x,z,{solid:false});}
     if(chapter===3){for(const [x,z]of [[10,29],[20,9],[40,32],[51,22]])m.prop('ruin',x,z,{solid:false,rotation:.2});}
