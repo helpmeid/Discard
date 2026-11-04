@@ -191,6 +191,38 @@
       if(mission>=2)m.interactables.push({id:'bonus'+mission,kind:'chest',x:18+mission*2,z:9+mission,name:'Hidden expedition cache'});
 
     }
+    // Every mission reshapes walkability, rather than just recoloring one shared map.
+    // Rebuild mission routes after chapter terrain, while preserving all interactable locations.
+    if(mission>0){
+      const origins=[[6,12],[17,17],[35,24],[46,31],[56,37]];
+      const branches=[
+        [[6,12],[10,21],[17,31],[27,36],[37,27],[48,31],[56,37]],
+        [[6,12],[15,8],[25,12],[33,22],[43,18],[51,29],[56,37]],
+        [[6,12],[9,29],[21,35],[31,24],[42,14],[50,27],[56,37]]
+      ];
+      const spine=branches[(mission-1)%branches.length];
+      const baseType=chapter===2||chapter===4?'stone':chapter===1?'earth':'grass';
+      for(const tile of m.tiles){if(tile.x<2||tile.z<2||tile.x>61||tile.z>45)continue;tile.height=0;tile.walk=true;tile.type=baseType;}
+      // Distinct lakes and solid ridges, positioned away from mission objectives.
+      const obstacles=mission%3===1?[[20,8,9,6],[37,31,8,9],[49,9,9,7]]:
+        mission%3===2?[[12,23,9,9],[29,7,10,8],[44,36,9,8]]:
+        [[23,27,9,9],[38,7,8,9],[50,17,9,8]];
+      for(let i=0;i<obstacles.length;i++){
+        const [x,z,w,h]=obstacles[i];
+        m.rect(x,z,w,h,{height:i===1?.75:-.28,type:i===1?'stone':'water',walk:false});
+      }
+      m.line(spine,2.6,chapter===2||chapter===4?'stone':'path');
+      const branchTargets=[...m.interactables.filter(q=>['cage','task','exit','chest','station'].includes(q.kind)),...m.encounters.flatMap(group=>group.units.map(u=>({x:u[1],z:u[2]})))];
+      for(const q of branchTargets){
+        const junction=spine.reduce((best,pt)=>Math.hypot(pt[0]-q.x,pt[1]-q.z)<Math.hypot(best[0]-q.x,best[1]-q.z)?pt:best,spine[0]);
+        m.line([junction,[q.x,q.z]],1.75,chapter===2||chapter===4?'stone':'path');
+        m.rect(Math.floor(q.x)-1,Math.floor(q.z)-1,3,3,{height:0,walk:true,type:'path'});
+      }
+      m.rect(5,10,5,5,{height:0,walk:true,type:'path'});
+      m.props=m.props.filter(p=>!['tree','grass','flowers','rock','fence','bridgeRail'].includes(p.kind));
+      const sceneKinds=chapter===4?['banner','ruinArch','ruin']:chapter===2?['rock','ruinArch','anvil']:chapter===1?['tent','campfire','lantern']:['ruin','lantern','banner'];
+      for(let i=0;i<12;i++){const [x,z]=spine[Math.min(spine.length-1,Math.floor(i/2))];m.prop(sceneKinds[(i+mission)%3],x+(i%2?3:-3),z+((i%3)-1)*2,{solid:false,rotation:mission*.3});}
+    }
     const tasks=[
       [['Burned registry','Orchard refugees','Lost heirloom'],['Ember orchard key','Father’s memorial','Ashen relic']],
       [['Supply wagon','Marauder provisions','Explosive powder'],['Gator tracks','Infected nest','The beast’s trail'],['Trapper’s snare','Rolling-log trap','Fortress gate'],['Ancient totem','Mire heartstone','Witchlight beacon']],
