@@ -184,8 +184,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.5.10";
+const APP_VERSION = "3.6.1";
 const UPDATE_LOG = [
+  { version: "3.6.1", notes: ["Updated Discard version to 3.6.1."] },
   { version: "3.5.10", notes: ["Unlock Account now closes old tabs when allowed or signs them out without reloading.", "Fixed unnecessary browser reload warnings when no Garlic Fone game is running."] },
   { version: "3.5.9", notes: ["Sign-in: Unlock Account button signs out other tabs after verifying your password.", "Improved account-lock cleanup and recovery on Chromebooks."] },
   { version: "3.5.8", notes: ["New update log (you're looking at it).", "Uno: hands are sorted, the draw pile and play direction are shown, and the host can start a rematch.", "Uno: new Speed rule lets you jump in with an identical card out of turn.", "Event Horizon: fixed the giant upgrade tree and moved it to a new Settings tab."] },
