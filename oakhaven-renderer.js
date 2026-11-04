@@ -40,6 +40,15 @@
     if(p.kind==='bench'){b(0,.4,0,1.5,.14,.6,'#8c724e');b(-.55,0,0,.13,.4,.4,'#6b5941');b(.55,0,0,.13,.4,.4,'#6b5941');}
   }
   const sat=v=>Math.max(0,Math.min(1,v)),ease=v=>{v=sat(v);return v*v*(3-2*v);},mix3=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+  const twoHanded=new Set(['cragbreaker','dukeblade','ridgepike','ironmace','ashaxe']);
+  const weaponLooks={
+    splinter:{type:'sword',length:.94,color:'#b9b9ae',width:.075},garrow:{type:'sword',length:1.12,color:'#d7eced',width:.09},
+    longblade:{type:'sword',length:1.22,color:'#e5ddbd',width:.095},cragbreaker:{type:'greatsword',length:1.65,color:'#a6b6c6',width:.23},
+    dukeblade:{type:'greatsword',length:1.82,color:'#887aa6',width:.26},veilrapier:{type:'rapier',length:1.42,color:'#a6c7d6',width:.042},
+    scoutdagger:{type:'dagger',length:.51,color:'#d9e5df',width:.07},mirefang:{type:'daggers',length:.67,color:'#86d7bf',width:.075},
+    ashaxe:{type:'axe',length:1.19,color:'#bac0bb',width:.16},ironmace:{type:'mace',length:1.22,color:'#9cabb4',width:.15},
+    ridgepike:{type:'spear',length:1.9,color:'#c9d5d0',width:.105}
+  };
   function combatPose(p,time=0){
     let a=p.action;
     if(!a&&p.kind&&p.state==='windup'){const progress=sat(1-p.timer/(p.windup||p.tell||1));a=p.kind==='archer'?{kind:'bow',age:progress*1.1,duration:1.1}:{kind:p.kind==='brute'?'heavy':'melee',age:progress*.7,windup:.7,active:.16,duration:1.2,combo:1};}
@@ -48,6 +57,7 @@
     if(p.pose==='present'){out.hand=[.18,1.05,.63];out.offHand=[-.18,1.03,.61];}
     if(p.pose==='guide'){out.hand=[.35,1.25,.46];}if(p.pose==='crouch'){out.hand=[.15,.65,.5];}if(p.pose==='reach'){out.hand=[.25,.99,.47];out.offHand=[-.25,.99,.47];}
     if(p.pose==='threat'){out.offHand=[-.45,1.42,.3];out.lean=-.07;}
+    if(!a&&p.blocking&&twoHanded.has(p.gear?.weapon)){out.hand=[.33,1.15,.59];out.offHand=[-.22,1.23,.65];out.bladeTip=[-.42,1.79,.74];out.lean=-.06;return out;}
     if(!a)return out;
     if(a.kind==='bow'||a.kind==='bowRelease'){const d=a.kind==='bow'?sat(a.age/1.1):1-ease(a.age/a.duration);out.bowDraw=d;out.hand=[.16,1.08,.62-d*.48];out.offHand=[-.38,1.1,.65];out.bodyYaw=-.12*d;out.lean=-.035*d;return out;}
     if(a.kind==='slam'){const drop=ease(1-(p.airTime||0)/.28),recover=p.airTime>0?0:ease((a.age-a.duration+.28)/.28);out.hand=mix3(mix3([.18,1.73,.12],[.12,.58,.63],drop),rest,recover);out.bladeTip=mix3(mix3([.15,2.7,-.15],[.05,.1,1.65],drop),[.49,1.68,.19],recover);out.offHand=[out.hand[0]-.16,out.hand[1]-.06,out.hand[2]-.02];out.lean=.1*drop*(1-recover);return out;}
@@ -77,7 +87,39 @@
     else if(!options.child){b(0,1.8,.31,.64,.045,.035,trim);for(const side of[-1,1])b(side*.31,1.8,0,.035,.045,.6,trim);b(0,1.78,.335,.08,.1,.04,'#d6d3a1');b(-.16,1.79,.275,.25,.13,.08,hair);}
     if(kind==='duke'){b(0,2,0,.73,.07,.69,trim);for(const side of[-1,1]){b(side*.29,2.04,0,.1,.28,.13,trim);b(side*.48,1.23,0,.28,.19,.43,'#555d60');}b(0,1.98,.31,.11,.37,.09,'#d6b772');}
     if(p.pose==='present')b(0,1.04,.69,.13,.15,.05,'#d5c487');if(!options.mentor&&!options.civilian&&!p.unarmed){if(a?.kind==='bow'||a?.kind==='bowRelease'||kind==='archer'){const middle=[-.38,1.1,.69-pose.bowDraw*.47];limb([-.38,.69,.65],[-.38,1.49,.65],.065,.065,'#b1935e');limb([-.38,.69,.65],middle,.022,.022,'#e0dcc2');limb([-.38,1.49,.65],middle,.022,.022,'#e0dcc2');if(a?.kind==='bow')limb([0,1.08,.88],pose.hand,.025,.025,'#cfd9bd');}
-      else{const width=p.gear?.weapon==='cragbreaker'||kind==='duke'?.16:.085,blade=kind==='duke'?'#aab8b5':p.gear?.weapon==='splinter'?'#bfbbb0':'#e0e5d9',tip=pose.bladeTip;if(a&&['melee','heavy','slam'].includes(a.kind))limb(hand,tip,width,.12,blade);else b(.49,.68,.19,width,.95,.12,blade);b(...hand,.35,.07,.13,trim);const overhead=a?.kind==='heavy'||a?.kind==='slam'||a?.combo===3;b(overhead?-.3:-.48,.68,overhead?-.32:p.blocking?.57:.28,.46,.56,.1,p.shield>0?'#a8d6d7':'#5a8d93');b(overhead?-.3:-.48,.87,overhead?-.38:p.blocking?.63:.34,.13,.15,.025,trim);}}
+      else{
+        const id=p.gear?.weapon||'splinter',style=weaponLooks[id]||weaponLooks.splinter,holdingTwo=twoHanded.has(id),guarding=holdingTwo&&p.blocking;
+        const grip=guarding?[.34,1.13,.6]:hand;
+        const point=guarding?[-.43,1.78,.7]:a&&['melee','heavy','slam'].includes(a.kind)?pose.bladeTip:[.49,.68+style.length,.19];
+        const shaftColor=style.type==='spear'||style.type==='axe'||style.type==='mace'?'#886746':'#6c5548';
+        const shaftEnd=guarding?[-.37,1.77,.69]:[point[0],point[1]-(style.type==='spear'?.4:style.type==='mace'?.23:style.type==='axe'?.23:.1),point[2]];
+        if(style.type==='spear'){
+          limb(grip,point,.054,.052,'#a68859');
+          limb([point[0],point[1]-.36,point[2]],point,.105,.085,style.color);
+          b(point[0],point[1]-.27,point[2],.2,.09,.17,trim);
+        }else if(style.type==='axe'){
+          limb(grip,point,.065,.068,shaftColor);
+          b(point[0]-.18,point[1]-.28,point[2],.4,.4,.16,style.color);
+          b(point[0]-.39,point[1]-.27,point[2],.13,.28,.11,'#d8e1db');
+        }else if(style.type==='mace'){
+          limb(grip,point,.075,.076,shaftColor);
+          b(point[0],point[1]-.21,point[2],.36,.36,.31,style.color);
+          for(const side of[-1,1])b(point[0]+side*.19,point[1]-.25,point[2],.11,.22,.13,'#d1b993');
+        }else{
+          const bladeStart=guarding?[.21,1.28,.64]:a&&['melee','heavy','slam'].includes(a.kind)?grip:[.49,.88,.19];
+          limb(bladeStart,point,style.width,.11,style.color);
+          if(style.type==='greatsword')limb(bladeStart,point,style.width*.53,.04,'#d4c8c0');
+          if(style.type==='rapier')b(...grip,.31,.12,.16,'#c4a8cc');
+          if(style.type==='daggers'){
+            const second=guarding?[-.5,1.57,.69]:[-.52,1.2,.35];
+            limb(pose.offHand,second,.073,.065,style.color);
+            b(...pose.offHand,.22,.07,.12,trim);
+          }
+        }
+        b(...grip,.33,.07,.13,trim);
+        if(!holdingTwo){const overhead=a?.kind==='heavy'||a?.kind==='slam'||a?.combo===3;b(overhead?-.3:-.48,.68,overhead?-.32:p.blocking?.57:.28,.46,.56,.1,p.shield>0?'#a8d6d7':'#5a8d93');b(overhead?-.3:-.48,.87,overhead?-.38:p.blocking?.63:.34,.13,.15,.025,trim);}
+        else if(guarding){limb(pose.offHand,[.09,1.38,.66],.11,.12,skin);}
+      }}
     if(a&&['melee','heavy'].includes(a.kind)&&pose.active>0){let previous=local(...pose.bladeTip);for(let i=1;i<=3;i++){const age=Math.max(a.windup,a.age-i*.022),past=combatPose({...p,action:{...a,age}},time),tip=local(...past.bladeTip);m.limb(previous,tip,.025,.025,i===1?'#eed89c':'#bda774');previous=tip;}}
     for(let i=0;i<2;i++){const l=-.33+i*.33,r=l+.33,wave=Math.sin(time*3+i)*.035;m.quad(local(l,1.18,-.25),local(l*1.08,.32,-.35+wave-(moving?.14:0)),local(r*1.08,.32,-.35-wave-(moving?.14:0)),local(r,1.18,-.25),cloth);}
   }
