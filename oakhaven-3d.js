@@ -100,7 +100,7 @@
         }else {human(m,10,10,1,cut,{color:'#b2bfc2'});human(m,13.75,9.5,-1,cut,{mentor:true});}
       }else{
         for(let i=0;i<players.length;i++){const e=players[i];if(e.hp<=0){m.ring(e.x/20,.08,e.y/20,.5,'#bc715c');continue;}const a=Math.atan2(e.fx,e.fy);human(m,e.x/20,e.y/20,a,t,{color:e.invulnerable>0&&!reduced?'#e1d3b5':i?'#83acbb':'#a5b7ba',walk:e.moving,swing:e.swing,block:e.blocking});m.ring(e.x/20,.035,e.y/20,.55,i?'#8dc1db':'#d5b77e');if(e.swing>0)m.ring(e.x/20,.7,e.y/20,e.heavy?2.6:1.8,'#f5d79c',Math.PI/2-a-.85,Math.PI/2-a+.85,.12);}
-        if(scene==='hub'){human(m,13.75,9.5,-1,t,{mentor:true});m.ring(13.75,.04,9.5,1.2,s.trainingClock>1.45?'#e7ac76':'#b8b78c');m.ring(28,.05,10,1,'#c5c18d');}
+        if(scene==='hub'){human(m,13.75,9.5,-1,t,{mentor:true});m.ring(13.75,.04,9.5,1.2,s?.trainingClock>1.45?'#e7ac76':'#b8b78c');m.ring(28,.05,10,1,'#c5c18d');}
         for(const e of s?.enemies||[]){if(e.kind==='huntsman'||e.kind==='marauder')human(m,e.x/20,e.y/20,Math.atan2(players[0].x-e.x,players[0].y-e.y),t,{color:e.flash>0&&!reduced?'#ffe6ae':e.kind==='huntsman'?'#9d8e69':'#8d6361',walk:!e.windup,swing:e.windup>0?.1:0});else beast(m,e,t);if(e.windup>0)m.ring(e.x/20,.04,e.y/20,2.4,'#d98560',0,Math.PI*2,.12);m.box(e.x/20,2.15,e.y/20,1.4,.09,.08,'#453e3c');m.box(e.x/20-(1-e.hp/e.maxHp)*.7,2.16,e.y/20,1.4*Math.max(0,e.hp/e.maxHp),.08,.09,'#d8a16e');}
         for(const b of s?.projectiles||[])m.cone(b.x/20,.6,b.y/20,.08,.4,'#e8c587',5);
         for(const p of s?.particles||[])m.sphere(p.x/20,.3+p.life*2,p.y/20,.065,p.color);
