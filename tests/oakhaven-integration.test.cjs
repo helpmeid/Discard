@@ -7,7 +7,7 @@ function fixture(id='alice',friends={bob:{}}){
   let now=0,frame=null;const storage=new Map(),events={},messages=[],intervals=[];
   const nodes=[];
   class Element{
-    constructor(tag){this.tagName=tag;this.children=[];this.textContent='';this.hidden=false;this.attrs={};this.classes=new Set();nodes.push(this);this.classList={add:(...s)=>s.forEach(x=>this.classes.add(x)),remove:(...s)=>s.forEach(x=>this.classes.delete(x)),contains:s=>this.classes.has(s)};}
+    constructor(tag){this.tagName=tag;this.children=[];this.textContent='';this.hidden=false;this.style={};this.attrs={};this.classes=new Set();nodes.push(this);this.classList={add:(...s)=>s.forEach(x=>this.classes.add(x)),remove:(...s)=>s.forEach(x=>this.classes.delete(x)),contains:s=>this.classes.has(s)};}
     set className(v){this.classes=new Set(v.split(' '));}get className(){return [...this.classes].join(' ');}
     append(...n){this.children.push(...n);}replaceChildren(...n){this.children=n;}setAttribute(k,v){this.attrs[k]=v;}
     addEventListener(k,f){this['on'+k]=f;}focus(){document.activeElement=this;}get options(){return this.children;}
@@ -18,9 +18,10 @@ function fixture(id='alice',friends={bob:{}}){
   for(const n of ['gamesHub','hubPlayOakhaven','oakInviteStatus']){const e=new Element('div');e.id=n;document.body.append(e);}
   const sandbox={document,currentUser:{id},state:{me:{id},friends},OakhavenCore:C,console,performance:{now:()=>now},crypto:{randomUUID:()=>`${id}-party`},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},matchMedia:()=>({matches:false}),connectTo:()=>{},sendTo:(to,data)=>{messages.push({to,data:structuredClone(data)});return true;},viewPerson:id=>({displayName:id}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame:()=>{frame=null;},setInterval:(fn,ms)=>intervals.push({fn,ms})};
   sandbox.window=sandbox;sandbox.addEventListener=(k,f)=>{(events[k]||=[]).push(f);};vm.createContext(sandbox);
+  sandbox.Oakhaven3D={create:()=>({render:()=>({cutscene:null}),aim:()=>null})};
   const load=file=>vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),sandbox);
   load('oakhaven.js');
-  const click=text=>{const b=nodes.findLast(n=>n.tagName==='button'&&n.textContent===text);assert.ok(b,`button ${text}`);b.onclick();return b;};
+  const click=text=>{const b=nodes.findLast(n=>n.tagName==='button'&&n.textContent===text);assert.ok(b,`button ${text}`);b.onclick();if(['Solo expedition','Two-player couch expedition','Accept invitation'].includes(text)){const skip=nodes.findLast(n=>n.textContent==='Skip intro (E)');skip?.onclick();}return b;};
   return {sandbox,document,storage,messages,intervals,load,click,open:()=>document.querySelector('#hubPlayOakhaven').onclick(),tick:(ms=17)=>{now+=ms;const f=frame;frame=null;f?.(now);},key:(code,type='keydown')=>{const e={code,preventDefault(){},stopImmediatePropagation(){},stopPropagation(){}};for(const f of events[type]||[])f(e);return e;}};
 }
 test('solo and couch menus, pause/resume, cursor state and close lifecycle',()=>{
@@ -36,7 +37,7 @@ test('keybind capture saves only non-conflicting keys per account',()=>{
 test('two simulated Discard peers invite, accept, exchange input/snapshot and end',()=>{
   const host=fixture('alice',{bob:{}}),guest=fixture('bob',{alice:{}});host.open();const select=host.document.querySelector('#oakMenu').querySelector('select');select.value='bob';host.click('Invite friend (online beta)');
   const invitation=host.messages.find(m=>m.data.t==='oak-invite').data;guest.sandbox.oakhavenHandle('alice',invitation);guest.open();guest.click('Accept invitation');
-  const join=guest.messages.find(m=>m.data.t==='oak-join').data;host.sandbox.oakhavenHandle('bob',join);assert.equal(host.sandbox.oakhavenIsPlaying(),true);
+  const join=guest.messages.find(m=>m.data.t==='oak-join').data;host.sandbox.oakhavenHandle('bob',join);host.click('Skip intro (E)');assert.equal(host.sandbox.oakhavenIsPlaying(),true);
   for(let i=0;i<8;i++)host.tick();const snapshot=host.messages.findLast(m=>m.data.t==='oak-state').data;assert.equal(C.validSnapshot(snapshot.world),true);guest.sandbox.oakhavenHandle('alice',snapshot);assert.equal(guest.sandbox.oakhavenIsPlaying(),true);
   guest.key('KeyD');for(let i=0;i<4;i++)guest.tick();const input=guest.messages.findLast(m=>m.data.t==='oak-input').data;assert.equal(input.input.right,true);host.sandbox.oakhavenHandle('bob',input);
   for(let i=0;i<8;i++)host.tick();const next=host.messages.findLast(m=>m.data.t==='oak-state').data;assert.ok(next.world.players[1].x>snapshot.world.players[1].x);

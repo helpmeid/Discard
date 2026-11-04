@@ -18,17 +18,17 @@ test('front perfect parry, late block, and rear damage differ',()=>{
 });
 test('heavy hit applies directional knockback, four-frame hitstop and poise stagger',()=>{
   const s=C.create(),p=s.players[0],e=C.enemy(s,p.x+30,p.y);s.enemies=[e];e.poise=10;C.strike(s,p,true);
-  assert.equal(e.hp,15);assert.ok(e.kx>0);assert.ok(e.stagger>0);assert.equal(s.freeze,4/60);assert.equal(s.shake,12);assert.ok(s.particles.length>0);
+  assert.equal(e.hp,8);assert.ok(e.kx>0);assert.ok(e.stagger>0);assert.equal(s.freeze,4/60);assert.equal(s.shake,12);assert.ok(s.particles.length>0);
   const x=e.x;C.step(s,[{}],1/60);assert.equal(e.x,x);
 });
 test('strikes miss behind player and attack cooldown prevents duplicate damage',()=>{
-  const s=C.create(),p=s.players[0],front=C.enemy(s,p.x+25,p.y),back=C.enemy(s,p.x-25,p.y);s.enemies=[front,back];C.strike(s,p,false);C.strike(s,p,false);assert.equal(front.hp,32);assert.equal(back.hp,50);
+  const s=C.create(),p=s.players[0],front=C.enemy(s,p.x+25,p.y),back=C.enemy(s,p.x-25,p.y);s.enemies=[front,back];C.strike(s,p,false);C.strike(s,p,false);assert.equal(front.hp,30);assert.equal(back.hp,50);
 });
-test('training gates deployment until five parries and three rolls',()=>{
-  const s=C.create();C.step(s,[{interact:true}],1/60);assert.equal(s.scene,'hub');s.parries=5;s.rolls=3;C.step(s,[{interact:true}],1/60);assert.equal(s.scene,'mire');assert.equal(s.enemies.length,3);
+test('optional training never blocks starting the mission',()=>{
+  const s=C.create();C.step(s,[{interact:true}],1/60);assert.equal(s.scene,'mire');assert.equal(s.parries,0);assert.equal(s.enemies.length,3);
 });
 test('boar wave leads to Huntsman, phase transition, then victory',()=>{
-  const s=C.create();C.deploy(s);s.enemies.forEach(e=>e.hp=0);C.step(s,[{}],1/60);assert.equal(s.enemies[0].kind,'huntsman');s.enemies[0].hp=200;C.step(s,[{}],1/60);assert.equal(s.enemies[0].phase,2);s.freeze=0;s.enemies[0].hp=0;C.step(s,[{}],1/60);assert.equal(s.won,true);
+  const s=C.create();C.deploy(s);s.enemies.forEach(e=>e.hp=0);C.step(s,[{}],1/60);assert.equal(s.enemies[0].kind,'marauder');s.enemies.forEach(e=>e.hp=0);C.step(s,[{}],1/60);assert.equal(s.enemies[0].kind,'huntsman');s.players[0].x=1030;s.players[0].y=620;s.enemies[0].hp=190;C.step(s,[{}],1/60);assert.equal(s.enemies[0].phase,2);s.freeze=0;s.enemies[0].hp=0;C.step(s,[{}],1/60);assert.equal(s.won,true);
 });
 test('projectile parry and trap root are simulation-owned',()=>{
   const s=C.create();C.deploy(s);const p=s.players[0];p.blocking=true;p.blockAge=0;C.hurt(s,p,12,{x:p.x+10,y:p.y});assert.equal(s.parries,1);
