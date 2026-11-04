@@ -2,7 +2,7 @@
 (function(root){
   'use strict';
   const W=typeof module!=='undefined'&&module.exports?require('./oakhaven-world.js'):root.OakhavenWorld;
-  const DIFFICULTIES={easy:{hp:.7,damage:.55,speed:.9,playerDamage:1.25},medium:{hp:1,damage:1,speed:1,playerDamage:1},hard:{hp:1.45,damage:1.45,speed:1.1,playerDamage:.9},impossible:{hp:2.4,damage:2.25,speed:1.2,playerDamage:.75}};
+  const DIFFICULTIES={easy:{hp:1.4,damage:1.2,speed:.98,playerDamage:1},medium:{hp:2.1,damage:1.8,speed:1.07,playerDamage:.85},hard:{hp:3.1,damage:2.65,speed:1.16,playerDamage:.7},impossible:{hp:4.6,damage:3.8,speed:1.24,playerDamage:.55}};
   const difficultyOf=s=>DIFFICULTIES[s.difficulty]||DIFFICULTIES.medium;
   const VERSION=11,INTRO=48,DT=1/60,dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),unit=(x,z)=>{const l=Math.hypot(x,z)||1;return{x:x/l,z:z/l};},clamp=W.clamp;
   const actions=['up','down','left','right','attack','heavy','ranged','roll','block','heal','interact','a1','a2','a3','jump','heavyJump'];
