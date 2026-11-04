@@ -125,6 +125,17 @@
       }
       m.title+=' · '+(mission+1);
     }
+    const tasks=[
+      [],
+      [['Supply wagon','Marauder provisions','Explosive powder'],['Gator tracks','Infected nest','The beast’s trail'],['Trapper’s snare','Rolling-log trap','Fortress gate']],
+      [['Captive blacksmith','Forge shackles','Smithing supplies'],['Bridge barricade','Enemy signal fire','Bridge explosives'],['Stone bastion lock','Powder cache','Siege breach']],
+      [['Lookout report','Spy signal beacon','Scout hideout'],['Antidote ingredients','Toxic vent','Alchemical formula'],['Hidden passage','Illusion mirror','Poisoned dagger stash']],
+      [['City gate supplies','Siege banner','Duke’s signal flare'],['The final seal','Captive family','Obsidian war banner']]
+    ];
+    if(chapter>0){
+      const names=tasks[chapter][mission]||tasks[chapter][0];
+      m.interactables.filter(q=>q.kind==='cage').forEach((q,i)=>{q.name=names[i];q.kind='task';});
+    }
     const boss=m.encounters.find(e=>e.group==='boss');
     if(boss)boss.units=chapter===2?[['brute',56,37]]:chapter===4?[['huntsman',56,37],['soldier',53,35],['archer',59,38]]:chapter===3?[['huntsman',56,37],['hound',53,35]]:boss.units;
     if(chapter===1)m.encounters.find(e=>e.group==='orchard').units.push(['hound',14,18]);
