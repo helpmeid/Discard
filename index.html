@@ -692,10 +692,12 @@
 <body>
   <div class="theme-backdrop" id="themeBackdrop" aria-hidden="true"></div>
   <div class="profile-modal hidden" id="profileModal"><div class="profile-card" role="dialog" aria-modal="true" aria-label="Profile" id="profileCard"></div></div>
-  <div class="profile-modal hidden" id="gamesHub"><div class="profile-card games-hub" role="dialog" aria-label="Solo games">
-    <h3>🎮 Solo games</h3>
-    <div class="profile-sub">Play on your own. No chat needed.</div>
-    <div class="hub-game"><div class="hub-icon">🕳️</div><div class="hub-text"><b>Event Horizon</b><small>Solo black hole idle game</small></div><button class="profile-btn primary" id="hubPlayHorizon" type="button">Play</button></div>
+  <div class="profile-modal hidden" id="gamesHub"><div class="profile-card games-hub" role="dialog" aria-label="Games">
+    <h3>🎮 Games</h3>
+    <div class="profile-sub">Your main games. Play solo or bring a friend.</div>
+    <div class="hub-game"><div class="hub-icon">🕳️</div><div class="hub-text"><b>Event Horizon</b><small>Black hole idle game</small><small data-playtime="horizon">0h 0m played</small></div><button class="profile-btn primary" id="hubPlayHorizon" type="button">Play</button></div>
+    <div class="hub-game"><div class="hub-icon">⚔️</div><div class="hub-text"><b>Oakhaven: Ash &amp; Oath</b><small>Action RPG · vertical slice · solo / couch / online beta</small><small data-playtime="oakhaven">0h 0m played</small></div><button class="profile-btn primary" id="hubPlayOakhaven" type="button">Play</button></div>
+    <div class="profile-sub" id="oakInviteStatus" role="status"></div>
     <div class="hub-transfer"><div class="hub-label">Event Horizon save data</div><div class="profile-actions"><button class="profile-btn" id="hubExportHorizon" type="button">Export save</button><button class="profile-btn" id="hubImportHorizon" type="button">Import save</button></div></div>
     <div class="profile-sub" id="hubStatus" role="status"></div>
     <div class="profile-actions"><button class="profile-btn" id="hubClose" type="button">Close</button></div>
@@ -795,7 +797,7 @@
       </section>
       <div class="account-row"><div class="avatar" id="userAvatar">U</div><div class="account-copy"><div class="account-name" id="userName">Username</div><div class="account-caption" id="userHandle">Your space</div></div></div>
       <div class="section-label">Messages</div>
-      <div class="sidebar-actions"><div class="section-label">Your chats</div><div class="sidebar-action-buttons"><button class="icon-button" id="gamesToggle" type="button" aria-label="Games" title="Solo games">🎮</button><button class="icon-button" id="friendsToggle" type="button" aria-label="Friends" title="Friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></button><button class="icon-button" id="newChatButton" type="button" aria-label="New group chat" title="New group chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
+      <div class="sidebar-actions"><div class="section-label">Your chats</div><div class="sidebar-action-buttons"><button class="icon-button" id="gamesToggle" type="button" aria-label="Games" title="Games">🎮</button><button class="icon-button" id="friendsToggle" type="button" aria-label="Friends" title="Friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg></button><button class="icon-button" id="newChatButton" type="button" aria-label="New group chat" title="New group chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
       <section class="social-panel hidden" id="friendsPanel" aria-label="Friends">
         <h3>Friends</h3>
         <div class="code-row"><input id="myCode" readonly aria-label="Your friend code"><button type="button" id="copyCode">Copy</button></div><p class="panel-message">Your friend code. Share it so friends can add you.</p>
@@ -835,5 +837,8 @@
   <script src="party-games.js?v=3.5.10"></script>
   <script src="hangman.js?v=3.5.10"></script>
   <script src="uno.js?v=3.5.10"></script>
+  <script src="oakhaven-core.js?v=1"></script>
+  <script src="oakhaven.js?v=1"></script>
+  <script src="game-time.js?v=1"></script>
 </body>
 </html>
