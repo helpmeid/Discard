@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.8.2";
+const APP_VERSION = "3.8.3";
 const UPDATE_LOG = [
+  { version: "3.8.3", notes: ["Increase combat challenge across Easy, Medium, Hard and Impossible: stronger enemy health and attacks, plus scaled player damage."] },
   { version: "3.8.2", notes: ["Oakhaven player movement accelerates and decelerates smoothly and turns more naturally, while dodge and dash remain responsive."] },
   { version: "3.8.1", notes: ["Oakhaven rescue and supply objectives remain visible through the mission and all three are required for completion; prevent skipping incomplete missions when returning to camp."] },
   { version: "3.8.0", notes: ["Oakhaven adds Easy, Medium, Hard and Impossible difficulty selection in world creation and camp, with enemy health, damage and speed scaling, and multiple enemies can now hit the player without normal-hit immunity blocking subsequent attacks."] },
