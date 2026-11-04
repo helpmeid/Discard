@@ -322,6 +322,42 @@
       [['City gate supplies','Siege banner','Duke’s signal flare'],['The final seal','Captive family','Obsidian war banner'],['Breached wall','Obsidian chains','Royal armory'],['Duke’s war orders','The throne seal','Father’s banner']]
     ];
     if(chapter||mission)m.interactables.filter(q=>q.kind==='cage').forEach((q,i)=>{q.kind='task';q.name=objectives[chapter][mission][i];});
+    // Quest supplies are tangible objects next to the interactable, not invisible text prompts.
+    for(const q of m.interactables.filter(q=>q.kind==='task')){
+      m.prop('questItem',q.x+.35,q.z+.45,{solid:false,subject:q.name,questId:q.id});
+    }
+    // Give every mission a visibly different set of structures and destination landmarks.
+    const architecture=[
+      ['house','cart','well'],['tent','cart','campfire'],['ruinArch','anvil','ruin'],
+      ['ruin','lantern','ruinArch'],['watchtower','banner','ruinArch']
+    ][chapter];
+    const majorSites=[[13+mission*4,36-mission*5],[28+mission*3,11+mission*7],[47-mission*4,16+mission*5],[18+mission*5,23+mission*2]];
+    for(let j=0;j<majorSites.length;j++){
+      const [x,z]=majorSites[j];
+      m.prop(architecture[(j+mission)%architecture.length],x,z,{solid:false,rotation:mission*.5+j*.7});
+      if(j%2===0)m.prop('banner',x+1.5,z+1.5,{solid:false,tone:chapter});
+    }
+    // Distinct destination shapes: open field, ruined passage, marsh channels, or fortress courts.
+    const xShift=(chapter*3+mission*7)%12;
+    const zones=mission===0?[[10+xShift,29,8,8],[34-xShift/2,10,9,6]]:
+      mission===1?[[20+xShift,6,8,13],[39-xShift/2,30,10,10]]:
+      mission===2?[[8+xShift,18,13,10],[44-xShift/2,8,10,13]]:
+      [[24-xShift/2,28,12,9],[39+xShift/3,14,12,10]];
+    for(const [x,z,w,h] of zones){
+      for(let tz=Math.floor(z);tz<z+h;tz++)for(let tx=Math.floor(x);tx<x+w;tx++){
+        const t=m.tile(tx,tz);if(!t||!t.walk)continue;
+        if(landmarks.some(a=>Math.hypot(a[0]-tx,a[1]-tz)<4))continue;
+        if(m.encounters.some(g=>g.units.some(u=>Math.hypot(u[1]-tx,u[2]-tz)<3)))continue;
+        if((tx+tz+seed)%4!==0){t.walk=false;t.type=chapter===1||chapter===3?'water':'stone';t.height=t.type==='water'?-.25:.8;}
+      }
+    }
+    // Recarve safe roads after scenery zones so quests remain navigable.
+    for(let i=1;i<order.length;i++)carve(hubs[order[i-1]],hubs[order[i]],2);
+    for(const q of m.interactables){
+      const pt=[q.x,q.z],idx=order.reduce((best,j)=>Math.hypot(hubs[j][0]-pt[0],hubs[j][1]-pt[1])<Math.hypot(hubs[best][0]-pt[0],hubs[best][1]-pt[1])?j:best,order[0]);
+      carve(pt,hubs[idx],2);m.rect(Math.floor(q.x)-2,Math.floor(q.z)-2,5,5,{walk:true,height:0,type:'path'});
+    }
+
     // Finales vary: a huntsman appears only at selected story beats.
     const boss=m.encounters.find(g=>g.group==='boss');
     if(boss)boss.units=chapter===4&&mission===3?[['huntsman',56,37],['brute',53,36],['archer',58,37]]:
