@@ -35,6 +35,29 @@
     if(p.kind==='well'){for(const [dx,dz]of[[-.55,0],[.55,0],[0,-.55],[0,.55]])b(dx,0,dz,.35,.65,1.1,'#989b7e');b(0,.4,0,.8,.04,.8,'#467b7f');return;}
     if(p.kind==='cart'){b(0,.5,0,1.5,.18,2,'#8e7047');for(const dx of[-.7,.7]){b(dx,.65,0,.14,.5,2,'#a78a59');for(const dz of[-.65,.65])b(dx*1.2,.2,dz,.18,.65,.65,'#554d39');}b(0,.65,-.1,1.1,.75,1.1,'#b4a17a');return;}
     if(p.kind==='campfire'){for(const a of[.5,-.5])b(0,.04,0,1.15,.16,.22,'#695139',a);b(0,.16,0,.26,.55,.26,'#d88e44');b(.08,.2,.03,.12,.6,.12,'#edc672');return;}
+    if(p.kind==='questItem'){
+      const name=(p.subject||'').toLowerCase();
+      // Specific readable physical pickup: gunpowder kegs, scrolls, ingredients, tools, relics.
+      if(/powder|explosive|siege|cache/.test(name)){
+        b(0,.1,0,.82,.85,.65,'#775338');b(0,.12,.01,.88,.09,.72,'#d1b273');b(0,.72,.01,.88,.1,.72,'#d1b273');
+        b(0,.82,0,.5,.13,.48,'#313e37');b(0,.91,0,.22,.11,.18,'#d5bc79');
+      }else if(/report|ledger|plan|formula|orders|registry|signal|tracks|trail/.test(name)){
+        b(0,.12,0,.82,.13,.7,'#8b6944');b(0,.26,0,.69,.045,.58,'#e2d1a3');
+        for(let i=0;i<4;i++)b(0,.3,-.17+i*.11,.47,.015,.02,'#7e695b');
+      }else if(/ingredient|antidote|toxic|alchemy|vent/.test(name)){
+        b(0,.1,0,.34,.55,.34,'#75a9a1');b(0,.57,0,.23,.16,.23,'#cab68c');b(0,.32,.19,.18,.12,.07,'#a3d68e');
+      }else if(/shackle|lock|chain|gate|barricade|snare|trap/.test(name)){
+        b(0,.14,0,.85,.18,.69,'#66685d');b(-.28,.35,0,.12,.4,.12,'#9b9f95');
+        b(.28,.35,0,.12,.4,.12,'#9b9f95');b(0,.55,0,.63,.12,.12,'#b5a680');
+      }else if(/crucible|forge|smith|anvil|weapon|dagger/.test(name)){
+        b(0,.16,0,.8,.4,.57,'#6b716d');b(0,.55,0,.58,.2,.46,'#ce9959');
+        b(0,.78,0,.34,.22,.32,'#e6c378');
+      }else{
+        b(0,.09,0,.75,.34,.7,'#7c6248');b(0,.44,0,.6,.15,.57,'#bda770');
+        b(0,.62,0,.3,.19,.3,'#9bc3b2');b(0,.84,0,.18,.13,.18,'#d9c88f');
+      }
+      return;
+    }
     if(p.kind==='cage'){for(const dz of[-.6,.6])b(0,0,dz,1.4,.12,.12,'#6e6450');for(const dx of[-.6,.6])b(dx,0,0,.12,.12,1.4,'#6e6450');return;}
     if(p.kind==='anvil'){b(0,0,0,.55,.55,.5,'#6a5c42');b(0,.55,0,.9,.25,.45,'#626d6d');return;}
     if(p.kind==='bench'){b(0,.4,0,1.5,.14,.6,'#8c724e');b(-.55,0,0,.13,.4,.4,'#6b5941');b(.55,0,0,.13,.4,.4,'#6b5941');}
