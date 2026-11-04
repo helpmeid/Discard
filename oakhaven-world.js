@@ -102,7 +102,7 @@
     const theme=themes[chapter]||themes[0];
     m.title=theme.title;
     m.seed=theme.seed;
-    if(!chapter)return m;
+    if(!chapter&&!mission)return m;
     // Retain the tested navigation graph, but each region gains its own landmarks, ground, encounters and hazards.
     for(const tile of m.tiles){
       if(!tile.walk||tile.type==='bridge'||tile.type==='water')continue;
@@ -143,21 +143,32 @@
     if(chapter===4){for(const [x,z]of [[17,8],[36,11],[46,36],[56,28]])m.prop('banner',x,z,{tone:1});}
     if(mission>0){
       // Mission variants alter patrols and landmarks without invalidating paths in older saves.
-      const encounter=m.encounters.find(e=>e.group=== (mission===1?'crossing':'ridge'));
-      if(encounter)encounter.units.push([chapter===2?'brute':chapter===3?'archer':'hound',mission===1?33:48,mission===1?22:31]);
-      for(const [x,z] of (mission===1?[[31,17],[38,30]]:[[47,21],[54,29]])){
+      const encounter=m.encounters.find(e=>e.group=== (mission===1?'crossing':mission===2?'ridge':'mire'))
+      if(encounter)encounter.units.push([chapter===2?'brute':chapter===3?'archer':'hound',mission===1?33:mission===2?48:14,mission===1?22:mission===2?31:33]);
+      for(const [x,z] of (mission===1?[[31,17],[38,30]]:mission===2?[[47,21],[54,29]]:[[12,32],[20,38],[34,32]])){
         m.prop(chapter===2?'ruinArch':chapter===4?'banner':'tent',x,z,{solid:false,rotation:mission*.4});
       }
       m.title+=' · '+(mission+1);
+      // Optional exploration spurs, pickups and region sights for the additional missions.
+      const spurs=[
+        [[6,12],[12,33],[18,37],[26,31],[34,23]],
+        [[8,13],[15,8],[24,10],[33,17],[44,15]],
+        [[11,15],[19,22],[29,31],[43,33],[53,37]]
+      ];
+      m.line(spurs[(mission-1)%3],1.35,chapter===2||chapter===4?'stone':'earth');
+      const sights=[[14,35],[26,9],[42,35],[48,13],[18,28]];
+      for(let k=0;k<3;k++){const [x,z]=sights[(mission+k+chapter)%sights.length];m.prop(chapter===2?'ruinArch':chapter===4?'banner':chapter===1?'tent':'ruin',x,z,{solid:false,rotation:mission*.3});}
+      if(mission>=2)m.interactables.push({id:'bonus'+mission,kind:'chest',x:18+mission*2,z:9+mission,name:'Hidden expedition cache'});
+
     }
     const tasks=[
-      [],
-      [['Supply wagon','Marauder provisions','Explosive powder'],['Gator tracks','Infected nest','The beast’s trail'],['Trapper’s snare','Rolling-log trap','Fortress gate']],
-      [['Captive blacksmith','Forge shackles','Smithing supplies'],['Bridge barricade','Enemy signal fire','Bridge explosives'],['Stone bastion lock','Powder cache','Siege breach']],
-      [['Lookout report','Spy signal beacon','Scout hideout'],['Antidote ingredients','Toxic vent','Alchemical formula'],['Hidden passage','Illusion mirror','Poisoned dagger stash']],
-      [['City gate supplies','Siege banner','Duke’s signal flare'],['The final seal','Captive family','Obsidian war banner']]
+      [['Burned registry','Orchard refugees','Lost heirloom'],['Ember orchard key','Father’s memorial','Ashen relic']],
+      [['Supply wagon','Marauder provisions','Explosive powder'],['Gator tracks','Infected nest','The beast’s trail'],['Trapper’s snare','Rolling-log trap','Fortress gate'],['Ancient totem','Mire heartstone','Witchlight beacon']],
+      [['Captive blacksmith','Forge shackles','Smithing supplies'],['Bridge barricade','Enemy signal fire','Bridge explosives'],['Stone bastion lock','Powder cache','Siege breach'],['Molten crucible','Forge master’s plans','Anvil of freedom']],
+      [['Lookout report','Spy signal beacon','Scout hideout'],['Antidote ingredients','Toxic vent','Alchemical formula'],['Hidden passage','Illusion mirror','Poisoned dagger stash'],['Crown sigil','Shadow portal','Spymaster’s ledger']],
+      [['City gate supplies','Siege banner','Duke’s signal flare'],['The final seal','Captive family','Obsidian war banner'],['Breached wall','Obsidian chains','Royal armory'],['Duke’s war orders','The throne seal','Father’s banner']]
     ];
-    if(chapter>0){
+    if(chapter>0||mission>0){
       const names=tasks[chapter][mission]||tasks[chapter][0];
       m.interactables.filter(q=>q.kind==='cage').forEach((q,i)=>{q.name=names[i];q.kind='task';});
     }
