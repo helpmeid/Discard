@@ -16,6 +16,29 @@ const partyWords = {
   food: ["avocado", "banana split", "birthday cake", "burrito", "cheese", "cherries", "corn on the cob", "cupcake", "donut", "french fries", "ice cream", "lemonade", "noodles", "pancakes", "popcorn", "pretzel", "sushi", "taco", "watermelon", "waffle"],
   places: ["aquarium", "beach", "castle", "city park", "desert island", "farm", "forest", "haunted house", "island", "jungle", "lighthouse", "museum", "pyramid", "rainforest", "school", "space station", "train station", "underwater cave", "volcano", "waterfall"]
 };
+// Wider drawing pools and shared recent history prevent identical prompts in nearby games.
+const partySketchExtraWords = {"mixed":["astronaut","airplane","anchor","basketball hoop","beehive","birthday party","bookcase","bowling alley","bubble bath","camping tent","carnival","chessboard","cloud castle","coffee mug","crystal ball","dinosaur","disco ball","diving board","doghouse","drum set","electric guitar","ferris wheel","fishing rod","flying saucer","garden gnome","giraffe","globe","golden crown","gumball machine","ice skates","jack-o-lantern","kite","ladder","mailbox","magic wand","microscope","mountain cabin","music notes","pirate ship","planet Saturn","race car","rocket launch","sailboat","scarecrow","skateboard","snow globe","snowman","soccer goal","spider web","submarine","superhero cape","surfboard","swimming pool","tornado","traffic light","treehouse","treasure map","unicorn","vending machine","violin","water slide","windmill","wizard hat","yoyo"],"animals":["aardvark","antelope","armadillo","bat","beaver","bee","bison","black bear","buffalo","cat","cheetah","chicken","chimpanzee","cow","crocodile","deer","dog","donkey","duck","eagle","fox","frog","giraffe","goat","gorilla","hippopotamus","horse","hummingbird","jaguar","koala","ladybug","lemur","lion","llama","lobster","meerkat","monkey","moose","mouse","otter","panda","parrot","pelican","pig","polar bear","porcupine","rabbit","raccoon","rhinoceros","rooster","seal","shark","sheep","skunk","snake","squirrel","starfish","swan","tiger","toucan","turkey","walrus","wolf"],"food":["apple pie","bagel","baked potato","barbecue ribs","blueberries","broccoli","burger","buttered toast","carrot cake","cereal bowl","chicken nuggets","chocolate bar","chocolate chip cookie","coconut","cotton candy","croissant","egg sandwich","fish sticks","fruit salad","grilled cheese","hamburger","hot dog","jelly beans","kiwi","lasagna","lobster roll","mac and cheese","mango","marshmallow","milkshake","muffin","nachos","omelet","onion rings","orange","peanut butter","pepperoni pizza","pineapple","pizza slice","popsicle","pumpkin pie","ramen","rice bowl","salad","sandwich","smoothie","spaghetti","strawberry","sunny-side-up egg","tomato soup","turkey leg","vegetable soup","watermelon slice","whipped cream","yogurt"],"places":["airport","amusement park","arcade","art gallery","bakery","ballpark","bank","basketball court","bowling alley","bus stop","campground","canyon","cave","cinema","circus tent","coffee shop","construction site","coral reef","farmers market","fire station","football stadium","garden","grocery store","gym","harbor","hospital","hotel","ice rink","library","moon base","mountain","movie theater","observatory","office","orchard","parking garage","playground","police station","post office","restaurant","river","roller rink","rooftop","ski resort","skyscraper","soccer field","stadium","subway station","supermarket","swimming pool","theme park","volcano crater","water park","wind farm","zoo"]};
+const partySketchHistoryKey = "discard-sketch-word-history-v2";
+function partySketchHistory() {
+  try { const value = JSON.parse(localStorage.getItem(partySketchHistoryKey)); return Array.isArray(value) ? value.filter(v => typeof v === "string").slice(-240) : []; }
+  catch { return []; }
+}
+function partyChooseSketchWord() {
+  const category = partyGame.category;
+  const base = partyWords[category] || partyWords.mixed;
+  const all = [...new Set([...base, ...(partySketchExtraWords[category] || [])].map(w => w.trim().toLowerCase()))];
+  // Both session and stored history apply across categories, including mixed overlaps.
+  const sessionUsed = partyGame.sketchUsedWords ||= [];
+  const history = partySketchHistory();
+  const available = all.filter(w => !sessionUsed.includes(w) && !history.includes(w));
+  const fallback = all.filter(w => !sessionUsed.includes(w));
+  const pool = available.length ? available : fallback.length ? fallback : all;
+  const word = pool[Math.floor(Math.random() * pool.length)];
+  sessionUsed.push(word);
+  if (sessionUsed.length > 240) sessionUsed.shift();
+  try { localStorage.setItem(partySketchHistoryKey, JSON.stringify([...history.filter(w => w !== word), word].slice(-120))); } catch {}
+  return word;
+}
 const partyCategories = ["mixed", "animals", "food", "places"];
 
 function partyElement(tag, className = "", text) {
@@ -252,8 +275,7 @@ function partyStartSketchRound() {
     return;
   }
   const drawer = partyGame.players[partyGame.round % partyGame.players.length];
-  const words = partyWords[partyGame.category] || partyWords.mixed;
-  partyGame.word = words[Math.floor(Math.random() * words.length)];
+  partyGame.word = partyChooseSketchWord();
   partyGame.drawer = drawer;
   partyGame.phase = "draw";
   partyGame.startedAt = Date.now();
