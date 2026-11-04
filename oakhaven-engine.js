@@ -48,7 +48,7 @@
     if(action){action.age+=dt;
       if(action.kind==='roll'||action.kind==='dash'){slide(map(s),p,action.fx*10*dt,action.fz*10*dt);p.fx=action.fx;p.fz=action.fz;p.moving=true;if(action.kind==='dash'&&!action.hit){action.hit=true;for(const e of s.enemies)if(e.hp>0&&dist(p,e)<2.8)damageEnemy(s,e,35,p,40);}}
       else if(action.kind==='bow'){if(look){p.fx=look.x;p.fz=look.z;}if(!a.ranged||action.age>=1.25)fire(s,p,action.age);}
-      else if(action.kind==='melee'||action.kind==='heavy'){p.fx=action.fx;p.fz=action.fz;if(!action.hit&&action.age>=action.windup){action.hit=true;strike(s,p,action);}slide(map(s),p,v.x*1.1*dt,v.z*1.1*dt);}
+      else if(action.kind==='melee'||action.kind==='heavy'){p.fx=action.fx;p.fz=action.fz;if(!action.hit&&action.age>=action.windup+action.active*.5){action.hit=true;strike(s,p,action);}slide(map(s),p,v.x*1.1*dt,v.z*1.1*dt);}
       if(p.action===action&&action.age>=action.duration)p.action=null;
     }else{const speed=p.blocking?1.8:4.3;p.moving=Math.hypot(v.x,v.z)>.01;slide(map(s),p,v.x*speed*dt,v.z*speed*dt);}
     if(!p.blocking&&p.action?.kind!=='roll')p.stamina=clamp(p.stamina+26*dt,0,100);interact(s,p,a.interact);

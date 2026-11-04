@@ -7,10 +7,10 @@
   const defaults=E.defaults.map(b=>({...b})),key=()=>`discard-oakhaven-reborn-1-${currentUser?.id||'guest'}`;
   const read=()=>{try{return JSON.parse(localStorage.getItem(key()))||{};}catch{return{};}},write=value=>{try{localStorage.setItem(key(),JSON.stringify(value));return true;}catch{return false;}};
   const node=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;parent?.append(n);return n;};
-  const button=(text,fn,parent,cls='oak-button')=>{const b=node('button',text,parent,cls);b.type='button';b.onclick=fn;return b;};
+  const button=(text,fn,parent,cls='oak-button')=>{const b=node('button',text,parent,cls);b.type='button';b.onclick=()=>fn();return b;};
   const keyName=c=>String(c||'').replace(/^Key|^Digit/,'').replace('Arrow','');
   const send=(id,data)=>{connectTo(id);return sendTo(id,data);};
-  function load(){const data=read(),reserved=new Set(),fallback=['KeyT','KeyY','KeyZ','KeyX','KeyC','KeyN','KeyB','KeyM','BracketLeft','BracketRight','Backslash'];binds=defaults.map((base,i)=>Object.fromEntries(E.actions.map(a=>{let c=data.binds?.[i]?.[a]||base[a];if(typeof c!=='string'||c.length>25||['Escape','Tab','KeyV'].includes(c)||reserved.has(c))c=[base[a],...fallback].find(q=>!reserved.has(q)&&!['Escape','Tab','KeyV'].includes(q));reserved.add(c);return[a,c];})));options={low:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,sound:true,...data.options};}
+  function load(){const data=read(),reserved=new Set(),fallback=['KeyT','KeyY','KeyZ','KeyX','KeyC','KeyN','KeyB','KeyM','BracketLeft','BracketRight','Backslash'];binds=defaults.map((base,i)=>Object.fromEntries(E.actions.map(a=>{let c=data.binds?.[i]?.[a]||base[a];if(typeof c!=='string'||c.length>25||['Escape','Tab','KeyV'].includes(c)||reserved.has(c))c=[base[a],...defaults.flatMap(Object.values),...fallback].find(q=>!reserved.has(q)&&!['Escape','Tab','KeyV'].includes(q));reserved.add(c);return[a,c];})));options={low:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,sound:true,...data.options};}
   function build(){if(root)return;
     const style=node('style');style.textContent=`
       #oakRoot{position:fixed;inset:0;z-index:250;overflow:hidden;background:#111c1c;color:#e9e4cf;font:13px system-ui,sans-serif}#oakRoot.hidden{display:none}#oakStage{position:absolute;inset:0;overflow:hidden}#oakCanvas{display:block;width:100%;height:100%;outline:none}#oakRoot.playing #oakStage,#oakRoot.playing #oakStage *{cursor:none}#oakRoot [hidden]{display:none!important}
