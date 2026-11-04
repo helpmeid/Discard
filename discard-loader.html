@@ -24,6 +24,7 @@
       const inline = code => code.replace(/<\/script/gi, "<\\/script").replace(/<!--/g, "<\\!--");
 
       let html;
+      let offlineReason = "";
       try {
         let page = await get("index.html");
         const scripts = [...page.matchAll(/<script src="((?!https?:)[^"]+)"><\/script>/g)];
@@ -34,6 +35,7 @@
         html = page.replace("<head>", `<head><base href="${base}">`);
         try { localStorage.setItem(cacheKey, html); } catch {}
       } catch (error) {
+        offlineReason = error?.message || "The latest download failed";
         try { html = localStorage.getItem(cacheKey); } catch {}
         if (!html) {
           status.textContent = "Could not load Discard. Check your internet connection and reload.";
@@ -43,6 +45,13 @@
       document.open();
       document.write(html);
       document.close();
+      if (offlineReason) {
+        const warning = document.createElement("div");
+        warning.setAttribute("role", "status");
+        warning.style.cssText = "position:fixed;bottom:36px;left:12px;z-index:2147483646;max-width:min(420px,90vw);background:#7d332d;color:#fff;padding:10px 14px;border-radius:7px;font:13px system-ui;box-shadow:0 3px 16px #0005";
+        warning.textContent = "Discard could not fetch the newest version (" + offlineReason + "). You are viewing a saved older copy. Check your connection and reopen the loader to update.";
+        document.body.appendChild(warning);
+      }
     })();
   </script>
 </body>
