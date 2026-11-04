@@ -43,7 +43,7 @@
     m.interactables=[{id:'garrow',kind:'mentor',x:17,z:14.1,name:'Old Man Garrow'},{id:'map',kind:'mission',x:29.5,z:15.5,name:'The Ashen Road'},{id:'dummy',kind:'dummy',x:20,z:9,name:'Training dummy'}];
     decorate(m);m.props=m.props.filter(p=>p.kind!=='tree'||(Math.hypot(p.x-18,p.z-16.8)>4.5&&!(p.x>17&&p.x<26&&p.z>16&&p.z<25)));return m;
   }
-  function forest(){
+  function forest(withDetail=true){
     const m=new Map('forest',64,48);m.title='The Ashen Road';m.spawn={x:6.5,z:12};
     for(let z=0;z<48;z++)for(let x=0;x<64;x++){const t=m.tile(x,z);if(x<2||z<2||x>61||z>45){t.height=-.8;t.walk=false;}else if(x>48&&z>29)t.height=.5;else if(x<15&&z>28)t.height=.5;}
     m.line([[3,13],[10,13],[17,17],[23,19],[28,21],[34,24],[40,23],[46,28],[51,33],[56,36]],2.1);
@@ -83,7 +83,7 @@
       {group:'mire',units:[['hound',14,30],['boar',17,33],['soldier',11,37]]},
       {group:'boss',units:[['huntsman',56,37]]}
     ];
-    decorate(m);m.props=m.props.filter(p=>!['tree','rock'].includes(p.kind)||!m.interactables.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.8));return m;
+    if(withDetail)decorate(m);m.props=m.props.filter(p=>!['tree','rock'].includes(p.kind)||!m.interactables.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.8));return m;
   }
   function prologue(){const m=new Map('prologue',34,30);m.title='Oakhaven · Before the Ash';m.spawn={x:16,z:16};m.line([[3,18],[12,17],[19,17],[28,11]],2.5).line([[15,17],[16,8]],1.5);for(const [x,z,w,d,roof]of[[7,11,4.5,3.5,'#b18a4e'],[17,8,4.1,3.6,'#aa7d47'],[26,9,4.4,3.5,'#8f6e47'],[28,27,4,3.3,'#9b754c']])m.prop('house',x,z,{w,d,roof});m.prop('well',12,12,{solid:false});m.prop('cart',29,22,{solid:false});for(let x=3;x<29;x+=1.4){if(x>13&&x<19)continue;m.prop('fence',x,21.5);}for(const [x,z]of[[11,18],[20,14],[26,16]])m.prop('lantern',x,z);decorate(m);m.props=m.props.filter(p=>p.kind!=='tree'||!(p.x>10&&p.x<27&&p.z>11&&p.z<24));return m;}
 
@@ -200,7 +200,9 @@
         [[6,12],[15,8],[25,12],[33,22],[43,18],[51,29],[56,37]],
         [[6,12],[9,29],[21,35],[31,24],[42,14],[50,27],[56,37]]
       ];
-      const spine=branches[(mission-1)%branches.length];
+      // Chapter/mission-specific transforms create a different geometry for all 18 levels.
+      const serial=chapter*7+mission;
+      const spine=branches[(mission+chapter-1)%branches.length].map(([x,z],i)=>i===0||i===6?[x,z]:[Math.max(5,Math.min(58,x+((serial*3+i*5)%9)-4)),Math.max(5,Math.min(41,z+((serial*7+i*3)%9)-4))]);
       const baseType=chapter===2||chapter===4?'stone':chapter===1?'earth':'grass';
       for(const tile of m.tiles){if(tile.x<2||tile.z<2||tile.x>61||tile.z>45)continue;tile.height=0;tile.walk=true;tile.type=baseType;}
       // Distinct lakes and solid ridges, positioned away from mission objectives.
@@ -208,18 +210,22 @@
         mission%3===2?[[12,23,9,9],[29,7,10,8],[44,36,9,8]]:
         [[23,27,9,9],[38,7,8,9],[50,17,9,8]];
       for(let i=0;i<obstacles.length;i++){
-        const [x,z,w,h]=obstacles[i];
+        const [bx,bz,bw,bh]=obstacles[i];const x=Math.max(4,Math.min(53,bx+((chapter*5+mission*3+i*2)%11)-5)),z=Math.max(4,Math.min(34,bz+((chapter*2+mission*7+i*3)%11)-5)),w=bw+(serial%3),h=bh+((serial+i)%3);
         m.rect(x,z,w,h,{height:i===1?.75:-.28,type:i===1?'stone':'water',walk:false});
       }
-      m.line(spine,2.6,chapter===2||chapter===4?'stone':'path');
+      const floor=chapter===2||chapter===4?'stone':'path';
+      // Cut actual walkable trails through all terrain, including lakes and ridges.
+      const carve=points=>{for(let j=1;j<points.length;j++){const [ax,az]=points[j-1],[bx,bz]=points[j],len=Math.hypot(bx-ax,bz-az);for(let d=0;d<=len;d+=.65){const x=ax+(bx-ax)*d/len,z=az+(bz-az)*d/len;m.rect(Math.floor(x)-1,Math.floor(z)-1,3,3,{height:0,type:floor,walk:true});}}};
+      carve(spine);
       const branchTargets=[...m.interactables.filter(q=>['cage','task','exit','chest','station'].includes(q.kind)),...m.encounters.flatMap(group=>group.units.map(u=>({x:u[1],z:u[2]})))];
       for(const q of branchTargets){
         const junction=spine.reduce((best,pt)=>Math.hypot(pt[0]-q.x,pt[1]-q.z)<Math.hypot(best[0]-q.x,best[1]-q.z)?pt:best,spine[0]);
-        m.line([junction,[q.x,q.z]],1.75,chapter===2||chapter===4?'stone':'path');
+        carve([junction,[q.x,q.z]]);
         m.rect(Math.floor(q.x)-1,Math.floor(q.z)-1,3,3,{height:0,walk:true,type:'path'});
       }
       m.rect(5,10,5,5,{height:0,walk:true,type:'path'});
       m.props=m.props.filter(p=>!['tree','grass','flowers','rock','fence','bridgeRail'].includes(p.kind));
+      m.title+=' · '+['The Causeway','The Overlook','The Hollow','The Descent'][(serial+chapter)%4];
       const sceneKinds=chapter===4?['banner','ruinArch','ruin']:chapter===2?['rock','ruinArch','anvil']:chapter===1?['tent','campfire','lantern']:['ruin','lantern','banner'];
       for(let i=0;i<12;i++){const [x,z]=spine[Math.min(spine.length-1,Math.floor(i/2))];m.prop(sceneKinds[(i+mission)%3],x+(i%2?3:-3),z+((i%3)-1)*2,{solid:false,rotation:mission*.3});}
     }
@@ -253,7 +259,7 @@
     if(chapter===4)m.encounters.find(e=>e.group==='crossing').units.push(['brute',38,26]);
     return m;
   }
-  function build(id,chapter=0,mission=0){const m=id==='forest'?chapterWorld(forest(),chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
+  function build(id,chapter=0,mission=0){const m=id==='forest'?chapterWorld(forest(chapter===0&&mission===0),chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
   function pathfind(m,sx,sz,tx,tz){
     const start=m.tile(sx,sz),goal=m.tile(tx,tz);if(!start||!goal||!m.canWalk(goal.x+.5,goal.z+.5))return[];
     const key=(x,z)=>z*m.width+x,source=key(start.x,start.z),target=key(goal.x,goal.z),cost=new Float32Array(m.width*m.depth).fill(Infinity),parent=new Int32Array(cost.length).fill(-1),open=[{k:source,x:start.x,z:start.z,f:0}],seen=new Uint8Array(cost.length);cost[source]=0;
