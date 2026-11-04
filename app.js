@@ -207,6 +207,16 @@ const disguiseKey = "discard-tab-disguise";
 const coverKeyStorage = "discard-cover-keybind";
 let tabDisguised = false;
 let coverOn = false;
+// Browsers prohibit replacing the origin with app.minga.io; use a visible URL fragment instead.
+const mingaAddressFragment = "#app.minga.io/home";
+let addressBeforeMinga = location.hash === mingaAddressFragment ? "" : location.hash;
+function updateMingaAddress() {
+  const enabled = tabDisguised || coverOn;
+  const desired = enabled ? mingaAddressFragment : addressBeforeMinga;
+  if (location.hash === desired) return;
+  try { history.replaceState(history.state, "", location.pathname + location.search + desired); }
+  catch { location.hash = desired; }
+}
 
 // The disguise is remembered outside the account so the sign-in screen is covered too.
 let unreadTotal = 0;
@@ -253,6 +263,7 @@ function renderDisguise() {
     tabIcon.href = base;
   }
   document.querySelector("#mingaCover")?.classList.toggle("on", coverOn);
+  updateMingaAddress();
 }
 function applyTabDisguise(on, remember = true) {
   tabDisguised = on;
