@@ -112,6 +112,31 @@
       if(chapter===3&&tile.type==='grass'&&n<.27)tile.type='earth';
       if(chapter===4&&tile.type==='grass'&&n<.64)tile.type='stone';
     }
+    // Region-specific traversable routes, terrain, and nonblocking landmarks.
+    // Mission variants reroute the exploration spaces rather than changing only labels.
+    const roads=[
+      null,
+      [[[6,12],[9,25],[15,34],[23,36],[34,30],[44,31],[56,37]],[[17,18],[22,12],[32,10],[45,14]]],
+      [[[6,12],[16,9],[26,8],[38,13],[46,19],[53,27],[56,37]],[[23,19],[32,30],[43,35],[54,37]]],
+      [[[6,12],[12,22],[20,29],[32,33],[43,29],[56,37]],[[20,17],[32,12],[43,14],[50,23]]],
+      [[[6,12],[15,19],[25,23],[35,17],[45,23],[56,37]],[[11,30],[20,38],[37,37],[56,37]]]
+    ];
+    const route=roads[chapter]||[];
+    for(const points of route)m.line(points,chapter===2?1.85:1.55,chapter===2||chapter===4?'stone':'earth');
+    const terrainTypes=['grass','earth','stone'];
+    for(const tile of m.tiles){
+      if(!tile.walk||tile.type==='water'||tile.type==='bridge')continue;
+      const n=hash(tile.x+mission*13,tile.z+chapter*19,theme.seed);
+      if(n<.045+(mission*.025))tile.type=terrainTypes[(chapter+mission)%terrainTypes.length];
+    }
+    const landmarks=[
+      [],
+      [[12,24,'campfire'],[23,35,'tent'],[47,34,'lantern']],
+      [[12,24,'rock'],[30,10,'ruinArch'],[48,24,'rock']],
+      [[12,24,'ruin'],[30,12,'lantern'],[47,34,'banner']],
+      [[12,24,'banner'],[30,10,'ruinArch'],[48,24,'banner']]
+    ];
+    for(const [x,z,kind] of landmarks[chapter]||[])m.prop(kind,x+mission*1.3,z,{solid:false});
     if(chapter===1){for(const [x,z]of [[13,27],[18,32],[36,13],[43,37]])m.prop('tent',x,z,{solid:false,rotation:.3});}
     if(chapter===2){for(const [x,z]of [[12,27],[21,35],[43,9],[49,25]])m.prop('ruinArch',x,z,{solid:false});}
     if(chapter===3){for(const [x,z]of [[10,29],[20,9],[40,32],[51,22]])m.prop('ruin',x,z,{solid:false,rotation:.2});}
