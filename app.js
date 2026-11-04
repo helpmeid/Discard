@@ -184,8 +184,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.6.1";
+const APP_VERSION = "3.6.2";
 const UPDATE_LOG = [
+  { version: "3.6.2", notes: ["Oakhaven: five chapter-specific quest objective sequences and boss labels, more distinct Garrow guidance, multiplayer enemy scaling and expanded weapon arsenal."] },
   { version: "3.6.1", notes: ["Updated Discard version to 3.6.1."] },
   { version: "3.5.10", notes: ["Unlock Account now closes old tabs when allowed or signs them out without reloading.", "Fixed unnecessary browser reload warnings when no Garlic Fone game is running."] },
   { version: "3.5.9", notes: ["Sign-in: Unlock Account button signs out other tabs after verifying your password.", "Improved account-lock cleanup and recovery on Chromebooks."] },
