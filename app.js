@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.6.8";
+const APP_VERSION = "3.6.9";
 const UPDATE_LOG = [
+  { version: "3.6.9", notes: ["Event Horizon now shows as Playing Event Horizon to online friends and clears activity when closed."] },
   { version: "3.6.8", notes: ["Friends see when you are playing Oakhaven. Group chat members can be added directly through Add Friend buttons."] },
   { version: "3.6.7", notes: ["Oakhaven: press / to open in-game text chat, press Enter to send, and Escape to close. Online party chat uses the existing multiplayer connection."] },
   { version: "3.6.6", notes: ["Oakhaven: additional regional paths and terrain, mission landmarks, and recorded active playtime and mission completion times. No claim of 8–10 hours until human playtesting."] },
