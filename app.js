@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.7.1";
+const APP_VERSION = "3.7.2";
 const UPDATE_LOG = [
+  { version: "3.7.2", notes: ["Oakhaven: all 18 missions have unique traversable terrain layouts, varied boss parties instead of repeated Huntsman fights, dynamically named finales, reduced scenery load, and fixed blocked objective paths."] },
   { version: "3.7.1", notes: ["Oakhaven regions now have distinct playable terrain layouts, obstacle formations, water crossings, routes and landmarks, rather than reusing the same original level geometry."] },
   { version: "3.7.0", notes: ["Oakhaven: expanded campaign from 12 to 18 missions, new objectives and exploration routes, secret caches, tougher later bosses, regional weapon rewards, and completion rewards. Real 8–10 hour playtime is not yet verified."] },
   { version: "3.6.9", notes: ["Event Horizon now shows as Playing Event Horizon to online friends and clears activity when closed."] },
