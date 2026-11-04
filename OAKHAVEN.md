@@ -1,6 +1,6 @@
 # Historical Oakhaven prototype ledger
 
-The active game has been replaced by a new implementation. See [OAKHAVEN-REBUILD.md](OAKHAVEN-REBUILD.md) for current features, controls and verification. Everything below describes earlier prototypes, whose source is retained but no longer loaded by Discard.
+The active game has been replaced by a new implementation. See [OAKHAVEN-DEMO.md](OAKHAVEN-DEMO.md) for current features, controls and verification. Everything below describes earlier prototypes, whose source is retained but no longer loaded by Discard.
 
 # Oakhaven: Ash & Oath — implementation ledger
 

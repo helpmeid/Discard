@@ -8,7 +8,7 @@ A Discord-style chat app that is **fully peer to peer**. There is no server: dow
 
 **Easiest (auto-updating):** download just [`discard-loader.html`](discard-loader.html) and open it in Chrome. It fetches the latest Discard from GitHub every time, so you never re-download to update. Keep using the same copy of that file so your saved data stays in the same place.
 
-**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep all companion JavaScript files and images beside it, including the four `oakhaven-world/engine/renderer/game.js` files, `oakhaven-art.js` and `game-time.js`).
+**Offline copy:** download the zip of this repository, unzip it, and open `index.html` (keep all companion JavaScript files and images beside it, including all six current Oakhaven JavaScript modules and `game-time.js`).
 
 ## Run a local test server
 
@@ -45,17 +45,19 @@ Open any chat, press the **+** at the left of the message bar and choose **🧄 
 
 ## Games
 
-**Oakhaven has been rebuilt from scratch.** It now uses a new block-built 3D world, staged 3D opening, click-to-move pathfinding, timed combat, three abilities, equipment, minimap and a first expedition called **The Ashen Road**. The original medieval Oakhaven/Garrow/Obsidian Duke story remains; the playable hero is eighteen and clean-shaven. This is a playable first mission, not the finished 8–10-hour campaign. [OAKHAVEN-REBUILD.md](OAKHAVEN-REBUILD.md) records current features, controls, architecture, tests and remaining work. Earlier revisions in OAKHAVEN.md are historical.
+**Oakhaven is a private demo.** Open the existing Discard loader, choose **Games → Play Oakhaven**, and enter **1423**. Choose one of six local worlds, or create a solo, couch or online world. The campfire lets you change equipment and gather your party before loading. Online worlds require both players to join, ready up and finish loading; a remaining player waits at camp if their companion leaves.
 
-Press the **🎮** button above your chat list to open **Games**, then **Play Oakhaven**. Event Horizon remains available. Uno and other embedded chat games stay in the chat's **+** menu. Main-game playtime is per local account/browser and counts active foreground play; Oakhaven excludes menus, prologue, waiting, defeat and completion.
+The sequel-style revision adds regenerating arrow charges, stamina-limited combat, jumping/heavy landings, a character-preview equipment screen, quick inventory, clearer block-built characters, shared multiplayer story scenes and five discoverable rail stops. The Watchtower and open woodland region preserve their own progress between visits. The full 8–10-hour campaign remains planned. [OAKHAVEN-DEMO.md](OAKHAVEN-DEMO.md) records current scope, controls and verification.
 
-Choose **Begin story**, **Couch co-op · 2 players** or **Online party**. Player I uses WASD, F strike, G heavy, Q bow, Space dodge, R guard, H potion, E interact/revive and 1/2/3 abilities. Player II uses arrows, J/K/U/L/I/P/O and ;/'/ /. V opens equipment; Tab opens the mission map; Escape pauses. All combat controls can be rebound. Mouse play uses left-click movement/targeting and hold/release right-click bow. The pointer hides during play. Use the mission map or the camp's mission banner to start The Ashen Road.
+Mouse play uses left-click movement/attack/interaction and right-click charged arrows. Space jumps, Q heavy-jumps, R dodges, E drinks a potion, and 1/2/3 use abilities. I or Tab opens equipment; hold I for quick equipment. M opens the map. Mouse/keyboard gameplay keeps the pointer visible. Controller activity hides it only over the world. Optional WASD and configurable split-keyboard couch controls remain available.
 
-Solo checkpoints use a new per-account save slot; previous prototype saves are retained separately. Online friends must both use this version (protocol 10). Parties support two people with host-owned simulation; real two-device WebRTC and Chromebook FPS still need manual verification. There is no online reconnect or host migration.
+The equipment screen has seven gear slots, item artwork, power/stat comparisons and a 3D preview. Quick equipment leaves the other couch player moving. Six saves are per local Discard account/browser, not cloud-synced. Compatible earlier rebuild checkpoints import into a separate named world; old save keys are kept. Both online friends need this revision (protocol 11). There is no host migration or automatic online reconnect yet.
 
-The existing Discard loader file is unchanged. Its script discovery includes the new game files. An existing closing-script-string error in the loader was identified and left untouched under the user's explicit restriction; actual loader launch has not been verified. See the rebuild ledger for the exact limitation.
+Event Horizon and the other games are unchanged. Uno and embedded chat games stay in the chat's **+** menu. Main-game playtime remains per account/browser and counts active foreground play; Oakhaven excludes menus, its prologue, waiting and defeat.
 
-Run checks with `node --test tests/*.test.cjs` (Node 22+, no dependencies). New rebuild tests have `oakhaven-rebuild` names; older prototype tests remain as historical checks. The manual graphics fixture is `tests/oakhaven-rebuild-browser.html`.
+The **loader file is unchanged**. Its real script assembly and cache fallback pass adapter tests with the new game modules. A previous warning about the loader's script-ending string was caused by an incorrect regular-expression check and has been withdrawn. Browser/GPU appearance, sound, physical controllers, real two-device WebRTC and Chromebook FPS still need manual verification. High detail supports up to 1440p; low graphics reduce resolution and disable shadows, with automatic defaults for smaller devices.
+
+Run checks with `node --test tests/*.test.cjs` (Node 22+, no dependencies). The current suite has 114 checks, including retained prototype regressions. `tests/oakhaven-rebuild-browser.html` is a synthetic-account manual graphics fixture; the product entry remains the existing Discard loader.
 
 ## Other chat games
 

@@ -14,6 +14,7 @@
     canWalk(x,z,r=.28,fromHeight=null){for(const dx of [-r,r])for(const dz of [-r,r]){const t=this.tile(x+dx,z+dz);if(!t?.walk||(fromHeight!==null&&Math.abs(t.height-fromHeight)>.65))return false;}for(const p of this.buckets?(this.buckets[Math.floor(x)+','+Math.floor(z)]||[]):(this.solidProps||this.props)){if(!p.solid)continue;if(p.w&&Math.abs(x-p.x)<p.w/2+r&&Math.abs(z-p.z)<p.d/2+r)return false;if(!p.w&&Math.hypot(x-p.x,z-p.z)<p.radius+r)return false;}return true;}
     height(x,z){return this.tile(x,z)?.height||0;}
     canTraverse(x,z,tx,tz){const steps=Math.ceil(Math.hypot(tx-x,tz-z)/.12),h=this.height(x,z);for(let i=1;i<=steps;i++)if(!this.canWalk(x+(tx-x)*i/steps,z+(tz-z)*i/steps,.28,h))return false;return true;}
+    canOccupyAir(x,z,r,y){const t=this.tile(x,z);if(!t||(!t.walk&&t.type!=='water')||t.height>y+.15)return false;for(const p of this.buckets?(this.buckets[Math.floor(x)+','+Math.floor(z)]||[]):this.props){if(!p.solid)continue;const top=p.y+(['fence','bridgeRail'].includes(p.kind)?.95:p.kind==='tree'?3.7:4);if(y>top)continue;if(p.w?Math.abs(x-p.x)<p.w/2+r&&Math.abs(z-p.z)<p.d/2+r:Math.hypot(x-p.x,z-p.z)<p.radius+r)return false;}return true;}
     lineClear(x,z,tx,tz){const d=Math.hypot(tx-x,tz-z);for(let s=.15;s<d;s+=.15){const q=s/d,px=x+(tx-x)*q,pz=z+(tz-z)*q;for(const p of this.buckets?(this.buckets[Math.floor(px)+','+Math.floor(pz)]||[]):(this.solidProps||this.props))if(p.solid&&(p.w?Math.abs(px-p.x)<p.w/2&&Math.abs(pz-p.z)<p.d/2:Math.hypot(px-p.x,pz-p.z)<p.radius))return false;}return true;}
   }
   function decorate(m){
@@ -34,23 +35,26 @@
     m.prop('watchtower',24.5,5,{solid:true,w:4.2,d:4.2});m.prop('house',6.2,5.5,{solid:true,w:4.1,d:3.3,roof:'#9b6d46'});
     m.prop('tent',12.5,10.5,{solid:true,w:2.4,d:2,rotation:.15});m.prop('anvil',15.2,11,{solid:true,radius:.5});
     m.prop('campfire',18,16.8,{solid:true,radius:.4});m.prop('bench',17,18.2,{rotation:Math.PI/2});m.prop('well',7.8,20.7,{solid:true,radius:.8});
-    m.prop('cart',26,18.7,{solid:true,w:1.5,d:2.1});m.prop('banner',22.3,10,{tone:0});m.prop('banner',27,9,{tone:0});
+    m.prop('cart',26,20.2,{solid:true,w:1.5,d:2.1});m.prop('banner',22.3,10,{tone:0});m.prop('banner',27,9,{tone:0});
     m.prop('banner',29.5,15.5,{tone:0});
     for(let x=5;x<=28;x+=1.5){if(x>9&&x<13)continue;m.prop('fence',x,22,{rotation:0});}
     for(let i=0;i<9;i++)m.prop('flowers',6+i*.8,19.2+Math.sin(i)*.35,{tone:i%3,count:6});
     for(const [x,z] of [[16,12],[21,13],[28,15]])m.prop('lantern',x,z);
     m.interactables=[{id:'garrow',kind:'mentor',x:17,z:14.1,name:'Old Man Garrow'},{id:'map',kind:'mission',x:29.5,z:15.5,name:'The Ashen Road'},{id:'dummy',kind:'dummy',x:20,z:9,name:'Training dummy'}];
-    decorate(m);return m;
+    decorate(m);m.props=m.props.filter(p=>p.kind!=='tree'||(Math.hypot(p.x-18,p.z-16.8)>4.5&&!(p.x>17&&p.x<26&&p.z>16&&p.z<25)));return m;
   }
   function forest(){
     const m=new Map('forest',64,48);m.title='The Ashen Road';m.spawn={x:6.5,z:12};
     for(let z=0;z<48;z++)for(let x=0;x<64;x++){const t=m.tile(x,z);if(x<2||z<2||x>61||z>45){t.height=-.8;t.walk=false;}else if(x>48&&z>29)t.height=.5;else if(x<15&&z>28)t.height=.5;}
     m.line([[3,13],[10,13],[17,17],[23,19],[28,21],[34,24],[40,23],[46,28],[51,33],[56,36]],2.1);
     m.line([[19,18],[20,10],[27,8]],1.25).line([[34,24],[35,32],[42,35]],1.4);
+    m.line([[34,24],[39,20],[43,14],[47,13]],1.4).line([[17,18],[15,25],[15,34],[12,39]],1.3);
     for(let z=3;z<43;z++){const x=25+Math.floor(Math.sin(z*.18)*2);m.rect(x,z,3,1,{height:-.32,type:'water',walk:false});}
     m.rect(23,19,8,3,{type:'bridge',height:.06,walk:true});
     m.prop('house',7,7.7,{solid:true,w:4.2,d:3.5,roof:'#a17b4d'});m.prop('house',14.5,10,{solid:true,w:3.4,d:3,roof:'#796448'});
     m.prop('well',11,7.4,{solid:true,radius:.65});m.prop('cart',18.7,16,{solid:true,w:1.5,d:2});
+    m.prop('house',11,31,{solid:true,w:3.4,d:2.8,roof:'#60765d'});m.prop('house',18,36,{solid:true,w:3.6,d:3,roof:'#8a7451'});m.prop('lantern',14,33);m.prop('well',12,35.5,{solid:true,radius:.7});m.prop('ruinArch',12,40);
+    for(let i=0;i<8;i++)m.prop('rock',44+(i%4)*1.2,9+Math.floor(i/4)*1.6,{scale:1.1+(i%3)*.25});m.prop('cart',48,12,{solid:true,w:1.5,d:2});m.prop('banner',45,15,{tone:0});
     for(let x=4;x<19;x+=1.3){m.prop('fence',x,10.6);if(x<15)m.prop('fence',x,17.6);}
     for(const z of [19.1,21.9])for(let x=23.5;x<30;x+=1.5)m.prop('bridgeRail',x,z);
     m.prop('tent',34,17.7,{solid:true,w:2.8,d:2.3,rotation:.2});m.prop('tent',39,18.2,{solid:true,w:2.6,d:2.1,rotation:-.2});
@@ -66,18 +70,25 @@
       {id:'cage2',kind:'cage',x:36,z:28,name:'Rescue the smith'},
       {id:'cage3',kind:'cage',x:41,z:25,name:'Rescue the scout'},
       {id:'chest2',kind:'chest',x:43,z:35,name:'Abandoned armory',item:'cragbreaker'},
+      {id:'chest3',kind:'chest',x:46,z:13,name:'Quarry pay chest',item:'craghelm'},
+      {id:'chest4',kind:'chest',x:15,z:35,name:'Mirewalker’s cache',item:'mireboots'},
+      {id:'chest5',kind:'chest',x:12,z:39,name:'The Veil’s lost compass',item:'veilcharm'},
       {id:'exit',kind:'exit',x:58,z:39,name:'Return to the Watchtower'}
     ];
     m.encounters=[
       {group:'orchard',units:[['soldier',15,14],['boar',18,18],['archer',20,16],['soldier',20,12]]},
       {group:'crossing',units:[['soldier',30,22],['brute',35,24],['archer',38,22],['hound',32,26],['soldier',40,26]]},
       {group:'ridge',units:[['archer',47,30],['soldier',48,34],['hound',46,33]]},
+      {group:'quarry',units:[['soldier',44,14],['archer',47,15],['brute',46,11]]},
+      {group:'mire',units:[['hound',14,30],['boar',17,33],['soldier',11,37]]},
       {group:'boss',units:[['huntsman',56,37]]}
     ];
     decorate(m);m.props=m.props.filter(p=>!['tree','rock'].includes(p.kind)||!m.interactables.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.8));return m;
   }
   function prologue(){const m=new Map('prologue',34,30);m.title='Oakhaven · Before the Ash';m.spawn={x:16,z:16};m.line([[3,18],[12,17],[19,17],[28,11]],2.5).line([[15,17],[16,8]],1.5);for(const [x,z,w,d,roof]of[[7,11,4.5,3.5,'#b18a4e'],[17,8,4.1,3.6,'#aa7d47'],[26,9,4.4,3.5,'#8f6e47'],[26,23,4,3.3,'#9b754c']])m.prop('house',x,z,{w,d,roof});m.prop('well',12,12,{solid:false});m.prop('cart',22,19,{solid:false});for(let x=3;x<29;x+=1.4){if(x>13&&x<19)continue;m.prop('fence',x,21.5);}for(const [x,z]of[[11,18],[20,14],[26,16]])m.prop('lantern',x,z);decorate(m);m.props=m.props.filter(p=>p.kind!=='tree'||!(p.x>10&&p.x<27&&p.z>11&&p.z<24));return m;}
-  function build(id){const m=id==='forest'?forest():id==='prologue'?prologue():camp(),avoid=[m.spawn,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.2));return m.index();}
+  const railStations=[{id:'watchtower',map:'camp',name:'Watchtower Halt',x:12,z:19},{id:'road',map:'forest',name:'Oakhaven Road',x:8.5,z:13.5},{id:'orchard',map:'forest',name:'The Old Orchard',x:19.5,z:18.5},{id:'mill',map:'forest',name:'Mill Crossing',x:34,z:25},{id:'ridge',map:'forest',name:'Sanctuary Ridge',x:49,z:32}];
+  function rails(m){m.stations=railStations.filter(s=>s.map===m.id);for(const q of m.stations){m.interactables.push({...q,kind:'station'});m.prop('station',q.x,q.z,{name:q.name});}const points=m.id==='camp'?[[12,19],[10,21],[18,21],[28,18],[28,16]]:[[8.5,13.5],[13,15],[19.5,18.5],[23.5,20.5],[29,20.5],[34,25],[40,25],[46,29],[49,32]];for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],d=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let j=0;j<d;j+=.65){const t=j/d,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;m.prop('rail',x,z,{rotation:Math.atan2(b[0]-a[0],b[1]-a[1]),length:Math.min(.7,d-j)});}}}
+  function build(id){const m=id==='forest'?forest():id==='prologue'?prologue():camp();if(['camp','forest'].includes(id))rails(m);const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
   function pathfind(m,sx,sz,tx,tz){
     const start=m.tile(sx,sz),goal=m.tile(tx,tz);if(!start||!goal||!m.canWalk(goal.x+.5,goal.z+.5))return[];
     const key=(x,z)=>z*m.width+x,source=key(start.x,start.z),target=key(goal.x,goal.z),cost=new Float32Array(m.width*m.depth).fill(Infinity),parent=new Int32Array(cost.length).fill(-1),open=[{k:source,x:start.x,z:start.z,f:0}],seen=new Uint8Array(cost.length);cost[source]=0;
@@ -87,5 +98,5 @@
       for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const x=p.x+dx,z=p.z+dz,t=m.tile(x,z);if(!t||!m.canWalk(x+.5,z+.5,.28,m.tile(p.x,p.z).height))continue;if(dx&&dz&&(!m.canWalk(p.x+dx+.5,p.z+.5)||!m.canWalk(p.x+.5,p.z+dz+.5)))continue;if(!m.canTraverse(p.x+.5,p.z+.5,x+.5,z+.5))continue;const k=key(x,z),g=cost[p.k]+(dx&&dz?1.414:1);if(g>=cost[k])continue;cost[k]=g;parent[k]=p.k;push({k,x,z,f:g+Math.hypot(goal.x-x,goal.z-z)});}
     }return[];
   }
-  const api={Map,build,pathfind,hash,palettes,clamp};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.OakhavenWorld=api;
+  const api={Map,build,pathfind,hash,palettes,clamp,railStations};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.OakhavenWorld=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
