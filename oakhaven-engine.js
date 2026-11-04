@@ -84,8 +84,8 @@
       // Instanced pickups: each hero sees their own reward, and one hero can't steal the other's.
       s.players.forEach((hero,i)=>{
         const x=target.x+(i?1:-1)*.65,z=target.z+.3;
-        if(s.loot.length<32)s.loot.push({id:'l'+s.next++,kind:'item',item:reward.id,owner:hero.id,x,z,life:120});
-        if(s.loot.length<32)s.loot.push({id:'l'+s.next++,kind:'gold',owner:hero.id,value:10+Math.floor(seed*11),x:x+.25,z:z+.25,life:120});
+        if(s.loot.length<32)s.loot.push({id:'l'+s.next++,kind:'item',item:reward.id,owner:hero.id,x,z,life:120,pickupDelay:.65});
+        if(s.loot.length<32)s.loot.push({id:'l'+s.next++,kind:'gold',owner:hero.id,value:10+Math.floor(seed*11),x:x+.25,z:z+.25,life:120,pickupDelay:.65});
       });
       notice(s,'CHEST OPENED · Walk near the glowing drops to collect your personal loot!');
       particles(s,target.x,target.z,'#f4d17b',26);
@@ -153,7 +153,7 @@
     for(const e of s.enemies)tickEnemy(s,e,dt);
     const bodies=[...s.players.filter(p=>!p.dead),...s.enemies.filter(e=>e.hp>0)];for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){const a=bodies[i],b=bodies[j];if(a.action?.kind==='roll'||b.action?.kind==='roll')continue;const d=dist(a,b),min=.65;if(d<min){const v=unit(a.x-b.x||.01,a.z-b.z);slide(map(s),a,v.x*(min-d)*.5,v.z*(min-d)*.5);slide(map(s),b,-v.x*(min-d)*.5,-v.z*(min-d)*.5);}}
     tickBolts(s,dt);s.enemies=s.enemies.filter(e=>e.hp>0);
-    s.loot=s.loot.filter(l=>{l.life-=dt;const nearest=s.players.filter(p=>!p.dead&&(!l.owner||l.owner===p.id)).sort((a,b)=>dist(a,l)-dist(b,l))[0];if(nearest&&dist(nearest,l)<2.1){const d=dist(nearest,l)||1,step=Math.min(d,dt*5);l.x+=(nearest.x-l.x)/d*step;l.z+=(nearest.z-l.z)/d*step;}const p=nearest&&dist(nearest,l)<1.05?nearest:null;if(!p)return l.life>0;if(l.kind==='food')p.hp=Math.min(p.maxHp,p.hp+25);else if(l.kind==='item'){if(!p.inventory.includes(l.item)){p.inventory.push(l.item);notice(s,'LOOT · '+items[l.item].name+' · I to equip');}else {p.gold+=6;notice(s,'Duplicate gear salvaged · +6 crowns');}}else p.gold+=l.value;return false;});
+    s.loot=s.loot.filter(l=>{l.life-=dt;if(l.pickupDelay>0){l.pickupDelay=Math.max(0,l.pickupDelay-dt);return true;}const nearest=s.players.filter(p=>!p.dead&&(!l.owner||l.owner===p.id)).sort((a,b)=>dist(a,l)-dist(b,l))[0];if(nearest&&dist(nearest,l)<2.1){const d=dist(nearest,l)||1,step=Math.min(d,dt*5);l.x+=(nearest.x-l.x)/d*step;l.z+=(nearest.z-l.z)/d*step;}const p=nearest&&dist(nearest,l)<1.05?nearest:null;if(!p)return l.life>0;if(l.kind==='food')p.hp=Math.min(p.maxHp,p.hp+25);else if(l.kind==='item'){if(!p.inventory.includes(l.item)){p.inventory.push(l.item);notice(s,'LOOT · '+items[l.item].name+' · I to equip');}else {p.gold+=6;notice(s,'Duplicate gear salvaged · +6 crowns');}}else p.gold+=l.value;return false;});
     if(s.quest===0&&!s.enemies.some(e=>e.group==='orchard')){s.quest=1;s.message='Cross the mill stream. Defeat the camp guards.';notice(s,'OBJECTIVE UPDATED · The mill crossing');}
     if(s.quest===1&&!s.enemies.some(e=>e.group==='crossing')){s.quest=2;s.message='Free the three villagers. Interact at their cages.';notice(s,'Rescue the villagers · 0 / 3');}
   }
