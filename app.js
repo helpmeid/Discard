@@ -184,8 +184,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.6.4";
+const APP_VERSION = "3.6.5";
 const UPDATE_LOG = [
+  { version: "3.6.5", notes: ["Oakhaven campaign development branch: persistent twelve-mission storyline, new mission encounters, and a five-scene ending after the final battle."] },
   { version: "3.6.4", notes: ["Oakhaven bosses: unique phase transitions, mire reinforcements, tougher Iron Warden, Spymaster poison and multi-shot volleys, and Citadel fire attacks."] },
   { version: "3.6.3", notes: ["Oakhaven: visually themed regional map variants with new landmarks, encounters and chapter-specific commanders."] },
   { version: "3.6.2", notes: ["Oakhaven: five chapter-specific quest objective sequences and boss labels, more distinct Garrow guidance, multiplayer enemy scaling and expanded weapon arsenal."] },
