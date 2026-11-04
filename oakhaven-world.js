@@ -91,7 +91,7 @@
   const railStations=travelPoints; // Save/input compatibility for existing worlds.
   function waystones(m){m.stations=travelPoints.filter(s=>s.map===m.id);for(const q of m.stations){m.interactables.push({...q,kind:'station'});m.prop('waystone',q.x,q.z,{name:q.name});}if(m.id==='camp')m.line([[12,19],[14,17],[17,15]],1.1);}
   function borders(m){for(const t of m.tiles)if(t.x===0||t.z===0||t.x===m.width-1||t.z===m.depth-1)t.walk=false;const add=(x,z,rotation)=>{if(m.tile(x,z)?.type==='water')return;m.prop('borderWall',x,z,{rotation,height:m.id==='camp'?1.05:.8});};for(let x=1;x<m.width-1;x+=1.5){add(x,.65,0);add(x,m.depth-.65,0);}for(let z=1;z<m.depth-1;z+=1.5){add(.65,z,Math.PI/2);add(m.width-.65,z,Math.PI/2);}}
-  function chapterWorld(m,chapter){
+  function chapterWorld(m,chapter,mission=0){
     const themes=[
       {title:'The Ashen Road',seed:31},
       {title:'The Howling Mire',seed:43},
@@ -116,6 +116,15 @@
     if(chapter===2){for(const [x,z]of [[12,27],[21,35],[43,9],[49,25]])m.prop('ruinArch',x,z,{solid:false});}
     if(chapter===3){for(const [x,z]of [[10,29],[20,9],[40,32],[51,22]])m.prop('ruin',x,z,{solid:false,rotation:.2});}
     if(chapter===4){for(const [x,z]of [[17,8],[36,11],[46,36],[56,28]])m.prop('banner',x,z,{tone:1});}
+    if(mission>0){
+      // Mission variants alter patrols and landmarks without invalidating paths in older saves.
+      const encounter=m.encounters.find(e=>e.group=== (mission===1?'crossing':'ridge'));
+      if(encounter)encounter.units.push([chapter===2?'brute':chapter===3?'archer':'hound',mission===1?33:48,mission===1?22:31]);
+      for(const [x,z] of (mission===1?[[31,17],[38,30]]:[[47,21],[54,29]])){
+        m.prop(chapter===2?'ruinArch':chapter===4?'banner':'tent',x,z,{solid:false,rotation:mission*.4});
+      }
+      m.title+=' · '+(mission+1);
+    }
     const boss=m.encounters.find(e=>e.group==='boss');
     if(boss)boss.units=chapter===2?[['brute',56,37]]:chapter===4?[['huntsman',56,37],['soldier',53,35],['archer',59,38]]:chapter===3?[['huntsman',56,37],['hound',53,35]]:boss.units;
     if(chapter===1)m.encounters.find(e=>e.group==='orchard').units.push(['hound',14,18]);
@@ -124,7 +133,7 @@
     if(chapter===4)m.encounters.find(e=>e.group==='crossing').units.push(['brute',38,26]);
     return m;
   }
-  function build(id,chapter=0){const m=id==='forest'?chapterWorld(forest(),chapter):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
+  function build(id,chapter=0,mission=0){const m=id==='forest'?chapterWorld(forest(),chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
   function pathfind(m,sx,sz,tx,tz){
     const start=m.tile(sx,sz),goal=m.tile(tx,tz);if(!start||!goal||!m.canWalk(goal.x+.5,goal.z+.5))return[];
     const key=(x,z)=>z*m.width+x,source=key(start.x,start.z),target=key(goal.x,goal.z),cost=new Float32Array(m.width*m.depth).fill(Infinity),parent=new Int32Array(cost.length).fill(-1),open=[{k:source,x:start.x,z:start.z,f:0}],seen=new Uint8Array(cost.length);cost[source]=0;
