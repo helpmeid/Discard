@@ -336,13 +336,35 @@
     .settings-note { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
     .lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000c; cursor: zoom-out; }
     .lightbox.hidden { display: none; }
-    .games-hub { width: min(420px, 92vw); text-align: left; justify-items: stretch; }
-    .games-hub h3, .games-hub .profile-sub { text-align: center; }
-    .hub-game { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
-    .hub-icon { font-size: 28px; }
-    .hub-text { flex: 1; display: grid; }
-    .hub-text small, .hub-label { color: var(--muted, inherit); opacity: .8; font-size: 12px; }
-    .hub-transfer { display: grid; gap: 6px; justify-items: center; }
+    .profile-card.games-hub { width: min(760px, 94vw); max-height: 92vh; overflow-y: auto; box-sizing: border-box; padding: clamp(18px, 4vw, 32px); text-align: left; justify-items: stretch; gap: 20px; border-radius: 24px; }
+    .hub-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+    .hub-eyebrow { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+    .games-hub .hub-heading h3 { margin: 5px 0 8px; font-size: 36px; line-height: 1; letter-spacing: -.05em; }
+    .games-hub .hub-heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .hub-heading-mark { display: grid; place-items: center; width: 50px; height: 50px; border: 1px solid var(--line); border-radius: 16px; background: var(--field); font-size: 25px; }
+    .hub-library { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .hub-game { min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: var(--field); }
+    .hub-art { position: relative; height: 138px; overflow: hidden; isolation: isolate; }
+    .hub-art-horizon { background: radial-gradient(ellipse at 50% 72%, #7f609744, transparent 65%), radial-gradient(circle at 18% 28%, #dedcf7 1px, transparent 2px), radial-gradient(circle at 80% 22%, #dedcf7 1px, transparent 2px), radial-gradient(circle at 88% 76%, #dedcf7 1px, transparent 2px), #151323; }
+    .hub-art-horizon::before { content: ''; position: absolute; width: 180px; height: 52px; left: 50%; top: 50%; border: 9px solid #c9a9ff; border-radius: 50%; transform: translate(-50%, -40%) rotate(-18deg); box-shadow: 0 0 0 4px #725487, 0 0 24px #b18cce66; }
+    .hub-art-horizon::after { content: ''; position: absolute; width: 80px; height: 80px; left: 50%; top: 50%; border: 2px solid #d5bbeb; border-radius: 50%; transform: translate(-50%, -50%); background: #090a13; box-shadow: 0 0 16px #bb86da77; }
+    .hub-art-oakhaven { background: radial-gradient(circle at 77% 28%, #ead395 0 15px, transparent 16px), linear-gradient(160deg, #344c50, #172f32 68%); }
+    .hub-art-oakhaven::before { content: ''; position: absolute; inset: 48px 0 0; background: #213d37; clip-path: polygon(0 60%, 9% 20%, 16% 50%, 26% 0, 40% 62%, 54% 25%, 65% 80%, 80% 25%, 100% 70%, 100% 100%, 0 100%); }
+    .hub-art-oakhaven::after { content: ''; position: absolute; bottom: 0; left: 43%; width: 55px; height: 88px; background: repeating-linear-gradient(0deg, #657064 0 12px, #48594f 12px 14px); clip-path: polygon(0 0, 20% 0, 20% 12%, 40% 12%, 40% 0, 60% 0, 60% 12%, 80% 12%, 80% 0, 100% 0, 100% 100%, 0 100%); box-shadow: 18px 30px #132622; }
+    .hub-art-label { position: absolute; z-index: 1; top: 12px; left: 12px; padding: 5px 8px; border: 1px solid #ffffff26; border-radius: 6px; background: #12191dc9; color: #f6f1e8; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .hub-text { display: flex; flex: 1; flex-direction: column; gap: 9px; padding: 17px; }
+    .hub-text b { font-size: 18px; letter-spacing: -.02em; }
+    .hub-description { margin: 0; min-height: 36px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .hub-modes { display: flex; flex-wrap: wrap; gap: 5px; }
+    .hub-modes span { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; font-size: 10px; font-weight: 700; color: var(--muted); }
+    .hub-game .hub-playtime { margin-top: auto; padding-top: 3px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .hub-game .profile-btn { width: 100%; margin-top: 4px; padding: 10px; border-radius: 9px; }
+    .hub-transfer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .hub-label { color: var(--muted); font-size: 11px; }
+    .games-hub .hub-transfer .profile-actions { margin: 0; }
+    .games-hub [role="status"]:empty { display: none; }
+    #gamesToggle { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--field)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 12px; }
+    @media (max-width: 540px) { .hub-library { grid-template-columns: 1fr; } .hub-art { height: 112px; } .hub-description { min-height: 0; } }
     .profile-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #0008; }
     .profile-card { width: min(320px, 92vw); padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel, var(--field)); color: var(--ink); text-align: center; display: grid; gap: 8px; justify-items: center; }
     .profile-card .avatar { width: 72px; height: 72px; font-size: 28px; }
@@ -693,10 +715,11 @@
   <div class="theme-backdrop" id="themeBackdrop" aria-hidden="true"></div>
   <div class="profile-modal hidden" id="profileModal"><div class="profile-card" role="dialog" aria-modal="true" aria-label="Profile" id="profileCard"></div></div>
   <div class="profile-modal hidden" id="gamesHub"><div class="profile-card games-hub" role="dialog" aria-label="Games">
-    <h3>🎮 Games</h3>
-    <div class="profile-sub">Your main games. Play solo or bring a friend.</div>
-    <div class="hub-game"><div class="hub-icon">🕳️</div><div class="hub-text"><b>Event Horizon</b><small>Black hole idle game</small><small data-playtime="horizon">0h 0m played</small></div><button class="profile-btn primary" id="hubPlayHorizon" type="button">Play</button></div>
-    <div class="hub-game"><div class="hub-icon">⚔️</div><div class="hub-text"><b>Oakhaven: Ash &amp; Oath</b><small>Action RPG · vertical slice · solo / couch / online beta</small><small data-playtime="oakhaven">0h 0m played</small></div><button class="profile-btn primary" id="hubPlayOakhaven" type="button">Play</button></div>
+    <div class="hub-heading"><div><div class="hub-eyebrow">Your next adventure</div><h3>Games</h3><p>Find your world. Go alone or bring your party.</p></div><div class="hub-heading-mark" aria-hidden="true">🎮</div></div>
+    <div class="hub-library">
+      <article class="hub-game" aria-label="Event Horizon"><div class="hub-art hub-art-horizon" aria-hidden="true"><span class="hub-art-label">Cosmic idle</span></div><div class="hub-text"><b>Event Horizon</b><p class="hub-description">Start with a spark. Build a black hole that swallows the cosmos.</p><div class="hub-modes"><span>Solo</span><span>Idle</span></div><small class="hub-playtime" data-playtime="horizon">0h 0m played</small><button class="profile-btn primary" id="hubPlayHorizon" type="button" aria-label="Play Event Horizon">Play Event Horizon ↗</button></div></article>
+      <article class="hub-game" aria-label="Oakhaven: Ash and Oath"><div class="hub-art hub-art-oakhaven" aria-hidden="true"><span class="hub-art-label">Ash &amp; Oath</span></div><div class="hub-text"><b>Oakhaven</b><p class="hub-description">An oath forged in ashes. Steel yourself for the Howling Mire.</p><div class="hub-modes"><span>Solo</span><span>Couch co-op</span><span>Online beta</span></div><small class="hub-playtime" data-playtime="oakhaven">0h 0m played</small><button class="profile-btn primary" id="hubPlayOakhaven" type="button" aria-label="Play Oakhaven">Play Oakhaven ↗</button><small class="hub-label">Early playable slice</small></div></article>
+    </div>
     <div class="profile-sub" id="oakInviteStatus" role="status"></div>
     <div class="hub-transfer"><div class="hub-label">Event Horizon save data</div><div class="profile-actions"><button class="profile-btn" id="hubExportHorizon" type="button">Export save</button><button class="profile-btn" id="hubImportHorizon" type="button">Import save</button></div></div>
     <div class="profile-sub" id="hubStatus" role="status"></div>
