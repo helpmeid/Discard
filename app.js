@@ -178,14 +178,25 @@ const themePresets = [
 let mode = "signin";
 let currentUser = null;
 let snapshot = { friends: [], requests: [], chats: [], user: null };
+const gameActivity = new Map();
+let myGameActivity = '';
+window.setDiscardGameActivity = name => {
+  myGameActivity = typeof name === 'string' ? name.slice(0,48) : '';
+  if (!state) return;
+  for (const id of Object.keys(state.friends)) sendTo(id, { t:'activity', game:myGameActivity });
+  renderedKeys.friends = '';
+  refreshSnapshot();
+};
+function friendGame(id){const a=gameActivity.get(id);return a&&isOnline(id)&&Date.now()-a.at<120000?a.game:'';}
 let activeChatId = null;
 let refreshing = false;
 let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.6.7";
+const APP_VERSION = "3.6.8";
 const UPDATE_LOG = [
+  { version: "3.6.8", notes: ["Friends see when you are playing Oakhaven. Group chat members can be added directly through Add Friend buttons."] },
   { version: "3.6.7", notes: ["Oakhaven: press / to open in-game text chat, press Enter to send, and Escape to close. Online party chat uses the existing multiplayer connection."] },
   { version: "3.6.6", notes: ["Oakhaven: additional regional paths and terrain, mission landmarks, and recorded active playtime and mission completion times. No claim of 8–10 hours until human playtesting."] },
   { version: "3.6.5", notes: ["Oakhaven campaign development branch: persistent twelve-mission storyline, new mission encounters, and a five-scene ending after the final battle."] },
@@ -674,7 +685,7 @@ function snapshotLocal() {
   Object.keys(state.friends).forEach(ensureDirectChat);
   return {
     user: accountUser(),
-    friends: Object.values(state.friends).map(friend => ({ ...viewPerson(friend.id), online: isOnline(friend.id) })),
+    friends: Object.values(state.friends).map(friend => ({ ...viewPerson(friend.id), online: isOnline(friend.id), game: friendGame(friend.id) })),
     requests: state.requests.map(request => ({ id: request.id, direction: request.direction, user: request.user })),
     chats: state.chats.filter(chat => chat.isGroup || state.friends[chat.members.find(id => id !== state.me.id)]).map(chatToView)
   };
@@ -792,6 +803,7 @@ function connectAll() {
 
 function greet(id) {
   sendTo(id, { t: "hello", profile: myProfile() });
+  if(state.friends[id])sendTo(id,{t:"activity",game:myGameActivity});
   if (state.requests.some(request => request.id === id && request.direction === "outgoing")) {
     sendTo(id, { t: "friend-request", profile: myProfile() });
   }
@@ -817,7 +829,7 @@ function attach(conn) {
     } catch {}
   });
   const gone = () => {
-    if (conns.get(id)?.conn === conn) conns.delete(id);
+    if (conns.get(id)?.conn === conn){conns.delete(id);gameActivity.delete(id);}
     notify();
   };
   conn.on("close", gone);
@@ -963,6 +975,10 @@ function handleData(from, data) {
         });
       }
       return;
+    case "activity":
+      if(!state.friends[from]||typeof data.game!=='string'||data.game.length>48)return;
+      gameActivity.set(from,{game:data.game,at:Date.now()});
+      renderedKeys.friends='';refreshSnapshot();return;
     case "hello":
       if (!profile) return;
       state.people[from] = profile;
@@ -2354,7 +2370,7 @@ function openProfile(person) {
   handle.textContent = info.username && info.username !== "unknown" ? `@${info.username}` : "";
   const status = document.createElement("div");
   status.className = "profile-sub";
-  status.textContent = person.id === currentUser.id ? "This is you" : friend ? (friend.online ? "Friend · Online" : "Friend · Offline") : "Not in your friends list";
+  status.textContent = person.id === currentUser.id ? (myGameActivity?"Playing "+myGameActivity:"This is you") : friend ? (friend.game?"Friend · Playing "+friend.game:friend.online?"Friend · Online":"Friend · Offline") : "Not in your friends list";
   const real = document.createElement("div");
   real.className = "profile-sub";
   real.textContent = info.realName ? `Display name: ${info.realName}` : "";
@@ -2385,6 +2401,12 @@ function openProfile(person) {
   }
   const actions = document.createElement("div");
   actions.className = "profile-actions";
+  if (!friend && person.id !== currentUser.id) {
+    const add=document.createElement("button");
+    add.type="button";add.className="profile-btn primary";add.textContent="Add Friend";
+    add.addEventListener("click",async()=>{try{await api("/api/friends/request",{method:"POST",body:{username:person.id}});add.textContent="Request Sent";add.disabled=true;await refreshSnapshot();}catch(error){add.textContent=error.message;}});
+    actions.append(add);
+  }
   if (friend) {
     const message = document.createElement("button");
     message.type = "button";
@@ -2891,6 +2913,12 @@ function renderGroupManagement(chat) {
     label.addEventListener("click", () => openProfile(member));
     label.textContent = `${member.displayName}${member.id === currentUser.id ? " (you)" : ""}${member.id === ownerId ? " · Owner" : ""}`;
     row.append(label);
+    if(member.id!==currentUser.id&&!snapshot.friends.some(f=>f.id===member.id)){
+      const add=document.createElement("button");
+      add.type="button";add.textContent="Add Friend";add.className="profile-btn";
+      add.addEventListener("click",async()=>{try{await api("/api/friends/request",{method:"POST",body:{username:member.id}});add.textContent="Request Sent";add.disabled=true;await refreshSnapshot();}catch(error){add.title=error.message;add.textContent=error.message;}});
+      row.append(add);
+    }
     if (isOwner && member.id !== currentUser.id) {
       const actions = document.createElement("span");
       actions.className = "group-member-actions";
@@ -3055,7 +3083,8 @@ function renderFriends() {
     dot.className = `status-dot${friend.online ? " online" : ""}`;
     const label = document.createElement("span");
     label.className = "social-label";
-    label.title = friend.online ? "Online" : "Offline";
+    label.title = friend.game ? "Playing "+friend.game : friend.online ? "Online" : "Offline";
+    if(friend.game){const activity=document.createElement("small");activity.textContent=" 🎮 Playing "+friend.game;activity.style.cssText="display:block;color:#8bd7a6";name.append(activity);}
     label.classList.add("clickable");
     label.addEventListener("click", () => openProfile(friend));
     label.append(dot, name);
