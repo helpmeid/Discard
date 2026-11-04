@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.8.0";
+const APP_VERSION = "3.8.1";
 const UPDATE_LOG = [
+  { version: "3.8.1", notes: ["Oakhaven rescue and supply objectives remain visible through the mission and all three are required for completion; prevent skipping incomplete missions when returning to camp."] },
   { version: "3.8.0", notes: ["Oakhaven adds Easy, Medium, Hard and Impossible difficulty selection in world creation and camp, with enemy health, damage and speed scaling, and multiple enemies can now hit the player without normal-hit immunity blocking subsequent attacks."] },
   { version: "3.7.9", notes: ["Oakhaven quest pickups now disappear immediately after collection; enemies gain increasing health, damage and speed across the campaign."] },
   { version: "3.7.8", notes: ["Oakhaven now rebuilds scenery per mission instead of reusing cached forest meshes, and the Mire, Crags, Veil and Citadel have distinct environment palettes."] },
