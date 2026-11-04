@@ -2232,6 +2232,7 @@
     sceneActive = false;
     drag = null;
     root.classList.add("hidden");
+    window.setDiscardGameActivity?.("");
   };
 
   const keyFor = userId => `discard-event-horizon-v4-${userId || "guest"}`;
@@ -2294,6 +2295,7 @@
     if (canSave) save();
     cancelAnimationFrame(raf);
     root.classList.add("hidden");
+    window.setDiscardGameActivity?.("");
   };
   window.voidForgeTransfer = transfer;
 
@@ -2319,6 +2321,7 @@
     pulse = 0;
     feedText = "";
     root.classList.remove("hidden");
+    window.setDiscardGameActivity?.("Event Horizon");
     setTab("cosmos");
     applyStage();
     view.R = holeRadius();
