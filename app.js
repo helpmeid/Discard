@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.7.5";
+const APP_VERSION = "3.7.6";
 const UPDATE_LOG = [
+  { version: "3.7.6", notes: ["Oakhaven equipped weapons now render in distinct shapes, two-handed swords, spears, axes and maces hide shields, and guarding uses the held weapon with its own stamina cost."] },
   { version: "3.7.5", notes: ["Oakhaven now displays its loaded build version on the password screen, inventory, and HUD to diagnose stale installations; refreshed all script caches."] },
   { version: "3.7.4", notes: ["Oakhaven: fix equipment changes, double-click an inventory item to equip, show equip feedback, synchronize equipment changes online, and add unique weapon SVG icons."] },
   { version: "3.7.3", notes: ["Fix Oakhaven browser caching: bump all Oakhaven script tags; build 17 individual mission maps from fresh terrain instead of copying the Ashen Road; validate all 18 objective routes."] },
