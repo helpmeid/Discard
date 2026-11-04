@@ -21,8 +21,8 @@
     for(let z=1;z<m.depth-1;z++)for(let x=1;x<m.width-1;x++){
       const t=m.tile(x,z),n=hash(x,z,m.seed);if(t.type!=='grass'||!t.walk)continue;
       const closeRoad=[[-1,0],[1,0],[0,-1],[0,1]].some(([dx,dz])=>m.tile(x+dx,z+dz)?.type==='path');
-      if(!closeRoad&&n>.93&&m.canWalk(x+.5,z+.5,1.1)){m.prop('tree',x+.5,z+.5,{solid:true,radius:.22,scale:.8+hash(z,x)*.5,tone:Math.floor(n*91)%3});}
-      else if(n>.7){m.prop(n>.87?'flowers':'grass',x+.3+hash(z,x)*.4,z+.3+hash(x+4,z)*.4,{tone:Math.floor(hash(x,z+9)*5),count:3+Math.floor(n*4)});}
+      if(!closeRoad&&n>.98&&m.canWalk(x+.5,z+.5,1.1)){m.prop('tree',x+.5,z+.5,{solid:true,radius:.22,scale:.8+hash(z,x)*.5,tone:Math.floor(n*91)%3});}
+      else if(n>.94){m.prop(n>.87?'flowers':'grass',x+.3+hash(z,x)*.4,z+.3+hash(x+4,z)*.4,{tone:Math.floor(hash(x,z+9)*5),count:3+Math.floor(n*4)});}
       else if(n<.035&&!closeRoad)m.prop('rock',x+.5,z+.5,{solid:false,scale:.3+n*5});
     }
   }
@@ -259,7 +259,7 @@
     if(chapter===4)m.encounters.find(e=>e.group==='crossing').units.push(['brute',38,26]);
     return m;
   }
-  function build(id,chapter=0,mission=0){const m=id==='forest'?chapterWorld(forest(chapter===0&&mission===0),chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>p.kind!=='tree'||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.4));return m.index();}
+  function build(id,chapter=0,mission=0){const m=id==='forest'?chapterWorld(forest(chapter===0&&mission===0),chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>!p.solid||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.85));return m.index();}
   function pathfind(m,sx,sz,tx,tz){
     const start=m.tile(sx,sz),goal=m.tile(tx,tz);if(!start||!goal||!m.canWalk(goal.x+.5,goal.z+.5))return[];
     const key=(x,z)=>z*m.width+x,source=key(start.x,start.z),target=key(goal.x,goal.z),cost=new Float32Array(m.width*m.depth).fill(Infinity),parent=new Int32Array(cost.length).fill(-1),open=[{k:source,x:start.x,z:start.z,f:0}],seen=new Uint8Array(cost.length);cost[source]=0;
