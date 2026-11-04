@@ -259,7 +259,82 @@
     if(chapter===4)m.encounters.find(e=>e.group==='crossing').units.push(['brute',38,26]);
     return m;
   }
-  function build(id,chapter=0,mission=0){const m=id==='forest'?chapterWorld(forest(chapter===0&&mission===0),chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>!p.solid||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.85));return m.index();}
+  // Separate mission levels: authored on fresh terrain, never built by editing forest().
+  function distinctMissionWorld(chapter,mission){
+    const base=forest(false),m=new Map('forest',64,48);
+    m.seed=101+chapter*61+mission*17;
+    m.spawn={x:6.5,z:12};
+    m.encounters=base.encounters.map(g=>({group:g.group,units:g.units.map(u=>[...u])}));
+    m.interactables=base.interactables.map(q=>({...q}));
+    const biome=['Ashen Highlands','Sunken Mire','Iron Labyrinth','Shadowwood','Duke’s Stronghold'][chapter];
+    const places=['West Passage','Flooded Hollow','Broken Ridge','Forgotten Keep'];
+    m.title=biome+' · '+places[mission];
+    const rocky=chapter===2||chapter===4;
+    // Unique ground topology per mission. A fully blocked perimeter surrounds the level,
+    // with open courtyards, corridors and branches carved from a fresh tile field.
+    for(const t of m.tiles){t.type=rocky?'stone':chapter===1?'earth':'grass';t.walk=t.x>=2&&t.x<62&&t.z>=2&&t.z<46;t.height=0;}
+    const seed=chapter*41+mission*19+13;
+    const landmarks=[
+      [6,12],[17,15],[35,24],[30,27],[36,28],[41,25],[45,14],[48,33],[56,37],[58,39],[14,34],[22,8],[43,35]
+    ];
+    const jitter=(n,axis)=>((seed*(axis?7:3)+n*(axis?11:5))%15)-7;
+    const hubs=landmarks.map(([x,z],i)=>i<10?[x,z]:[Math.max(5,Math.min(58,x+jitter(i,0))),Math.max(5,Math.min(41,z+jitter(i,1)))]);
+    // Obstacle arrangement depends on both chapter and mission, and modifies real collision.
+    // Clear safe corridors and objective courtyards afterward.
+    for(let z=3;z<44;z++)for(let x=3;x<60;x++){
+      const n=hash(x,z,seed);
+      const band=Math.sin((x+seed)*(.11+mission*.037))+Math.cos((z+chapter*7)*(.13+mission*.028));
+      const t=m.tile(x,z);
+      if(n<.025+mission*.009||band>1.62+(chapter%2)*.1){
+        t.walk=false;t.type=chapter===1||chapter===3?'water':'stone';t.height=t.type==='water'?-.28:.8;
+      }
+    }
+    // Create a different connected route graph for each mission.
+    const paths=[
+      [0,1,2,6,7,8,9],
+      [0,11,1,3,4,5,2,7,8,9],
+      [0,10,3,4,5,2,6,8,9],
+      [0,1,11,6,2,4,3,5,7,8,9]
+    ];
+    const order=paths[mission];
+    const carve=(a,b,r=2)=>{const d=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let step=0;step<=d;step+=.45){const x=a[0]+(b[0]-a[0])*step/d,z=a[1]+(b[1]-a[1])*step/d;m.rect(Math.floor(x)-r+1,Math.floor(z)-r+1,r*2,r*2,{walk:true,height:0,type:rocky?'stone':'path'});}};
+    for(let i=1;i<order.length;i++)carve(hubs[order[i-1]],hubs[order[i]],2);
+    for(let i=0;i<landmarks.length;i++){const a=landmarks[i],nearest=hubs[order.reduce((best,j)=>Math.hypot(hubs[j][0]-a[0],hubs[j][1]-a[1])<Math.hypot(hubs[best][0]-a[0],hubs[best][1]-a[1])?j:best,order[0])];carve(a,nearest,2);m.rect(a[0]-2,a[1]-2,5,5,{walk:true,height:0,type:rocky?'stone':'path'});}
+    // Every encounter position gets its own traversable plaza.
+    for(const g of m.encounters)for(const [,x,z]of g.units){const a=[x,z];const nearest=hubs[order.reduce((best,j)=>Math.hypot(hubs[j][0]-x,hubs[j][1]-z)<Math.hypot(hubs[best][0]-x,hubs[best][1]-z)?j:best,order[0])];carve(a,nearest,2);m.rect(x-1,z-1,3,3,{walk:true,height:0,type:'path'});}
+    const scenery=[
+      ['house','fence','cart','well'],['tent','campfire','lantern','rock'],
+      ['ruinArch','anvil','rock','banner'],['ruin','lantern','tent','banner'],
+      ['watchtower','banner','ruinArch','ruin']
+    ][chapter];
+    for(let i=0;i<18;i++){
+      const x=5+(i*17+seed*3)%54,z=5+(i*13+seed)%35;
+      if(landmarks.some(a=>Math.hypot(a[0]-x,a[1]-z)<4))continue;
+      m.prop(scenery[i%4],x,z,{solid:false,rotation:i*.6});
+    }
+    for(const q of m.interactables.filter(q=>q.kind==='cage'))m.prop('cage',q.x,q.z,{solid:false});
+    // Personalized mission narrative / objectives and enemy leader.
+    const objectives=[
+      [['Rescue the miller','Rescue the smith','Rescue the scout'],['The orchard ledger','Lost family heirloom','Ember signal']],
+      [['Supply wagon','Marauder provisions','Explosive powder'],['Gator tracks','Infected nest','The beast’s trail'],['Trapper’s snare','Rolling-log trap','Fortress gate'],['Ancient totem','Mire heartstone','Witchlight beacon']],
+      [['Captive blacksmith','Forge shackles','Smithing supplies'],['Bridge barricade','Enemy signal fire','Bridge explosives'],['Stone bastion lock','Powder cache','Siege breach'],['Molten crucible','Forge master’s plans','Anvil of freedom']],
+      [['Lookout report','Spy signal beacon','Scout hideout'],['Antidote ingredients','Toxic vent','Alchemical formula'],['Hidden passage','Illusion mirror','Poisoned dagger stash'],['Crown sigil','Shadow portal','Spymaster’s ledger']],
+      [['City gate supplies','Siege banner','Duke’s signal flare'],['The final seal','Captive family','Obsidian war banner'],['Breached wall','Obsidian chains','Royal armory'],['Duke’s war orders','The throne seal','Father’s banner']]
+    ];
+    if(chapter||mission)m.interactables.filter(q=>q.kind==='cage').forEach((q,i)=>{q.kind='task';q.name=objectives[chapter][mission][i];});
+    // Finales vary: a huntsman appears only at selected story beats.
+    const boss=m.encounters.find(g=>g.group==='boss');
+    if(boss)boss.units=chapter===4&&mission===3?[['huntsman',56,37],['brute',53,36],['archer',58,37]]:
+      (chapter+mission)%4===0?[['huntsman',56,37]]:
+      (chapter+mission)%4===1?[['brute',56,37],['archer',53,36]]:
+      (chapter+mission)%4===2?[['soldier',56,37],['soldier',54,35],['archer',58,37]]:
+      [['brute',56,37],['hound',54,35],['hound',58,37]];
+    if(chapter===2)m.encounters.find(g=>g.group==='ridge').units.push(['brute',48,31]);
+    if(chapter===3)m.encounters.find(g=>g.group==='quarry').units.push(['archer',44,14]);
+    m.interactables.push({id:'bonus'+mission,kind:'chest',x:12+mission*7,z:8+chapter*3,name:'Hidden expedition cache'});
+    return m;
+  }
+  function build(id,chapter=0,mission=0){const m=id==='forest'?chapter===0&&mission===0?chapterWorld(forest(true),0,0):distinctMissionWorld(chapter,mission):id==='prologue'?prologue():camp();if(['camp','forest'].includes(id)){waystones(m);borders(m);}const avoid=[m.spawn,...m.interactables,...m.encounters.flatMap(e=>e.units.map(q=>({x:q[1],z:q[2]})))];m.props=m.props.filter(p=>!p.solid||!avoid.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<1.85));return m.index();}
   function pathfind(m,sx,sz,tx,tz){
     const start=m.tile(sx,sz),goal=m.tile(tx,tz);if(!start||!goal||!m.canWalk(goal.x+.5,goal.z+.5))return[];
     const key=(x,z)=>z*m.width+x,source=key(start.x,start.z),target=key(goal.x,goal.z),cost=new Float32Array(m.width*m.depth).fill(Infinity),parent=new Int32Array(cost.length).fill(-1),open=[{k:source,x:start.x,z:start.z,f:0}],seen=new Uint8Array(cost.length);cost[source]=0;
