@@ -1348,7 +1348,7 @@ function libraryGifs() {
   const seen = new Set();
   const list = [];
   const add = image => {
-    if (!image?.id || image.type !== "image/gif" || seen.has(image.id)) return;
+    if (!image?.id || !["image/gif", "image/png", "image/jpeg", "image/webp"].includes(image.type) || seen.has(image.id)) return;
     seen.add(image.id);
     list.push(image);
   };
@@ -1710,7 +1710,7 @@ async function api(path, options = {}) {
   if (method === "POST" && route === "/api/gifs") {
     if (state.gifs.length >= 100) fail("Your GIF library is full.");
     const image = sanitizeImage({ url: body.image });
-    if (!image || image.type !== "image/gif" || tenorUrlPattern.test(image.url)) fail("Images must be GIF.");
+    if (!image || !["image/gif", "image/png", "image/jpeg", "image/webp"].includes(image.type) || tenorUrlPattern.test(image.url)) fail("Choose a GIF, PNG, JPG, or WebP image.");
     state.gifs.push(image);
     touchMeta();
     return { ok: true };
@@ -1968,7 +1968,7 @@ function cleanImported(raw, official = false) {
     .filter(([id, value]) => idPattern.test(id) && id !== me.id && sanitizeNickname(value)).map(([id, value]) => [id, sanitizeNickname(value)]));
   imported.requests = (Array.isArray(meta.requests) ? meta.requests : []).filter(item => idPattern.test(item?.id) && ["incoming", "outgoing"].includes(item.direction))
     .map(item => ({ id: item.id, direction: item.direction, user: sanitizeProfile(item.user, item.id) || { id: item.id, username: "pending", displayName: "Friend", avatar: null } }));
-  imported.gifs = (Array.isArray(meta.gifs) ? meta.gifs : []).map(sanitizeImage).filter(image => image && image.type === "image/gif" && !tenorUrlPattern.test(image.url));
+  imported.gifs = (Array.isArray(meta.gifs) ? meta.gifs : []).map(sanitizeImage).filter(image => image && ["image/gif", "image/png", "image/jpeg", "image/webp"].includes(image.type) && !tenorUrlPattern.test(image.url));
   imported.favoriteGifs = (Array.isArray(meta.favoriteGifs) ? meta.favoriteGifs : []).filter(key => typeof key === "string" && key.length < 300);
   imported.tenorKey = typeof meta.tenorKey === "string" && /^[\w-]{10,80}$/.test(meta.tenorKey) ? meta.tenorKey : "";
   imported.pendingGroupDeletes = (Array.isArray(meta.pendingGroupDeletes) ? meta.pendingGroupDeletes : [])
@@ -3961,11 +3961,11 @@ document.querySelector("#gifUpload").addEventListener("change", async event => {
   event.target.value = "";
   if (!file) return;
   try {
-    if (file.type !== "image/gif") throw new Error("Choose a GIF file.");
-    if (file.size > maxImageBytes) throw new Error("GIFs must be under 3 MB.");
+    if (!["image/gif", "image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("Choose a GIF, PNG, JPG, or WebP image.");
+    if (file.size > maxImageBytes) throw new Error("Images must be under 3 MB.");
     await api("/api/gifs", { method: "POST", body: { image: await readAsDataUrl(file) } });
     setGifTab("library");
-    gifStatus.textContent = "GIF added.";
+    gifStatus.textContent = "Saved to My GIFs. Still images will not animate.";
   } catch (error) {
     gifStatus.textContent = error.message;
   }
