@@ -2,7 +2,7 @@
 
 A Discord-style chat app that is **fully peer to peer**. There is no server: download `index.html`, open it in Chrome, and chat.
 
-**Version 3.7.6**
+**Version 3.7.7**
 
 ## How to play
 
