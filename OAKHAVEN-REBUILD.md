@@ -1,3 +1,7 @@
+# Historical first 3D rebuild
+
+The active game now uses the sequel-style demo systems. See [OAKHAVEN-DEMO.md](OAKHAVEN-DEMO.md). The following records the earlier first rebuild; its loader warning was later withdrawn after correct HTML script-data parsing and bundle assembly checks.
+
 # Oakhaven: Ash & Oath — ground-up rebuild
 
 This revision replaces the active prototype with four new modules. It uses original block-built models, terrain, story and interface. Minecraft Dungeons and the user's village-road screenshot guide the isometric camera, readable combat and compact HUD; no Minecraft assets, branding or code are included.
@@ -47,7 +51,7 @@ New automated checks cover navigation through the actual movement controller, fa
 
 CPU-rasterized previews of the submitted mesh/camera were inspected for camp, road, crossing and opening shots. They are design checks, not browser screenshots. Actual browser rendering, shader compilation, sound, long-session balance, keyboard ghosting, accessibility, real two-device WebRTC play, Chromebook FPS and full loader launch remain unverified in this environment. `tests/oakhaven-rebuild-browser.html` is an isolated manual graphics fixture, not an alternative product entry point.
 
-The existing `discard-loader.html` is deliberately unchanged. Its relative-script discovery finds all four replacement modules in `index.html`; they do not rely on module imports or new remote dependencies. A separate existing issue was found in both the repository loader and the user's downloaded copy: a literal closing script tag inside its JavaScript replacement string can terminate the outer HTML script early. Fixing that file was explicitly excluded by the user; this rebuild does not claim to repair or verify that loader defect.
+The existing `discard-loader.html` is deliberately unchanged. Its relative-script discovery finds all four replacement modules in `index.html`; they do not rely on module imports or new remote dependencies. The earlier claim that a closing-script string prevented loader startup was incorrect. A simple regular expression had extracted the wrong script boundary. The unchanged loader now passes script-data boundary, real-source bundle assembly and cache-fallback checks. No loader repair was applied.
 
 ## Still planned
 
