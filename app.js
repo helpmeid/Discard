@@ -852,7 +852,7 @@ function connectAll() {
 
 function greet(id) {
   sendTo(id, { t: "hello", profile: myProfile() });
-  if(state.friends[id])sendTo(id,{t:"activity",game:myGameActivity});
+  if(state.friends[id]) { sendTo(id,{t:"activity",game:myGameActivity}); sendTo(id,{t:"friend-accept",profile:myProfile()}); }
   if (state.requests.some(request => request.id === id && request.direction === "outgoing")) {
     deliverFriendRequest(id, true);
   }
