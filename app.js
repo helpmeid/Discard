@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.8.7";
+const APP_VERSION = "3.8.8";
 const UPDATE_LOG = [
+  { version: "3.8.8", notes: ["Friend requests show pending or confirmed delivery, retry automatically on reconnection, offer manual retry and clarify offline connection failures."] },
   { version: "3.8.7", notes: ["Sketch & Guess has much larger word pools and avoids repeating drawing prompts across rounds and recent games."] },
   { version: "3.8.6", notes: ["Oakhaven online parties now support up to four heroes, with invitations, ready checks, synchronized combat, and party chat."] },
   { version: "3.8.5", notes: ["Oakhaven party chat stays visible when you click back into the game, letting you move and fight while reading messages; click the message input to type, Esc to unfocus, or × to hide chat."] },
@@ -722,7 +723,7 @@ function snapshotLocal() {
   return {
     user: accountUser(),
     friends: Object.values(state.friends).map(friend => ({ ...viewPerson(friend.id), online: isOnline(friend.id), game: friendGame(friend.id) })),
-    requests: state.requests.map(request => ({ id: request.id, direction: request.direction, user: request.user })),
+    requests: state.requests.map(request => ({ id: request.id, direction: request.direction, user: request.user, delivered: !!request.delivered })),
     chats: state.chats.filter(chat => chat.isGroup || state.friends[chat.members.find(id => id !== state.me.id)]).map(chatToView)
   };
 }
@@ -735,6 +736,18 @@ function accountUser() {
 // ---------- peer-to-peer connections ----------
 const conns = new Map();
 const lastAttempt = new Map();
+const requestLastSend = new Map();
+const REQUEST_RETRY_MS = 12000;
+function requestStatus(request) { return request.delivered ? "Delivered · waiting for acceptance" : "Pending delivery · waiting for a connection"; }
+function deliverFriendRequest(id, force = false) {
+  const request = state?.requests.find(item => item.id === id && item.direction === "outgoing");
+  if (!request || request.delivered) return false;
+  const now = Date.now();
+  if (!force && now - (requestLastSend.get(id) || 0) < REQUEST_RETRY_MS) return false;
+  requestLastSend.set(id, now);
+  connectTo(id);
+  return sendTo(id, { t: "friend-request", profile: myProfile() });
+}
 let peer = null;
 let peerBlocked = false;
 const onlineWindow = 35000;
@@ -801,7 +814,7 @@ function startPeer() {
     window.setTimeout(() => { if (peer === current && !current.destroyed) try { current.reconnect(); } catch {} }, 3000);
   });
   current.on("error", error => {
-    if (error.type === "peer-unavailable") return;
+    if (error.type === "peer-unavailable") { setNet("Friend unavailable or offline. Pending requests will retry.", !!peer?.open); return; }
     if (error.type === "unavailable-id") {
       setNet("This profile looks open somewhere else. Retrying...", false);
       restart(15000);
@@ -841,7 +854,7 @@ function greet(id) {
   sendTo(id, { t: "hello", profile: myProfile() });
   if(state.friends[id])sendTo(id,{t:"activity",game:myGameActivity});
   if (state.requests.some(request => request.id === id && request.direction === "outgoing")) {
-    sendTo(id, { t: "friend-request", profile: myProfile() });
+    deliverFriendRequest(id, true);
   }
   flushOutbox(id);
   notify();
@@ -1024,6 +1037,8 @@ function handleData(from, data) {
       break;
     case "friend-request":
       if (!profile) return;
+      // Acknowledge receipt even if this request is already in the inbox.
+      sendTo(from, { t: "friend-request-received" });
       if (isOfficialSelf() && !state.friends[from] && Object.keys(state.friends).length < 5000) {
         addFriend(from, profile);
         sendTo(from, { t: "friend-accept", profile: myProfile() });
@@ -1040,6 +1055,11 @@ function handleData(from, data) {
         touchMeta();
       }
       break;
+    case "friend-request-received": {
+      const outgoing = state.requests.find(r => r.id === from && r.direction === "outgoing");
+      if (outgoing && !outgoing.delivered) { outgoing.delivered = true; touchMeta(); notify(); }
+      break;
+    }
     case "friend-accept":
       if (profile && state.requests.some(request => request.id === from && request.direction === "outgoing")) addFriend(from, profile);
       break;
@@ -1368,6 +1388,7 @@ window.setInterval(() => {
   if (!state) return;
   conns.forEach((entry, id) => sendTo(id, { t: "ping" }));
   connectAll();
+  state.requests.filter(r => r.direction === "outgoing" && !r.delivered).forEach(r => deliverFriendRequest(r.id));
   enforceStorageLimit();
 }, 10000);
 
@@ -1547,10 +1568,19 @@ async function api(path, options = {}) {
       connectTo(code);
       return { ok: true };
     }
-    state.requests.push({ id: code, direction: "outgoing", user: code === OFFICIAL_ID ? officialProfile : { id: code, username: "pending", displayName: "Waiting for friend to come online", avatar: null } });
+    state.requests.push({ id: code, direction: "outgoing", delivered: false, user: code === OFFICIAL_ID ? officialProfile : { id: code, username: "pending", displayName: "Waiting for friend to come online", avatar: null } });
     touchMeta();
-    connectTo(code);
-    return { ok: true };
+    deliverFriendRequest(code, true);
+    return { ok: true, status: "pending" };
+  }
+
+  if (method === "POST" && route === "/api/friends/retry") {
+    const code = typeof body.requestId === "string" ? body.requestId : "";
+    const request = state.requests.find(r => r.id === code && r.direction === "outgoing");
+    if (!request) fail("This request is no longer pending.");
+    requestLastSend.delete(code);
+    const sent = deliverFriendRequest(code, true);
+    return { ok: true, connected: sent, message: sent ? "Request resent. Waiting for delivery confirmation." : "Request queued. Your friend must be online and reachable for delivery." };
   }
 
   if (method === "POST" && route === "/api/friends/respond") {
@@ -2545,7 +2575,7 @@ function renderChatList() {
     title.textContent = name;
     const preview = document.createElement("span");
     preview.className = "chat-preview";
-    preview.textContent = "Pending - waiting for them to come online";
+    preview.textContent = requestStatus(request);
     summary.append(title, preview);
     const cancel = document.createElement("button");
     cancel.type = "button";
@@ -3087,14 +3117,19 @@ function renderFriends() {
     outgoing.forEach(request => {
       const row = document.createElement("div");
       row.className = "social-item social-name";
-      row.textContent = `Waiting for ${request.user.displayName} `;
+      row.textContent = `${request.user.displayName} · ${requestStatus(request)} `;
       row.append(handleSpan(request.user.username));
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.textContent = "Cancel";
       cancel.setAttribute("aria-label", `Cancel friend request to ${request.user.displayName}`);
       cancel.addEventListener("click", () => cancelFriendRequest(request.id));
-      row.append(cancel);
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Retry";
+      retry.disabled = !!request.delivered;
+      retry.addEventListener("click", async () => { try { const result = await api("/api/friends/retry", { method: "POST", body: { requestId: request.id } }); friendMessage.textContent = result.message; await refreshSnapshot(); } catch (error) { friendMessage.textContent = error.message; } });
+      row.append(retry, cancel);
       requestList.append(row);
     });
   }
@@ -3628,7 +3663,7 @@ friendForm.addEventListener("submit", async event => {
   try {
     await api("/api/friends/request", { method: "POST", body: { username: friendUsername.value.trim() } });
     friendUsername.value = "";
-    friendMessage.textContent = "Friend request sent.";
+    friendMessage.textContent = "Friend request saved. Pending delivery until your friend connects. Discard will retry automatically.";
     await refreshSnapshot();
   } catch (error) {
     friendMessage.textContent = error.message;
