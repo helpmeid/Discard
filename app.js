@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.8.8";
+const APP_VERSION = "3.8.9";
 const UPDATE_LOG = [
+  { version: "3.8.9", notes: ["New Games-tab title: Dead Zone, a top-down multiplayer zombie survival shooter with wave combat, co-op invitations, and shared scores."] },
   { version: "3.8.8", notes: ["Friend requests show pending or confirmed delivery, retry automatically on reconnection, offer manual retry and clarify offline connection failures."] },
   { version: "3.8.7", notes: ["Sketch & Guess has much larger word pools and avoids repeating drawing prompts across rounds and recent games."] },
   { version: "3.8.6", notes: ["Oakhaven online parties now support up to four heroes, with invitations, ready checks, synchronized combat, and party chat."] },
@@ -987,6 +988,7 @@ function handleData(from, data) {
   if (entry) entry.lastSeen = Date.now();
   if (!data || typeof data !== "object" || typeof data.t !== "string") return;
   if (!officialTrusted(from) && data.t !== "proof") return;
+  if (data.t.startsWith("dz-")) { window.deadZoneHandle?.(from, data); return; }
   if (data.t.startsWith("oak-")) {
     window.oakhavenHandle?.(from, data);
     return;
@@ -1316,7 +1318,7 @@ document.addEventListener("visibilitychange", () => sendReadReceipts(state?.chat
 function showMessageNotification(chat, from, text, image, file) {
   if (from === state.me.id || !state.me.preferences?.notifications) return;
   if (isMuted(chat.id) || isMuted(from)) return;
-  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot", "#oakRoot"].some(selector => {
+  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot", "#oakRoot", "#deadZoneRoot"].some(selector => {
     const panel = document.querySelector(selector);
     return panel && !panel.classList.contains("hidden");
   });
@@ -1893,6 +1895,7 @@ async function signOutForTakeover() {
   // The black-hole game should not save old progress over a newer session.
   window.closeVoidForgeForTakeover?.(ownsAccountSession());
   window.closeOakhaven?.();
+  window.closeDeadZone?.();
   if (typeof endGameLocal === "function") endGameLocal();
   if (typeof partyEndLocal === "function") partyEndLocal();
   if (typeof unoEndLocal === "function") unoEndLocal();
@@ -3948,6 +3951,7 @@ document.querySelector("#gamesToggle").addEventListener("click", () => setGamesH
 document.querySelector("#hubClose").addEventListener("click", () => setGamesHub(false));
 gamesHub.addEventListener("click", event => { if (event.target === gamesHub) setGamesHub(false); });
 document.addEventListener("keydown", event => { if (event.key === "Escape") setGamesHub(false); });
+document.querySelector("#hubPlayDeadZone").addEventListener("click", () => { setGamesHub(false); window.openDeadZone?.(); });
 document.querySelector("#hubPlayHorizon").addEventListener("click", () => {
   setGamesHub(false);
   window.openVoidForge(currentUser?.id);
