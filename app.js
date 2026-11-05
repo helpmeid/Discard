@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.9.6";
+const APP_VERSION = "3.9.7";
 const UPDATE_LOG = [
+  { version: "3.9.7", notes: ["Dead Zone: primary and secondary weapon slots, full-screen inventory, separate bat/axe/gun visuals, and staged zombie doorway navigation."] },
   { version: "3.9.6", notes: ["Dead Zone zombies now route around house exteriors to doorways and continue inside after breaking or opening doors."] },
   { version: "3.9.5", notes: ["Dead Zone now requires looted wooden boards for barricades and features a redesigned survival HUD, gear grid, inventory, and supply counts."] },
   { version: "3.9.4", notes: ["Dead Zone: fixed door traversal and house wall collisions, full door health bars, stronger barricades with changing colors."] },
