@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.9.3";
+const APP_VERSION = "3.9.4";
 const UPDATE_LOG = [
+  { version: "3.9.4", notes: ["Dead Zone: fixed door traversal and house wall collisions, full door health bars, stronger barricades with changing colors."] },
   { version: "3.9.3", notes: ["Dead Zone adds grass and roads, improved house wall collision, interactive doors, barricades, and zombies attacking closed doors to break in."] },
   { version: "3.9.2", notes: ["Dead Zone visual overhaul: five house variants and furnished interiors, zombie health bars, mouse-facing survivors, Care Mints healing, and chest interaction prompts."] },
   { version: "3.9.1", notes: ["Dead Zone game-over screen fixes: Play Again and Leave remain clickable and guest synchronization no longer hides the menu."] },
