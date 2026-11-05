@@ -44,24 +44,23 @@ for(const z of w.zombies){if(z.hp<=0)continue;
 const living=w.players.filter(p=>p.hp>0).sort((a,b)=>Math.hypot(a.x-z.x,a.y-z.y)-Math.hypot(b.x-z.x,b.y-z.y));if(!living.length){w.ended=true;break;}
 const p=living[0],targetHouse=houseAt(p.x,p.y),zHouse=houseAt(z.x,z.y);let tx=p.x,ty=p.y,door=null;
 z.attack=Math.max(0,z.attack-dt);
-if(targetHouse&&targetHouse!==zHouse){
- door=targetHouse;
- const h=door, outsideY=h.doorY+40, insideY=h.doorY-45;
- // Route around the outside of a house instead of steering into its exterior walls.
- // Keep going toward the interior waypoint until the zombie is actually inside.
- if(z.y<h.y+h.h-15 && (z.x<h.x-20||z.x>h.x+h.w+20)){
-   tx=z.x<h.x+h.w/2?h.x-37:h.x+h.w+37;ty=outsideY;
- }else if(z.y<h.y-22 || (z.y<h.doorY-30&&Math.abs(z.x-h.doorX)>18)){
-   tx=z.x<h.doorX?h.x-37:h.x+h.w+37;ty=outsideY;
- }else if(z.y>=h.doorY+25 && Math.abs(z.x-h.doorX)>12){
-   tx=h.doorX;ty=outsideY;
+if(zHouse&&zHouse!==targetHouse){
+ // Escape the current building through its south doorway before changing targets.
+ door=zHouse;const h=zHouse;
+ if(Math.abs(z.x-h.doorX)>10){tx=h.doorX;ty=z.y;}
+ else{tx=h.doorX;ty=h.doorY+52;}
+}else if(targetHouse&&targetHouse!==zHouse){
+ // Approach houses in stages. Diagonal steering into an exterior wall caused zombies to stick.
+ door=targetHouse;const h=targetHouse,sideX=z.x<h.doorX?h.x-42:h.x+h.w+42,stagingY=h.doorY+55;
+ if(z.y<h.doorY+28){
+   // First get outside the nearest side wall, then travel down past the bottom wall.
+   if(z.x>h.x-35&&z.x<h.x+h.w+35){tx=sideX;ty=z.y;}
+   else{tx=z.x;ty=stagingY;}
+ }else if(Math.abs(z.x-h.doorX)>10){
+   tx=h.doorX;ty=z.y;
  }else{
-   tx=h.doorX;ty=insideY;
+   tx=h.doorX;ty=h.doorY-56;
  }
-}else if(zHouse&&!targetHouse){
- door=zHouse;const h=door;
- if(Math.abs(z.x-h.doorX)>12){tx=h.doorX;ty=h.doorY-43;}
- else{tx=h.doorX;ty=h.doorY+46;}
 }
 if(door&&!door.doorOpen&&door.doorHp>0 && Math.abs(z.x-door.doorX)<39 && Math.abs(z.y-door.doorY)<46){
  if(z.attack<=0){door.doorHp=Math.max(0,door.doorHp-(12+w.wave*2));z.attack=.8;if(door.doorHp<=0){door.doorOpen=true;door.boards=0;w.notice='Zombies broke down a door!';}}
