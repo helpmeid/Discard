@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "3.9.0";
+const APP_VERSION = "3.9.1";
 const UPDATE_LOG = [
+  { version: "3.9.1", notes: ["Dead Zone game-over screen fixes: Play Again and Leave remain clickable and guest synchronization no longer hides the menu."] },
   { version: "3.9.0", notes: ["Dead Zone: a large scrolling world with enterable houses, lootable chests, smoother movement, starter spiked bat, weapons, inventory, ammo, and protective armor."] },
   { version: "3.8.9", notes: ["New Games-tab title: Dead Zone, a top-down multiplayer zombie survival shooter with wave combat, co-op invitations, and shared scores."] },
   { version: "3.8.8", notes: ["Friend requests show pending or confirmed delivery, retry automatically on reconnection, offer manual retry and clarify offline connection failures."] },
