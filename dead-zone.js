@@ -39,7 +39,36 @@ if(weapon.range<100){p.swing=.2;for(const z of w.zombies){const dist=Math.hypot(
 else if(p.ammo>0){p.ammo--;const spread=p.weapon==='shotgun'?[-.2,0,.2]:[0];for(const diff of spread)w.shots.push({x:p.x,y:p.y,vx:Math.cos(angle+diff)*730,vy:Math.sin(angle+diff)*730,life:weapon.range/730,damage:weapon.damage,owner:p.id});}else w.notice='Out of ammo — use your melee weapon';}}
 if(w.between>0){w.between-=dt;if(w.between<=0){w.wave++;w.remaining=5+w.wave*4;w.spawned=0;}return;}
 if(w.remaining>0){w.spawned+=dt*(1.3+w.wave*.25);while(w.spawned>=1&&w.remaining>0&&w.zombies.length<65){w.zombies.push(zombieSpawn());w.spawned--;w.remaining--;}}
-for(const z of w.zombies){if(z.hp<=0)continue;const living=w.players.filter(p=>p.hp>0).sort((a,b)=>Math.hypot(a.x-z.x,a.y-z.y)-Math.hypot(b.x-z.x,b.y-z.y));if(!living.length){w.ended=true;break;}const p=living[0];let tx=p.x,ty=p.y;const targetHouse=houseAt(p.x,p.y),zHouse=houseAt(z.x,z.y);if(targetHouse&&targetHouse!==zHouse){tx=targetHouse.doorX;ty=targetHouse.doorY+ (z.y>=targetHouse.doorY?31:-31);}else if(!targetHouse&&zHouse){tx=zHouse.doorX;ty=zHouse.doorY+ (z.y>=zHouse.doorY?-31:31);}const door=targetHouse&&targetHouse!==zHouse?targetHouse:zHouse&&!targetHouse?zHouse:null;if(door&&Math.abs(z.x-door.doorX)<30&&Math.abs(z.y-door.doorY)<45&&(door.doorOpen||door.doorHp<=0)){tx=door.doorX;ty=z.y>door.doorY?door.doorY-55:door.doorY+55;}z.attack=Math.max(0,z.attack-dt);if(door&&!door.doorOpen&&door.doorHp>0&&Math.hypot(z.x-door.doorX,z.y-door.doorY)<47){if(z.attack<=0){door.doorHp=Math.max(0,door.doorHp-(12+w.wave*2));z.attack=.8;if(door.doorHp<=0){door.doorOpen=true;door.boards=0;w.notice='Zombies broke down a door!';}}continue;}let dx=tx-z.x,dy=ty-z.y,l=Math.hypot(dx,dy)||1;move(z,dx/l*z.speed*dt,dy/l*z.speed*dt,12);const dist=Math.hypot(p.x-z.x,p.y-z.y);if(dist<25&&z.attack<=0&&p.invuln<=0){p.hp=Math.max(0,p.hp-Math.ceil(16*(1-(itemDefs[p.armor]?.defense||0))));p.invuln=.4;z.attack=.65;}}
+for(const z of w.zombies){if(z.hp<=0)continue;
+const living=w.players.filter(p=>p.hp>0).sort((a,b)=>Math.hypot(a.x-z.x,a.y-z.y)-Math.hypot(b.x-z.x,b.y-z.y));if(!living.length){w.ended=true;break;}
+const p=living[0],targetHouse=houseAt(p.x,p.y),zHouse=houseAt(z.x,z.y);let tx=p.x,ty=p.y,door=null;
+z.attack=Math.max(0,z.attack-dt);
+if(targetHouse&&targetHouse!==zHouse){
+ door=targetHouse;
+ const h=door, outsideY=h.doorY+40, insideY=h.doorY-45;
+ // Route around the outside of a house instead of steering into its exterior walls.
+ // Keep going toward the interior waypoint until the zombie is actually inside.
+ if(z.y<h.y+h.h-15 && (z.x<h.x-20||z.x>h.x+h.w+20)){
+   tx=z.x<h.x+h.w/2?h.x-37:h.x+h.w+37;ty=outsideY;
+ }else if(z.y<h.y-22 || (z.y<h.doorY-30&&Math.abs(z.x-h.doorX)>18)){
+   tx=z.x<h.doorX?h.x-37:h.x+h.w+37;ty=outsideY;
+ }else if(z.y>=h.doorY+25 && Math.abs(z.x-h.doorX)>12){
+   tx=h.doorX;ty=outsideY;
+ }else{
+   tx=h.doorX;ty=insideY;
+ }
+}else if(zHouse&&!targetHouse){
+ door=zHouse;const h=door;
+ if(Math.abs(z.x-h.doorX)>12){tx=h.doorX;ty=h.doorY-43;}
+ else{tx=h.doorX;ty=h.doorY+46;}
+}
+if(door&&!door.doorOpen&&door.doorHp>0 && Math.abs(z.x-door.doorX)<39 && Math.abs(z.y-door.doorY)<46){
+ if(z.attack<=0){door.doorHp=Math.max(0,door.doorHp-(12+w.wave*2));z.attack=.8;if(door.doorHp<=0){door.doorOpen=true;door.boards=0;w.notice='Zombies broke down a door!';}}
+ continue;
+}
+const dx=tx-z.x,dy=ty-z.y,l=Math.hypot(dx,dy)||1;move(z,dx/l*z.speed*dt,dy/l*z.speed*dt,12);
+if(Math.hypot(p.x-z.x,p.y-z.y)<25&&z.attack<=0&&p.invuln<=0){p.hp=Math.max(0,p.hp-Math.ceil(16*(1-(itemDefs[p.armor]?.defense||0))));p.invuln=.4;z.attack=.65;}
+}
 for(const shot of w.shots){shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.life-=dt;if(solid(shot.x,shot.y,3)){shot.life=0;continue;}for(const z of w.zombies)if(z.hp>0&&Math.hypot(z.x-shot.x,z.y-shot.y)<16){z.hp-=shot.damage;shot.life=0;if(z.hp<=0){w.score+=10;const p=w.players.find(p=>p.id===shot.owner);if(p)p.kills++;}break;}}
 w.shots=w.shots.filter(b=>b.life>0);w.zombies=w.zombies.filter(z=>z.hp>0);if(!w.remaining&&!w.zombies.length){w.between=6;for(const p of w.players)p.hp=Math.min(100,p.hp+15);}}
 function showInventory(){if(!root)return;if(!inventoryPanel){inventoryPanel=document.createElement('div');inventoryPanel.className='dz-inventory';root.querySelector('div').append(inventoryPanel);}inventoryPanel.style.display=inventoryOpen?'block':'none';if(!inventoryOpen)return;inventoryPanel.replaceChildren();const p=world?.players.find(p=>p.id===who());if(!p)return;
