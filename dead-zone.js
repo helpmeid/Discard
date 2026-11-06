@@ -69,8 +69,13 @@ else if(p.ammo>0){p.ammo--;p.flash=.14;const muzzleX=p.x+Math.cos(angle)*46-Math
 if(w.between>0){w.between-=dt;if(w.between<=0){w.wave++;w.remaining=Math.ceil((5+w.wave*4)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count);w.spawned=0;if(w.wave%10===0){w.zombies.push(zombieSpawn(true));w.notice='☠ BOSS HORDE · THE TITAN HAS ARRIVED!';}if(w.wave>=2)spawnDrop();}}
 if(w.remaining>0&&w.between<=0){w.spawned+=dt*(1.3+w.wave*.25)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count;while(w.spawned>=1&&w.remaining>0&&w.zombies.length<65){w.zombies.push(zombieSpawn());w.spawned--;w.remaining--;if(w.wave>=4&&w.remaining===Math.floor((5+w.wave*4)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count/2))spawnDrop();}}
 for(const z of w.zombies){if(z.hp<=0)continue;if(z.kvx||z.kvy){move(z,(z.kvx||0)*dt,(z.kvy||0)*dt,11);z.kvx*=Math.max(0,1-dt*12);z.kvy*=Math.max(0,1-dt*12);}
-const living=w.players.filter(p=>p.hp>0).sort((a,b)=>Math.hypot(a.x-z.x,a.y-z.y)-Math.hypot(b.x-z.x,b.y-z.y));if(!living.length){w.ended=true;break;}
-const down=w.players.filter(q=>q.hp<=0).sort((a,b)=>Math.hypot(a.x-z.x,a.y-z.y)-Math.hypot(b.x-z.x,b.y-z.y))[0];const corpse=down&&Math.hypot(down.x-z.x,down.y-z.y)<220?down:null;const p=corpse||living[0],targetHouse=houseAt(p.x,p.y),zHouse=houseAt(z.x,z.y);let tx=p.x,ty=p.y,door=null;if(corpse){const phase=(w.time||0)*1.4+(z.netId||0)*1.73;tx=corpse.x+Math.cos(phase)*43;ty=corpse.y+Math.sin(phase)*30;}
+const living=w.players.filter(p=>p.hp>0);if(!living.length){w.ended=true;break;}
+// Zombies retain targets until another survivor is significantly more attractive.
+// This prevents flickering between teammates, while runners actively hunt the closest one.
+let best=null,bestScore=Infinity;for(const candidate of living){const dist=Math.hypot(candidate.x-z.x,candidate.y-z.y);const same=candidate.id===z.targetId;const score=dist*(same?.72:1)+(houseAt(candidate.x,candidate.y)&&!houseAt(z.x,z.y)?65:0);if(score<bestScore){best=candidate;bestScore=score;}}
+const p=best;z.targetId=p.id;const targetHouse=houseAt(p.x,p.y),zHouse=houseAt(z.x,z.y);let tx=p.x,ty=p.y,door=null;
+// Spread the horde around exposed survivors rather than stacking on one exact pixel.
+if(!targetHouse&&!zHouse&&Math.hypot(p.x-z.x,p.y-z.y)>55){const flank=(z.netId%7-3)*.18;const angle=Math.atan2(p.y-z.y,p.x-z.x)+flank;tx=p.x-Math.cos(angle)*16;ty=p.y-Math.sin(angle)*16;}
 z.hit=Math.max(0,(z.hit||0)-dt);z.attack=Math.max(0,z.attack-dt);
 if(zHouse&&zHouse!==targetHouse){door=zHouse;tx=door.doorX;ty=door.doorY+48;if(Math.abs(z.x-door.doorX)<30&&z.y<door.doorY-8){tx=door.doorX;ty=door.doorY+65;}}
 else if(targetHouse&&targetHouse!==zHouse){door=targetHouse;const h=door,outerY=h.doorY+55;if(z.navHouse!==h.doorX+':'+h.doorY){z.navHouse=h.doorX+':'+h.doorY;z.navStage=0;z.navSide=z.x<h.doorX?h.x-46:h.x+h.w+46;}if(z.navStage===0){tx=z.navSide;ty=z.y;if(Math.abs(z.x-z.navSide)<9)z.navStage=1;}if(z.navStage===1){tx=z.navSide;ty=outerY;if(Math.abs(z.y-outerY)<10)z.navStage=2;}if(z.navStage===2){tx=h.doorX;ty=outerY;if(Math.abs(z.x-h.doorX)<9)z.navStage=3;}if(z.navStage===3){tx=h.doorX;ty=h.doorY-55;}}
@@ -79,14 +84,45 @@ if(door&&!door.doorOpen&&door.doorHp>0 && Math.abs(z.x-door.doorX)<39 && Math.ab
  if(z.attack<=0){door.doorHp=Math.max(0,door.doorHp-(12+w.wave*2));z.attack=.8;if(door.doorHp<=0){door.doorOpen=true;door.boards=0;w.notice='Zombies broke down a door!';}}
  continue;
 }
-const oldX=z.x,oldY=z.y,dx=tx-z.x,dy=ty-z.y,l=Math.hypot(dx,dy)||1;move(z,dx/l*z.speed*dt,dy/l*z.speed*dt,11);
+const oldX=z.x,oldY=z.y;
+let goalX=tx,goalY=ty;
+if((z.avoidTime||0)>0){z.avoidTime-=dt;if(Math.hypot(z.x-(z.avoidX||0),z.y-(z.avoidY||0))>13){goalX=z.avoidX;goalY=z.avoidY;}else z.avoidTime=0;}
+let dx=goalX-z.x,dy=goalY-z.y,l=Math.hypot(dx,dy)||1;
+let dirX=dx/l,dirY=dy/l;
+// Look ahead and steer around cars, house corners and other narrow obstacles.
+// Test multiple short-range headings; score each for clear movement, forward
+// progress and how much steering it requires. Avoid expensive full-map scans.
+const probe=Math.min(58,Math.max(28,z.speed*.28));const directBlocked=solid(z.x+dirX*probe,z.y+dirY*probe,11);
+if(directBlocked||((z.stuck||0)>.24)){let chosen=null,score=-Infinity;
+const base=Math.atan2(dirY,dirX);
+for(const offset of [0,.28,-.28,.57,-.57,.95,-.95,1.4,-1.4,2.1,-2.1,Math.PI]){
+const angle=base+offset,ux=Math.cos(angle),uy=Math.sin(angle);
+const near=!solid(z.x+ux*24,z.y+uy*24,11),far=!solid(z.x+ux*probe,z.y+uy*probe,11);
+if(!near)continue;
+const progress=(tx-z.x)*ux+(ty-z.y)*uy;
+const value=(far?110:0)+progress*.13-Math.abs(offset)*12+(offset===z.lastSteer?16:0);
+if(value>score){score=value;chosen={x:ux,y:uy,offset};}}
+if(chosen){dirX=chosen.x;dirY=chosen.y;z.lastSteer=chosen.offset;}
+}
+move(z,dirX*z.speed*dt,dirY*z.speed*dt,11);
 const moved=Math.hypot(z.x-oldX,z.y-oldY);
-if(l>16&&moved<Math.min(1,z.speed*dt*.20)){z.stuck=(z.stuck||0)+dt;}else z.stuck=Math.max(0,(z.stuck||0)-dt*2);
-if(z.stuck>.45){z.stuck=0;z.navStage=0;const h=zHouse||targetHouse;const goal=Math.atan2(ty-z.y,tx-z.x);let best=null,bestScore=Infinity;
-for(const offset of [Math.PI/2,-Math.PI/2,Math.PI/3,-Math.PI/3,Math.PI]){const angle=goal+offset;const px=z.x+Math.cos(angle)*38,py=z.y+Math.sin(angle)*38;if(solid(px,py,11))continue;const score=Math.hypot(tx-px,ty-py)+((z.avoidAngle||0)===offset?18:0);if(score<bestScore){bestScore=score;best={x:px,y:py,offset};}}
-if(h){const top=h.doorY-45,bottom=h.doorY+50;const candidates=zHouse?[{x:h.doorX,y:top},{x:h.doorX,y:bottom}]:[{x:h.x-37,y:bottom},{x:h.x+h.w+37,y:bottom},{x:h.doorX,y:bottom}];for(const point of candidates){if(solid(point.x,point.y,11))continue;const score=Math.hypot(point.x-z.x,point.y-z.y)+Math.hypot(point.x-tx,point.y-ty)*.45;if(score<bestScore){bestScore=score;best={...point,offset:0};}}}
-if(best){z.avoidX=best.x;z.avoidY=best.y;z.avoidAngle=best.offset;z.avoidTime=1.3;}}
-if((z.avoidTime||0)>0){z.avoidTime-=dt;if(Math.hypot(z.x-z.avoidX,z.y-z.avoidY)>9){const adx=z.avoidX-z.x,ady=z.avoidY-z.y,al=Math.hypot(adx,ady)||1;move(z,adx/al*z.speed*dt,ady/al*z.speed*dt,11);}else z.avoidTime=0;}
+if(l>22&&moved<Math.min(1.3,z.speed*dt*.33))z.stuck=(z.stuck||0)+dt;
+else z.stuck=Math.max(0,(z.stuck||0)-dt*2);
+// When truly stuck, select a reachable waypoint and follow it long enough
+// to actually round the obstacle instead of resetting the route every frame.
+if(z.stuck>.7){z.stuck=0;let bestPoint=null,bestValue=Infinity;
+const obstacles=[zHouse,targetHouse].filter(Boolean);
+for(const h of obstacles){for(const point of [{x:h.x-38,y:h.y-38},{x:h.x+h.w+38,y:h.y-38},{x:h.x-38,y:h.doorY+43},{x:h.x+h.w+38,y:h.doorY+43},{x:h.doorX,y:h.doorY+47},{x:h.doorX,y:h.doorY-42}]){
+if(solid(point.x,point.y,11))continue;
+const travel=Math.hypot(point.x-z.x,point.y-z.y);
+if(travel<25)continue;
+const val=travel+Math.hypot(tx-point.x,ty-point.y)*.7;
+if(val<bestValue){bestValue=val;bestPoint=point;}}}
+for(let a=0;a<12;a++){const angle=a*Math.PI/6,point={x:z.x+Math.cos(angle)*78,y:z.y+Math.sin(angle)*78};if(solid(point.x,point.y,11))continue;const val=Math.hypot(tx-point.x,ty-point.y)+65;if(val<bestValue){bestValue=val;bestPoint=point;}}
+if(bestPoint){z.avoidX=bestPoint.x;z.avoidY=bestPoint.y;z.avoidTime=1.8;}
+}
+// At doorway, chip away at a barricade even if the approach angle is imperfect.
+if(door&&!door.doorOpen&&door.doorHp>0&&Math.abs(z.x-door.doorX)<52&&Math.abs(z.y-door.doorY)<55&&z.attack<=0){door.doorHp=Math.max(0,door.doorHp-(12+w.wave*2));z.attack=.8;if(door.doorHp<=0){door.doorOpen=true;door.boards=0;w.notice='Zombies broke down a door!';}}
 
 if(p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<25&&z.attack<=0&&p.invuln<=0){p.hp=Math.max(0,p.hp-Math.ceil(16*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-(itemDefs[p.armor]?.defense||0))));burst(p.x,p.y,'#d15a48',12);p.invuln=.4;z.attack=.65;}
 }
