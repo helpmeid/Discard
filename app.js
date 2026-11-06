@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.0.5";
+const APP_VERSION = "4.0.6";
 const UPDATE_LOG = [
+  { version: "4.0.6", notes: ["Improved online connection status indicators."] },
   { version: "4.0.5", notes: ["Version 4.0.5 release."] },
   { version: "4.0.4", notes: ["Dead Zone: chainsaw, five weapon levels, and zombies guarding downed survivors."] },
   { version: "4.0.3", notes: ["Dead Zone: version 4.0.3 release."] },
