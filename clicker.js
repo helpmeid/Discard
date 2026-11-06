@@ -2118,7 +2118,7 @@
       return [name, button];
     });
     refs.spin = make("div", "vf-spin");
-    const closeButton = make("button", "vf-btn", "Close ✕");
+    const closeButton = make("button", "vf-btn", "← Back to Games");
     closeButton.type = "button";
     closeButton.addEventListener("click", close);
     const makeTransferButton = (label, title, run) => {
@@ -2232,6 +2232,7 @@
     sceneActive = false;
     drag = null;
     root.classList.add("hidden");
+    document.querySelector("#gamesHub")?.classList.remove("hidden");
     window.setDiscardGameActivity?.("");
   };
 
