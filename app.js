@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.0.3";
+const APP_VERSION = "4.0.4";
 const UPDATE_LOG = [
+  { version: "4.0.4", notes: ["Dead Zone: chainsaw, five weapon levels, and zombies guarding downed survivors."] },
   { version: "4.0.3", notes: ["Dead Zone: version 4.0.3 release."] },
   { version: "4.0.2", notes: ["Dead Zone: knockback, ground loot, teammate revives, spectating, persistent saves, refined combat, and multiplayer improvements."] },
   { version: "4.0.1", notes: ["Dead Zone: fixed stretched gameplay by preserving the canvas aspect ratio in fullscreen."] },
