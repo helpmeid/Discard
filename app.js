@@ -802,10 +802,10 @@ function sendTo(id, payload) {
 function startPeer() {
   if (!state || peerBlocked || (peer && !peer.destroyed)) return;
   if (typeof Peer === "undefined") {
-    setNet("Offline: could not load the connection library. Reconnect to the internet and reload.", false);
+    setNet("Disconnected — connection library unavailable", false);
     return;
   }
-  setNet("Connecting...", false);
+  setNet("Disconnected — connecting...", false);
   const current = new Peer(state.me.id, {
     config: {
       iceCandidatePoolSize: 4,
@@ -822,21 +822,21 @@ function startPeer() {
     window.setTimeout(startPeer, delay);
   };
   current.on("open", () => {
-    setNet("Connected. Friends can reach you.", true);
+    setNet("Connected", true);
     connectAll();
   });
   current.on("connection", attach);
   current.on("disconnected", () => {
-    setNet("Reconnecting...", false);
+    setNet("Disconnected — reconnecting...", false);
     window.setTimeout(() => { if (peer === current && !current.destroyed) try { current.reconnect(); } catch {} }, 3000);
   });
   current.on("error", error => {
-    if (error.type === "peer-unavailable") { setNet("Friend unavailable or offline. Pending requests will retry.", !!peer?.open); return; }
+    if (error.type === "peer-unavailable") { setNet(peer?.open ? "Connected · Friend unavailable" : "Disconnected — reconnecting...", !!peer?.open); return; }
     if (error.type === "unavailable-id") {
       setNet("This profile looks open somewhere else. Retrying...", false);
       restart(15000);
     } else {
-      setNet("Offline. Retrying...", false);
+      setNet("Disconnected — retrying...", false);
       restart(6000);
     }
   });
