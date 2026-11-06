@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.0.7";
+const APP_VERSION = "4.0.8";
 const UPDATE_LOG = [
+  { version: "4.0.8", notes: ["Dead Zone startup fix and improved in-tab launch."] },
   { version: "4.0.7", notes: ["Connection status now uses active network checks to detect disconnections."] },
   { version: "4.0.6", notes: ["Improved online connection status indicators."] },
   { version: "4.0.5", notes: ["Version 4.0.5 release."] },
