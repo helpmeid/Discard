@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.1.0";
+const APP_VERSION = "4.1.1";
 const UPDATE_LOG = [
+  { version: "4.1.1", notes: ["Redesigned Dead Zone lobby and added public join-code backend groundwork."] },
   { version: "4.1.0", notes: ["Version 4.1.0 release."] },
   { version: "4.0.11", notes: ["Version 4.0.11 release."] },
   { version: "4.0.10", notes: ["Fixed Dead Zone menu exit behavior."] },
