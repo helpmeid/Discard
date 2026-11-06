@@ -846,10 +846,15 @@ function isOnline(id) {
   return Boolean(entry?.conn.open && officialTrusted(id) && Date.now() - entry.lastSeen < onlineWindow);
 }
 
+const publicDeadZonePeers=new Set();
+window.deadZoneConnectPublic=id=>{if(!id||typeof id!=='string'||id.length>120)return;publicDeadZonePeers.add(id);connectTo(id);};
+window.deadZoneAuthorizePublicPeer=id=>{if(typeof id==='string'&&id.length<=120)publicDeadZonePeers.add(id);};
+window.deadZoneRevokePublicPeer=id=>publicDeadZonePeers.delete(id);
 function sendTo(id, payload) {
   if (!ownsAccountSession()) return false;
   const entry = conns.get(id);
   if (!entry?.conn.open || !officialTrusted(id)) return false;
+  if (payload?.t?.startsWith('dz-') && !state?.friends?.[id] && !publicDeadZonePeers.has(id)) return false;
   try {
     entry.conn.send(payload);
     return true;
@@ -947,7 +952,8 @@ function attach(conn) {
       try { conn.send({ t: "challenge", nonce: entry.nonce }); } catch {}
       return;
     }
-    greet(id);
+    if (!publicDeadZonePeers.has(id)) greet(id);
+    else window.deadZonePublicReady?.(id);
   });
   conn.on("data", data => {
     try {
@@ -1064,7 +1070,7 @@ function handleData(from, data) {
   if (entry) entry.lastSeen = Date.now();
   if (!data || typeof data !== "object" || typeof data.t !== "string") return;
   if (!officialTrusted(from) && data.t !== "proof") return;
-  if (data.t.startsWith("dz-")) { window.deadZoneHandle?.(from, data); return; }
+  if (data.t.startsWith("dz-")) { if(state?.friends?.[from]||publicDeadZonePeers.has(from)||data.t==='dz-join')window.deadZoneHandle?.(from,data); return; }
   if (data.t.startsWith("oak-")) {
     window.oakhavenHandle?.(from, data);
     return;
