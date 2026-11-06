@@ -771,11 +771,32 @@ let peerBlocked = false;
 const onlineWindow = 35000;
 
 function setNet(text, good) {
+  const online = navigator.onLine !== false;
   const label = document.querySelector("#netText");
   const dot = document.querySelector("#netDot");
-  if (label) label.textContent = text;
-  if (dot) dot.classList.toggle("online", Boolean(good));
+  if (label) label.textContent = online ? text : "Disconnected — device offline";
+  if (dot) dot.classList.toggle("online", online && Boolean(good));
 }
+window.addEventListener("offline", () => {
+  setNet("Disconnected — device offline", false);
+});
+window.addEventListener("online", () => {
+  setNet("Disconnected — reconnecting...", false);
+  if (peer && !peer.destroyed && !peer.open) {
+    try { peer.reconnect(); } catch {}
+  } else if (!peer || peer.destroyed) startPeer();
+  else setNet("Connected", true);
+});
+window.setInterval(() => {
+  if (!currentUser) return;
+  if (navigator.onLine === false) {
+    setNet("Disconnected — device offline", false);
+  } else if (!peer || peer.destroyed || !peer.open || peer.disconnected) {
+    setNet("Disconnected — reconnecting...", false);
+    if (!peer || peer.destroyed) startPeer();
+    else if (peer.disconnected) try { peer.reconnect(); } catch {}
+  }
+}, 2000);
 
 let notifyTimer = null;
 function notify() {
