@@ -770,33 +770,64 @@ let peer = null;
 let peerBlocked = false;
 const onlineWindow = 35000;
 
+let networkProbeOk = false;
+let networkProbeRunning = false;
+let networkProbeTime = 0;
+let networkStatusText = "Disconnected — checking connection";
+let networkStatusGood = false;
 function setNet(text, good) {
-  const online = navigator.onLine !== false;
+  networkStatusText = text;
+  networkStatusGood = Boolean(good);
+  const connected = navigator.onLine !== false && networkProbeOk && networkStatusGood;
   const label = document.querySelector("#netText");
   const dot = document.querySelector("#netDot");
-  if (label) label.textContent = online ? text : "Disconnected — device offline";
-  if (dot) dot.classList.toggle("online", online && Boolean(good));
+  if (label) label.textContent = navigator.onLine === false
+    ? "Disconnected — device offline"
+    : !networkProbeOk ? "Disconnected — checking connection"
+    : connected ? networkStatusText : networkStatusText;
+  if (dot) dot.classList.toggle("online", connected);
+}
+async function checkNetworkConnection() {
+  if (networkProbeRunning) return;
+  if (navigator.onLine === false) {
+    networkProbeOk = false;
+    setNet("Disconnected — device offline", false);
+    return;
+  }
+  networkProbeRunning = true;
+  const aborter = new AbortController();
+  const timeout = window.setTimeout(() => aborter.abort(), 4000);
+  try {
+    const response = await fetch("https://raw.githubusercontent.com/helpmeid/Discard/main/README.md?health=" + Date.now(), {
+      method: "GET", cache: "no-store", signal: aborter.signal
+    });
+    if (!response.ok) throw new Error("Network check failed");
+    networkProbeOk = true;
+    networkProbeTime = Date.now();
+    setNet(peer?.open && !peer.disconnected ? "Connected" : "Disconnected — reconnecting...", Boolean(peer?.open && !peer.disconnected));
+    if ((!peer || peer.destroyed) && currentUser) startPeer();
+    else if (peer?.disconnected && !peer.destroyed) try { peer.reconnect(); } catch {}
+  } catch {
+    networkProbeOk = false;
+    setNet("Disconnected — network unreachable", false);
+  } finally {
+    window.clearTimeout(timeout);
+    networkProbeRunning = false;
+  }
 }
 window.addEventListener("offline", () => {
+  networkProbeOk = false;
   setNet("Disconnected — device offline", false);
 });
 window.addEventListener("online", () => {
-  setNet("Disconnected — reconnecting...", false);
-  if (peer && !peer.destroyed && !peer.open) {
-    try { peer.reconnect(); } catch {}
-  } else if (!peer || peer.destroyed) startPeer();
-  else setNet("Connected", true);
+  networkProbeOk = false;
+  setNet("Disconnected — checking connection", false);
+  checkNetworkConnection();
 });
 window.setInterval(() => {
   if (!currentUser) return;
-  if (navigator.onLine === false) {
-    setNet("Disconnected — device offline", false);
-  } else if (!peer || peer.destroyed || !peer.open || peer.disconnected) {
-    setNet("Disconnected — reconnecting...", false);
-    if (!peer || peer.destroyed) startPeer();
-    else if (peer.disconnected) try { peer.reconnect(); } catch {}
-  }
-}, 2000);
+  checkNetworkConnection();
+}, 6000);
 
 let notifyTimer = null;
 function notify() {
@@ -845,6 +876,7 @@ function startPeer() {
   };
   current.on("open", () => {
     setNet("Connected", true);
+    checkNetworkConnection();
     connectAll();
   });
   current.on("connection", attach);
