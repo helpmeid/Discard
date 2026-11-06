@@ -211,11 +211,12 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.0.2";
+const APP_VERSION = "4.0.3";
 const UPDATE_LOG = [
-  { version: "4.0.2", notes: ["Dead Zone: knockback, ground loot, teammate revives, spectating, persistent saves, refined combat, and multiplayer improvements."] },
-  { version: "4.0.2", notes: ["Dead Zone: fixed stretched gameplay by preserving the canvas aspect ratio in fullscreen."] },
-  { version: "4.0.2", notes: ["Dead Zone: more fluid melee swing animation, faster zombies and four selectable difficulties—Easy, Normal, Hard, Nightmare."] },
+  { version: "4.0.3", notes: ["Dead Zone: version 4.0.3 release."] },
+  { version: "4.0.3", notes: ["Dead Zone: knockback, ground loot, teammate revives, spectating, persistent saves, refined combat, and multiplayer improvements."] },
+  { version: "4.0.3", notes: ["Dead Zone: fixed stretched gameplay by preserving the canvas aspect ratio in fullscreen."] },
+  { version: "4.0.3", notes: ["Dead Zone: more fluid melee swing animation, faster zombies and four selectable difficulties—Easy, Normal, Hard, Nightmare."] },
   { version: "3.9.9", notes: ["Dead Zone fills the viewport without footer controls and zombies use persistent waypoint stages to enter houses."] },
   { version: "3.9.8", notes: ["Dead Zone now supports board-consuming door repairs, animated melee weapon swings, a redesigned start screen, and an Escape menu that resumes or exits."] },
   { version: "3.9.7", notes: ["Dead Zone: primary and secondary weapon slots, full-screen inventory, separate bat/axe/gun visuals, and staged zombie doorway navigation."] },
