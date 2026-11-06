@@ -3958,7 +3958,16 @@ document.querySelector("#plusUno").addEventListener("click", () => {
 
 const gamesHub = document.querySelector("#gamesHub");
 const hubStatus = document.querySelector("#hubStatus");
+const updateDeadZoneHubPlaytime = () => {
+  const el = document.querySelector("#hubDeadZonePlaytime");
+  if (!el) return;
+  let seconds = 0;
+  try { seconds = Math.max(0, Number(localStorage.getItem("deadzone-total-playtime-v1-" + String(currentUser?.id || "guest"))) || 0); } catch {}
+  const totalMinutes = Math.floor(seconds / 60);
+  el.textContent = Math.floor(totalMinutes / 60) + "h " + (totalMinutes % 60) + "m played";
+};
 const setGamesHub = open => {
+  if (open) updateDeadZoneHubPlaytime();
   gamesHub.classList.toggle("hidden", !open);
   hubStatus.textContent = "";
 };
