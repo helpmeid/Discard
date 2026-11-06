@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.0.10";
+const APP_VERSION = "4.0.11";
 const UPDATE_LOG = [
+  { version: "4.0.11", notes: ["Version 4.0.11 release."] },
   { version: "4.0.10", notes: ["Fixed Dead Zone menu exit behavior."] },
   { version: "4.0.9", notes: ["Dead Zone now has a left-aligned game view with a right sidebar minimap and team chat."] },
   { version: "4.0.8", notes: ["Dead Zone startup fix and improved in-tab launch."] },
