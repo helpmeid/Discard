@@ -16,7 +16,7 @@ const source=fs.readFileSync(path.join(__dirname,'../dead-zone.js'),'utf8').repl
   for(const id of ['host','guest']){
    const page=await browser.newPage({viewport:{width:1440,height:900}});pages[id]=page;
    page.on('pageerror',e=>errors.push(id+': '+e.message));
-   await page.exposeFunction('relayMsg',async(to,data)=>{if(pages[to])await pages[to].evaluate(({from,data})=>window.deadZoneHandle?.(from,data),{from:id,data});});
+   await page.exposeFunction('relayMsg',async(to,data)=>{if(process.env.DZ_LATENCY_MS)await new Promise(r=>setTimeout(r,Number(process.env.DZ_LATENCY_MS)));if(pages[to])await pages[to].evaluate(({from,data})=>window.deadZoneHandle?.(from,data),{from:id,data});});
    await page.route('https://deadzone.test/',r=>r.fulfill({contentType:'text/html',body:'<html><body style="margin:0"></body></html>'}));
    await page.goto('https://deadzone.test/');
    await page.addScriptTag({content:`var currentUser={id:${JSON.stringify(id)}},state={friends:{host:{},guest:{}}};function viewPerson(id){return {displayName:id==='host'?'Ranger':'Medic'}}function connectTo(){}function sendTo(to,data){window.relayMsg(to,data)}`});
@@ -24,7 +24,9 @@ const source=fs.readFileSync(path.join(__dirname,'../dead-zone.js'),'utf8').repl
   }
   const {host,guest}=pages;
   await host.evaluate(()=>openDeadZone());
-  await host.getByRole('button',{name:'Invite friend',exact:true}).click();
+  // The lobby now uses shareable codes; inject its invitation through the real handler.
+  const sessionId=await host.evaluate(()=>dzTest.getSession().id);
+  await guest.evaluate(id=>deadZoneHandle('host',{v:1,t:'dz-invite',id}),sessionId);
   await guest.waitForFunction(()=>!!window.openDeadZone);
   await guest.evaluate(()=>openDeadZone());
   await guest.getByRole('button',{name:'Join Ranger',exact:true}).click();
@@ -32,7 +34,7 @@ const source=fs.readFileSync(path.join(__dirname,'../dead-zone.js'),'utf8').repl
   await host.getByRole('button',{name:/DEPLOY/}).click();
   await guest.waitForFunction(()=>dzTest.getSession().phase==='play');
   const before=await host.evaluate(()=>dzTest.getWorld().players[1].x);
-  await guest.locator('canvas').focus();await guest.keyboard.down('KeyD');await guest.keyboard.down('ShiftLeft');
+  await guest.locator('canvas').first().focus();await guest.keyboard.down('KeyD');await guest.keyboard.down('ShiftLeft');
   await guest.waitForTimeout(450);await guest.keyboard.up('KeyD');await guest.keyboard.up('ShiftLeft');
   await host.waitForFunction(x=>dzTest.getWorld().players[1].x>x+20,before);
   const stamina=await host.evaluate(()=>dzTest.getWorld().players[1].stamina);assert.ok(stamina<100);

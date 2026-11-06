@@ -857,6 +857,9 @@ function sendTo(id, payload) {
   const entry = conns.get(id);
   if (!entry?.conn.open || !officialTrusted(id)) return false;
   if (payload?.t?.startsWith('dz-') && !state?.friends?.[id] && !publicDeadZonePeers.has(id)) return false;
+  // Stale snapshots only add latency on a congested reliable data channel.
+  // Keep control/input messages flowing; the next snapshot supersedes this one.
+  if (payload?.t === 'dz-state' && entry.conn.dataChannel?.bufferedAmount > 65536) return false;
   try {
     entry.conn.send(payload);
     return true;
