@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.0.8";
+const APP_VERSION = "4.0.9";
 const UPDATE_LOG = [
+  { version: "4.0.9", notes: ["Dead Zone now has a left-aligned game view with a right sidebar minimap and team chat."] },
   { version: "4.0.8", notes: ["Dead Zone startup fix and improved in-tab launch."] },
   { version: "4.0.7", notes: ["Connection status now uses active network checks to detect disconnections."] },
   { version: "4.0.6", notes: ["Improved online connection status indicators."] },
