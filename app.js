@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.1.2";
+const APP_VERSION = "4.1.3";
 const UPDATE_LOG = [
+  { version: "4.1.3", notes: ["Dead Zone multiplayer: faster guest movement response, smoother remote movement, smaller state updates, and fewer interface redraws. Existing saves remain compatible."] },
   { version: "4.1.2", notes: ["Improved Games menu navigation for Dead Zone and Event Horizon; removed Oakhaven demo labels."] },
   { version: "4.1.1", notes: ["Redesigned Dead Zone lobby and added public join-code backend groundwork."] },
   { version: "4.1.0", notes: ["Version 4.1.0 release."] },
