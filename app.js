@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.1.3";
+const APP_VERSION = "4.2.0";
 const UPDATE_LOG = [
+  { version: "4.2.0", notes: ["Rebuilt Dead Zone multiplayer with acknowledged input prediction, buffered remote movement, and a separate real-time connection. The match now runs in a worker so guests can keep playing while the host switches tabs. Saves remain compatible."] },
   { version: "4.1.3", notes: ["Dead Zone multiplayer: faster guest movement response, smoother remote movement, smaller state updates, and fewer interface redraws. Existing saves remain compatible."] },
   { version: "4.1.2", notes: ["Improved Games menu navigation for Dead Zone and Event Horizon; removed Oakhaven demo labels."] },
   { version: "4.1.1", notes: ["Redesigned Dead Zone lobby and added public join-code backend groundwork."] },
@@ -850,9 +851,15 @@ function isOnline(id) {
 }
 
 const publicDeadZonePeers=new Set();
+const deadZoneRealtime=new window.DeadZoneNet.RealtimeTransport({
+  getConnection:id=>conns.get(id)?.conn,
+  allowed:id=>ownsAccountSession()&&officialTrusted(id)&&!!conns.get(id)?.conn.open&&!!(state?.friends?.[id]||publicDeadZonePeers.has(id)),
+  receive:(id,data)=>handleData(id,data)
+});
+window.deadZoneSendRealtime=(id,data)=>deadZoneRealtime.send(id,data);
 window.deadZoneConnectPublic=id=>{if(!id||typeof id!=='string'||id.length>120)return;publicDeadZonePeers.add(id);connectTo(id);};
 window.deadZoneAuthorizePublicPeer=id=>{if(typeof id==='string'&&id.length<=120)publicDeadZonePeers.add(id);};
-window.deadZoneRevokePublicPeer=id=>publicDeadZonePeers.delete(id);
+window.deadZoneRevokePublicPeer=id=>{publicDeadZonePeers.delete(id);deadZoneRealtime.close(id);};
 function sendTo(id, payload) {
   if (!ownsAccountSession()) return false;
   const entry = conns.get(id);
@@ -860,7 +867,7 @@ function sendTo(id, payload) {
   if (payload?.t?.startsWith('dz-') && !state?.friends?.[id] && !publicDeadZonePeers.has(id)) return false;
   // Stale snapshots only add latency on a congested reliable data channel.
   // Keep control/input messages flowing; the next snapshot supersedes this one.
-  if (payload?.t === 'dz-state' && entry.conn.dataChannel?.bufferedAmount > 65536) return false;
+  if ((payload?.t === 'dz-state'||payload?.t === 'dz-input') && entry.conn.dataChannel?.bufferedAmount > 8192) return false;
   try {
     entry.conn.send(payload);
     return true;
@@ -967,7 +974,7 @@ function attach(conn) {
     } catch {}
   });
   const gone = () => {
-    if (conns.get(id)?.conn === conn){conns.delete(id);gameActivity.delete(id);}
+    if (conns.get(id)?.conn === conn){deadZoneRealtime.close(id);conns.delete(id);gameActivity.delete(id);}
     notify();
   };
   conn.on("close", gone);

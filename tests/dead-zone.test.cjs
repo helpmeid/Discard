@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const vm=require('node:vm');const fs=require('node:fs');
-function game(){const code=fs.readFileSync(require('node:path').join(__dirname,'../dead-zone.js'),'utf8').replace('window.openDeadZone=open;',`window.test={setMenu:m=>menu=m,networkSnapshot,updateGuestVisuals,guestVisuals,saveGame,readSave,newWorld,tick,solid,move,action,equip,swapWeapon,storyTick,zombieSpawn,draw,build,open,lobby,missionSites,binds,burst,setSession:s=>session=s,getSession:()=>session,setWorld:w=>world=w,getWorld:()=>world,setInput:a=>localInput=a,inputs};window.openDeadZone=open;`);const c={console,Math,Set,Map,Number,JSON,crypto:require('node:crypto').webcrypto,performance,localStorage:{getItem:()=>null},currentUser:{id:'host'},viewPerson:()=>({displayName:'Tester'}),state:{friends:{guest:{}}},connectTo(){},sendTo(){},window:{},document:{},requestAnimationFrame(){}};vm.createContext(c);vm.runInContext(code,c);const api=c.window.test;api.setSession({mode:'host',gameMode:'story',difficulty:'normal',phase:'play',id:'test',host:'host',peers:new Map([['guest',{}]])});api.setWorld(api.newWorld(['host','guest']));return {api,c,w:api.getWorld()};}
+function game(){const code=fs.readFileSync(require('node:path').join(__dirname,'../dead-zone.js'),'utf8').replace('window.openDeadZone=open;',`window.test={startNetworkMatch,getWorker:()=>hostWorker,setUI:u=>{root=u.root;canvas=u.canvas;ctx=u.ctx;labels=u.labels;menu=u.menu;},stopHostUI:()=>{clearInterval(networkTimer);networkTimer=0;localInput={};},prediction,hostStreams,receiveSnapshot,receiveMetadata,sendMetadata,advanceGame,resetNetwork,setMenu:m=>menu=m,networkSnapshot,updateGuestVisuals,guestVisuals,saveGame,readSave,newWorld,tick,solid,move,action,equip,swapWeapon,storyTick,zombieSpawn,draw,build,open,lobby,missionSites,binds,burst,setSession:s=>session=s,getSession:()=>session,setWorld:w=>world=w,getWorld:()=>world,setInput:a=>localInput=a,inputs};window.openDeadZone=open;`);const c={console,Math,Set,Map,Number,JSON,crypto:require('node:crypto').webcrypto,performance,localStorage:{getItem:()=>null},currentUser:{id:'host'},viewPerson:()=>({displayName:'Tester'}),state:{friends:{guest:{}}},connectTo(){},sendTo(){},window:{},document:{},requestAnimationFrame(){},setInterval(){return 1},clearInterval(){}};vm.createContext(c);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../dead-zone-net.js'),'utf8'),c);vm.runInContext(code,c);const api=c.window.test;api.setSession({mode:'host',gameMode:'story',difficulty:'normal',phase:'play',id:'test',host:'host',peers:new Map([['guest',{}]])});api.setWorld(api.newWorld(['host','guest']));return {api,c,w:api.getWorld()};}
 test('story supplies, radio, timed extraction, victory and dead-player exclusion',()=>{const {api,w}=game();const p=w.players[0];p.x=1680;p.y=1170;api.setInput({use:true});for(let i=0;i<42;i++)api.storyTick(.05);assert.equal(w.story.stage,1);assert.equal(p.secondary,'pistol');assert.equal(p.ammo,30);p.x=2050;p.y=1370;for(let i=0;i<82;i++)api.storyTick(.05);assert.equal(w.story.stage,2);api.storyTick(1);assert.equal(w.story.defense,0);p.x=1800;p.y=1530;for(let i=0;i<46;i++)api.storyTick(1);assert.equal(w.won,true);assert.equal(w.ended,true);});
 test('endless does not end after story timer and never revives dead teammates',()=>{const {api,w}=game();w.mode='endless';w.between=0;w.remaining=0;w.players[1].hp=0;api.tick(.05);assert.equal(w.players[1].hp,0);assert.equal(w.between,9);assert.equal(w.ended,false);});
 test('sprint consumes stamina, walking restores it and collisions stop walls',()=>{const {api,w}=game(),p=w.players[0];w.between=100;api.setInput({x:1,sprint:true});for(let i=0;i<10;i++)api.tick(.05);assert.ok(p.stamina<90);api.setInput({});for(let i=0;i<10;i++)api.tick(.05);assert.ok(p.stamina>90);const h=w.houses[0];p.x=h.x-20;p.y=h.y+40;api.move(p,100,0);assert.ok(p.x<h.x);});
@@ -12,47 +12,85 @@ test('infected can enter an open house without position jumps',()=>{const {api,w
 test('projectiles keep moving during resupply and the countdown starts the next wave',()=>{const {api,w}=game(),p=w.players[0];w.mode='endless';w.between=.2;w.shots=[{x:p.x,y:p.y,vx:730,vy:0,life:1,damage:25,owner:p.id}];api.tick(.05);assert.ok(w.shots[0].x>p.x+30);for(let i=0;i<5;i++)api.tick(.05);assert.equal(w.wave,1);assert.ok(w.remaining>0);});
 module.exports={game};
 
-test('compact snapshots omit geometry, resync scenery and strip projectile trails',()=>{
- const {api,w}=game();w.shots=[{x:100,y:100,vx:10,vy:0,trail:Array(50).fill({x:1,y:1})}];
- const first=api.networkSnapshot(),next=api.networkSnapshot();
- assert.equal(next.world.houses,undefined);assert.equal(next.world.chests,undefined);
- assert.equal(next.world.shots[0].trail,undefined);assert.equal(next.scenery,undefined);
- assert.ok(first.scenery);assert.ok(next.seq>first.seq);
- assert.ok(JSON.stringify(next).length<JSON.stringify(w).length*.5);
- w.houses[0].doorOpen=true;w.chests[0].opened=true;
- const changed=api.networkSnapshot();assert.equal(changed.scenery.doors[0][0],true);assert.equal(changed.scenery.chests[0],true);
- w.time+=1.1;assert.ok(api.networkSnapshot().scenery,'periodic scenery repairs skipped snapshots');
+test('protocol 2 guest replays unacknowledged movement and leaves authoritative state intact',()=>{
+ const {api,c,w}=game();c.currentUser.id='guest';c.state.friends.host={};api.setMenu({style:{}});
+ api.setSession({mode:'guest',host:'host',id:'test',phase:'play'});
+ c.window.deadZoneHandle('host',{v:1,t:'dz-start',id:'test',world:JSON.parse(JSON.stringify(w))});
+ const own=api.getWorld().players[1],x=own.x;for(let i=0;i<12;i++)api.prediction.step({x:1,sprint:true});
+ assert.ok(api.prediction.state.x>x+20);assert.equal(own.x,x);
+ const packet=api.networkSnapshot();packet.seq=10;packet.ack={guest:0};api.receiveSnapshot(packet,1000);
+ assert.ok(api.prediction.lastError<.01);assert.ok(api.prediction.state.x>x+20);assert.equal(api.getWorld().players[1].x,x);
+ packet.world.players[1].x=500;packet.seq=9;api.receiveSnapshot(packet,1100);assert.equal(api.getWorld().players[1].x,x);
 });
-test('guest movement predicts before a host reply without changing authoritative state',()=>{
- const {api,w}=game(),p=w.players[0];api.setSession({mode:'guest'});api.setInput({x:1,sprint:true});
- const x=p.x;api.updateGuestVisuals(1000);for(let t=1016;t<1110;t+=16)api.updateGuestVisuals(t);
- const v=api.guestVisuals.get('p:host');assert.ok(v.x>x+5);assert.equal(p.x,x);assert.equal(p.stamina,100);
- p.hp=0;api.setInput({x:1});const deadX=v.x;for(let t=1120;t<1600;t+=16)api.updateGuestVisuals(t);assert.ok(v.x<=deadX);
- w.players=[];api.updateGuestVisuals(1700);assert.equal(api.guestVisuals.size,0);
-});
-test('predicted movement respects closed walls',()=>{
- const {api,w}=game(),p=w.players[0],h=w.houses[0];p.x=h.x-20;p.y=h.y+40;
- api.setInput({x:1,sprint:true});api.updateGuestVisuals(1000);for(let t=1016;t<2000;t+=16)api.updateGuestVisuals(t);
- assert.ok(api.guestVisuals.get('p:host').x<h.x-10);
-});
-test('save round trip retains gameplay state and excludes transient networking',()=>{
- const {api,c,w}=game(),storage=new Map();c.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
- w.players[0].ammo=42;w.houses[0].doorOpen=true;w.chests[0].opened=true;api.networkSnapshot();
- assert.equal(api.saveGame(),true);const saved=api.readSave();assert.equal(saved.world.players.length,1);
- assert.equal(saved.world.players[0].ammo,42);assert.equal(saved.world.houses[0].doorOpen,true);assert.equal(saved.world.chests[0].opened,true);
- assert.equal(saved.world.seq,undefined);assert.equal(saved.version,1);
+test('compact snapshots exclude inventories, map geometry, blood and projectile trails',()=>{
+ const {api,w}=game();w.players[0].inventory=Array(50).fill('rifle');w.shots=[{x:100,y:100,vx:700,vy:0,life:.5,trail:Array(50).fill({x:1,y:1})}];
+ const packet=api.networkSnapshot();assert.equal(packet.protocol,2);assert.equal(packet.world.players[0].inventory,undefined);
+ for(const key of ['houses','chests','blood','drops'])assert.equal(packet.world[key],undefined);
+ assert.ok(Array.isArray(packet.world.shots[0]));assert.ok(JSON.stringify(packet).length<JSON.stringify(w).length*.3);
 });
 
-test('guest applies compact state, scenery and rejects stale sequence numbers',()=>{
- const {api,c,w}=game();api.setMenu({style:{}});c.state.friends.host={};
- api.setSession({mode:'guest',host:'host',id:'test',phase:'play'});
- const send=d=>c.window.deadZoneHandle('host',JSON.parse(JSON.stringify({v:1,id:'test',...d})));
- send({t:'dz-start',world:w});const houses=api.getWorld().houses;
- const active=api.getWorld();active.houses[0].doorOpen=true;active.houses[0].doorMaxHp=210;active.chests[0].opened=true;active.players[0].ammo=52;
- active.zombies=[{x:1900.123,y:1300,hp:50,maxHp:50,kind:'runner',speed:120}];
- const packet=api.networkSnapshot();assert.ok(Array.isArray(packet.world.zombies[0]));send(packet);
- const loaded=api.getWorld();assert.equal(loaded.houses,houses);assert.equal(loaded.houses[0].doorOpen,true);
- assert.equal(loaded.houses[0].doorMaxHp,210);assert.equal(loaded.chests[0].opened,true);assert.equal(loaded.players[0].ammo,52);
- assert.equal(loaded.zombies[0].kind,'runner');assert.equal(loaded.zombies[0].x,1900.1);assert.ok(loaded.zombies[0].netId>0);
- packet.world.players[0].ammo=0;send(packet);assert.equal(api.getWorld().players[0].ammo,52);
+test('resync generations reject delayed input, state and metadata from an old stream',()=>{
+ const {api,c,w}=game(),N=require('../dead-zone-net.js'),g=api.getSession().peers.get('guest');g.epoch='current';
+ const send=epoch=>c.window.deadZoneHandle('guest',{v:1,t:'dz-input',id:'test',epoch,commands:[N.packCommand({seq:1,input:N.cleanInput({x:1,door:true})})]});
+ send('old');assert.equal(api.hostStreams.size,0);send('current');assert.equal(api.hostStreams.get('guest').queue.size,1);
+ c.window.deadZoneHandle('guest',{v:1,t:'dz-resync',id:'test',epoch:'current'});assert.notEqual(g.epoch,'current');send('current');assert.equal(api.hostStreams.size,0);send(g.epoch);assert.equal(api.hostStreams.size,1);
+ c.currentUser.id='guest';c.state.friends.host={};api.setMenu({style:{}});api.setSession({mode:'guest',host:'host',id:'test',phase:'play'});
+ c.window.deadZoneHandle('host',{v:1,t:'dz-start',id:'test',epoch:'new-client',world:JSON.parse(JSON.stringify(w))});
+ const x=api.getWorld().players[1].x,packet=api.networkSnapshot();packet.world.players[1].x=x+100;packet.seq=999;packet.epoch='old-client';api.receiveSnapshot(packet,1000);assert.equal(api.getWorld().players[1].x,x);
+ api.receiveMetadata({seq:999,epoch:'old-client',data:{players:[{id:'guest',ammo:999}]}});assert.equal(api.getWorld().players[1].ammo,0);
+ packet.epoch='new-client';api.receiveSnapshot(packet,1100);assert.equal(api.getWorld().players[1].x,x+100);
+});
+test('reliable metadata restores doors, loot, inventory and deduplicates blood',()=>{
+ const {api,w}=game(),p=w.players[0];
+ const d={seq:1,data:{players:[{id:p.id,ammo:42,inventory:['bat','rifle']}],doors:w.houses.map(h=>[true,210,2,210]),chests:w.chests.map(()=>true),drops:[{id:8,item:'boards',x:10,y:10}]},blood:[{netId:1,x:10,y:10,r:8,a:0}]};
+ api.receiveMetadata(d);assert.equal(p.ammo,42);assert.equal(w.houses[0].doorMaxHp,210);assert.equal(w.chests[0].opened,true);assert.equal(w.drops[0].id,8);
+ api.receiveMetadata({...d,seq:2});assert.equal(w.blood.length,1);
+});
+test('save round trip preserves old format, inventory and scenery without networking state',()=>{
+ const {api,c,w}=game(),storage=new Map();c.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
+ w.players[0].ammo=42;w.houses[0].doorOpen=true;w.chests[0].opened=true;api.networkSnapshot();
+ assert.equal(api.saveGame(),true);const saved=api.readSave();assert.equal(saved.version,1);assert.equal(saved.world.players.length,1);
+ assert.equal(saved.world.players[0].ammo,42);assert.equal(saved.world.houses[0].doorOpen,true);assert.equal(saved.world.chests[0].opened,true);assert.equal(saved.world.ack,undefined);
+});
+
+test('real host worker advances and handles guest commands with no host animation loop',async()=>{
+ const {Worker}=require('node:worker_threads'),path=require('node:path'),N=require('../dead-zone-net.js');const {w}=game();w.between=100;w.mode='endless';w.players.forEach(p=>p.invuln=100);
+ w.zombies=Array.from({length:65},(_,i)=>({netId:i+1,x:1930+i%8*26,y:1190+Math.floor(i/8)*28,hp:100,maxHp:100,kind:'walker',speed:20,attack:0}));w.zombieSerial=65;
+ const wrapper=`const {parentPort,workerData}=require('node:worker_threads'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');globalThis.self=globalThis;globalThis.postMessage=data=>parentPort.postMessage(data);globalThis.importScripts=(...names)=>names.forEach(name=>vm.runInThisContext(fs.readFileSync(path.join(workerData,name.split('?')[0]),'utf8'),{filename:name}));vm.runInThisContext(fs.readFileSync(path.join(workerData,'dead-zone-host-worker.js'),'utf8'));parentPort.on('message',data=>self.onmessage({data}));`;
+ const worker=new Worker(wrapper,{eval:true,workerData:path.join(__dirname,'..')});
+ let latest=null,saved=null,epoch='';const errors=[];worker.on('error',e=>errors.push(e));worker.on('message',data=>{if(data.type==='view')latest=data.packet;if(data.type==='checkpoint'&&data.save)saved=data.world;if(data.type==='network'&&data.packet.t==='dz-start'){epoch=data.packet.epoch;worker.postMessage({type:'packet',from:'guest',packet:{v:1,id:'test',t:'dz-ready',epoch}});}});
+ try{
+  worker.postMessage({type:'init',host:'host',players:['host','guest'],names:{host:'Host',guest:'Guest'},session:{id:'test',gameMode:'endless',difficulty:'normal'},peers:['guest'],world:w});
+  const commands=Array.from({length:90},(_,i)=>N.packCommand({seq:i+1,input:N.cleanInput({x:1,sprint:true,ax:3000,ay:1300})}));
+  const deadline=Date.now()+1800;while(Date.now()<deadline){if(epoch)worker.postMessage({type:'packet',from:'guest',packet:{v:1,id:'test',t:'dz-input',epoch,commands}});await new Promise(r=>setTimeout(r,50));}
+  assert.deepEqual(errors,[]);assert.ok(latest,'worker must publish without any render calls');assert.ok(latest.world.time>1.2);assert.equal(latest.ack.guest,90);
+  assert.ok(latest.world.players.find(p=>p.id==='guest').x>w.players[1].x+100);
+  worker.postMessage({type:'save'});for(let i=0;i<20&&!saved;i++)await new Promise(r=>setTimeout(r,20));assert.ok(saved);assert.ok(saved.houses.length);assert.equal(saved.players.length,2);
+ }finally{await worker.terminate();}
+});
+
+test('two complete game clients keep moving, rendering and saving after host UI timers stop',async()=>{
+ const {Worker:Thread}=require('node:worker_threads'),path=require('node:path');const host=game(),guest=game(),errors=[];
+ guest.c.currentUser.id='guest';guest.c.state.friends.host={};guest.api.setSession({mode:'guest',phase:'lobby',id:'test',host:'host',peers:new Map()});
+ const wrapper=`const {parentPort,workerData}=require('node:worker_threads'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');globalThis.self=globalThis;globalThis.postMessage=data=>parentPort.postMessage(data);globalThis.importScripts=(...names)=>names.forEach(name=>vm.runInThisContext(fs.readFileSync(path.join(workerData,name.split('?')[0]),'utf8'),{filename:name}));vm.runInThisContext(fs.readFileSync(path.join(workerData,'dead-zone-host-worker.js'),'utf8'));parentPort.on('message',data=>self.onmessage({data}));`;
+ class WorkerAdapter{constructor(){this.thread=new Thread(wrapper,{eval:true,workerData:path.join(__dirname,'..')});this.thread.on('message',data=>{try{this.onmessage?.({data});}catch(e){errors.push(e);}});this.thread.on('error',e=>errors.push(e));}postMessage(data){this.thread.postMessage(data);}terminate(){this.thread.terminate();}}
+ function ui(){const gradient={addColorStop(){}},ctx=new Proxy({createRadialGradient:()=>gradient},{get:(o,k)=>o[k]||(()=>{})});let count=0;const nodes={};for(const name of ['wave','score','time','enemies','countdown','hp','stamina','weapon','armor','ammo','boards','medkits','mints','energy','primary','secondary','hpBar','staminaBar'])nodes[name]={dataset:{dz:name},textContent:'',style:{},parentElement:{setAttribute(){}}};const toggle={};return{root:{style:{display:'flex'}},canvas:{focus(){}},menu:{style:{}},ctx,labels:{get firstChild(){return count?{}:null},set innerHTML(v){count++;},get builds(){return count},querySelectorAll:()=>Object.values(nodes),querySelector:()=>toggle}};}
+ let sent=0,active=true;const storage=new Map();
+ for(const [client,other,id]of [[host,guest,'host'],[guest,host,'guest']]){
+  client.c.setInterval=setInterval;client.c.clearInterval=clearInterval;client.c.Worker=id==='host'?WorkerAdapter:undefined;client.c.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};
+  client.ui=ui();client.api.setUI(client.ui);const deliver=(to,packet)=>{const n=++sent;if(['dz-state','dz-input'].includes(packet.t)&&n%7===0)return true;setTimeout(()=>{if(active)try{other.c.window.deadZoneHandle(id,JSON.parse(JSON.stringify(packet)));}catch(e){errors.push(e);}},60+(n%4)*7);return true;};client.c.sendTo=deliver;client.c.window.deadZoneSendRealtime=deliver;
+ }
+ host.w.between=100;host.w.mode='endless';host.w.players.forEach(p=>p.invuln=100);
+ try{
+  host.api.startNetworkMatch();const end=Date.now()+5000;while(guest.api.getSession().phase!=='play'&&Date.now()<end)await new Promise(r=>setTimeout(r,20));assert.equal(guest.api.getSession().phase,'play');assert.ok(host.api.getWorker());
+  const x=guest.api.getWorld().players[1].x;guest.api.setInput({x:1,sprint:true,ax:3000,ay:1300});await new Promise(r=>setTimeout(r,600));guest.api.setInput({});
+  host.api.draw();guest.api.draw();const authoritativeX=guest.api.getWorld().players[1].x;guest.api.draw();assert.equal(guest.api.getWorld().players[1].x,authoritativeX,'drawing must not mutate state');
+  const t=host.api.getWorld().time,oldX=host.api.getWorld().players[1].x;host.api.stopHostUI();guest.api.setInput({x:-1,ax:100,ay:1300});await new Promise(r=>setTimeout(r,1100));guest.api.setInput({});
+  assert.ok(oldX>x+40);assert.ok(host.api.getWorld().time>t+.8);assert.ok(host.api.getWorld().players[1].x<oldX-30);assert.ok(guest.api.prediction.pending.length<40);assert.ok(guest.api.prediction.lastError<.1);
+  assert.equal(host.api.saveGame(),true);await new Promise(r=>setTimeout(r,100));const saved=JSON.parse(storage.get('deadzone-save-v1-host'));assert.equal(saved.version,1);assert.equal(saved.world.players.length,1);assert.ok(saved.world.houses.length);
+  guest.api.draw();assert.equal(guest.ui.labels.builds,1,'HUD must keep the same nodes across updates');
+  host.c.document.querySelector=()=>null;host.c.setTimeout=setTimeout;host.c.clearTimeout=clearTimeout;
+  active=false;host.c.window.closeDeadZone();await new Promise(r=>setTimeout(r,100));assert.equal(host.api.getSession(),null);assert.equal(host.api.getWorker(),null);assert.ok(JSON.parse(storage.get('deadzone-save-v1-host')).world.time>t+.8,'exit save must come from the worker');
+  assert.deepEqual(errors,[]);
+ }finally{active=false;host.api.resetNetwork();guest.api.resetNetwork();}
 });
