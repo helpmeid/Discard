@@ -139,6 +139,35 @@ function showVerityInventory(){
  add('p','Giving equipment returns his replaced item to your backpack.');
  verityPanel.scrollTop=scroll;
 }
+// Lightweight, cached grid navigation keeps Verity from repeatedly walking into walls.
+function verityLineClear(ax,ay,bx,by){
+ const steps=Math.ceil(Math.hypot(bx-ax,by-ay)/22);
+ for(let i=1;i<=steps;i++)if(solid(ax+(bx-ax)*i/steps,ay+(by-ay)*i/steps,14))return false;
+ return true;
+}
+function verityFindPath(sx,sy,gx,gy){
+ const step=30,start=[Math.round(sx/step),Math.round(sy/step)],end=[Math.round(gx/step),Math.round(gy/step)];
+ const key=(x,y)=>x+','+y,heur=(x,y)=>Math.hypot(x-end[0],y-end[1]);
+ const open=[{x:start[0],y:start[1],g:0,f:heur(...start)}],cost=new Map([[key(...start),0]]),prev=new Map(),closed=new Set();
+ let goal=null,closest=null,best=Infinity,iterations=0;
+ while(open.length&&iterations++<1200){
+  let ix=0;for(let i=1;i<open.length;i++)if(open[i].f<open[ix].f)ix=i;
+  const n=open.splice(ix,1)[0],id=key(n.x,n.y);if(closed.has(id))continue;closed.add(id);
+  const dist=heur(n.x,n.y);if(dist<best){best=dist;closest=n;}
+  if(dist<1.15){goal=n;break;}
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+   const x=n.x+dx,y=n.y+dy,k=key(x,y),wx=x*step,wy=y*step;
+   if(closed.has(k)||solid(wx,wy,14))continue;
+   if(dx&&dy&&(solid((n.x+dx)*step,n.y*step,14)||solid(n.x*step,(n.y+dy)*step,14)))continue;
+   const g=n.g+Math.hypot(dx,dy);if(g>=(cost.get(k)??Infinity))continue;
+   cost.set(k,g);prev.set(k,id);open.push({x,y,g,f:g+heur(x,y)*1.12});
+  }
+ }
+ const last=goal||closest;if(!last||best>12)return [];
+ let current=key(last.x,last.y),path=[];
+ while(current!==key(...start)&&path.length<150){const [x,y]=current.split(',').map(Number);path.push({x:x*step,y:y*step});current=prev.get(current);if(!current)break;}
+ return path.reverse();
+}
 function tickVerity(dt){
  const v=world.verity;if(!v||v.state==='sleeping')return;
  v.cool=Math.max(0,(v.cool||0)-dt);v.roll=Math.max(0,(v.roll||0)-dt);v.rollCooldown=Math.max(0,(v.rollCooldown||0)-dt);v.invuln=Math.max(0,(v.invuln||0)-dt);v.healCooldown=Math.max(0,(v.healCooldown||0)-dt);
@@ -155,21 +184,48 @@ function tickVerity(dt){
   if(distance<desired*.75){tx=v.x-Math.cos(ang)*80;ty=v.y-Math.sin(ang)*80;}
   else if(distance>desired*1.2){tx=target.x-Math.cos(ang)*desired;ty=target.y-Math.sin(ang)*desired;}
   else {tx=v.x;ty=v.y;}
-  if(def.range>=100&&v.ammo<1){v.weapon=null;world.notice='Verity needs another weapon or ammo';}
+  if(def.range>=100&&v.ammo<1){v.cool=Math.max(v.cool,1);}
   else if(v.cool<=0&&distance<Math.min(def.range+15,760)&&clearShot(v.x,v.y,target.x,target.y)){
    v.cool=def.cool*1.08;
-   if(def.range>=100){v.ammo--;world.shots.push({x:v.x+Math.cos(ang)*16,y:v.y+Math.sin(ang)*16,vx:Math.cos(ang)*730,vy:Math.sin(ang)*730,life:def.range/730,damage:Math.round(def.damage*.85),owner:'verity',kind:v.weapon,trail:[]});burst(v.x,v.y,'#ffe29b',4);}
-   else if(distance<def.range+20){const dmg=Math.round(def.damage*.87);target.hp-=dmg;impact(target,v,dmg);target.hit=.12;if(target.hp<=0){world.score+=target.boss?500:10;zombieLoot(target);}}
+   if(def.range>=100){v.ammo--;world.shots.push({x:v.x+Math.cos(ang)*16,y:v.y+Math.sin(ang)*16,vx:Math.cos(ang)*730,vy:Math.sin(ang)*730,life:def.range/730,damage:Math.round(def.damage*(1+.22*((v.weaponLevel||1)-1))*.85),owner:'verity',kind:v.weapon,trail:[]});burst(v.x,v.y,'#ffe29b',4);}
+   else if(distance<def.range+20){const dmg=Math.round(def.damage*(1+.22*((v.weaponLevel||1)-1))*.87);target.hp-=dmg;impact(target,v,dmg);target.hit=.12;if(target.hp<=0){world.score+=target.boss?500:10;zombieLoot(target);}}
   }
  }else if(target){v.face=Math.atan2(target.y-v.y,target.x-v.x);}
  const closeThreat=nearZ.find(z=>Math.hypot(z.x-v.x,z.y-v.y)<72);
  if(closeThreat&&v.rollCooldown<=0){v.roll=.36;v.rollCooldown=2.4;v.invuln=.4;const ang=Math.atan2(v.y-closeThreat.y,v.x-closeThreat.x)+((Math.floor(world.time*5)%2)?.5:-.5);v.dodgeX=Math.cos(ang);v.dodgeY=Math.sin(ang);burst(v.x,v.y,'#f5dc63',7);}
- const dx=tx-v.x,dy=ty-v.y,dist=Math.hypot(dx,dy);
- const speed=v.roll>0?355:190;
- const ux=v.roll>0?v.dodgeX:(dist>25?dx/(dist||1):0),uy=v.roll>0?v.dodgeY:(dist>25?dy/(dist||1):0);
+ const distanceToGoal=Math.hypot(tx-v.x,ty-v.y),speed=v.roll>0?355:190;
+ const direct=verityLineClear(v.x,v.y,tx,ty);
+ v.routeClock=(v.routeClock||0)-dt;
+ if(!v.roll&&(!direct||v.stuck>.35)&&(v.routeClock<=0||!v.route?.length||Math.hypot(tx-(v.routeGoalX||0),ty-(v.routeGoalY||0))>100)){
+  v.route=verityFindPath(v.x,v.y,tx,ty);v.routeGoalX=tx;v.routeGoalY=ty;v.routeClock=.7;
+ }
+ if(direct&&v.stuck<.25)v.route=[];
+ while(v.route?.length&&Math.hypot(v.route[0].x-v.x,v.route[0].y-v.y)<24)v.route.shift();
+ let goalX=tx,goalY=ty;
+ if(!v.roll&&v.route?.length&&!direct){goalX=v.route[0].x;goalY=v.route[0].y;}
+ let dx=goalX-v.x,dy=goalY-v.y,dist=Math.hypot(dx,dy);
+ let ux=v.roll>0?v.dodgeX:(dist>20?dx/(dist||1):0),uy=v.roll>0?v.dodgeY:(dist>20?dy/(dist||1):0);
  const oldX=v.x,oldY=v.y;
  move(v,ux*speed*dt,uy*speed*dt,14);
- if(Math.hypot(v.x-oldX,v.y-oldY)<speed*dt*.12&&dist>50){v.stuck=(v.stuck||0)+dt;if(v.stuck>.4){const side=(Math.floor(world.time*2)%2)?1:-1;move(v,-uy*speed*dt*side,ux*speed*dt*side,14);}}else v.stuck=0;
+ let traveled=Math.hypot(v.x-oldX,v.y-oldY);
+ if(traveled<speed*dt*.18&&distanceToGoal>45){
+  v.stuck=(v.stuck||0)+dt;v.routeClock=0;
+  // Try clear lateral escapes before returning to the cached path.
+  if(v.stuck>.18){let best=null,bestScore=-Infinity;for(const angle of [Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI,-Math.PI/4,Math.PI/4]){
+   const a=Math.atan2(dy,dx)+angle,sx=Math.cos(a),sy=Math.sin(a);
+   if(solid(v.x+sx*35,v.y+sy*35,14))continue;
+   const progress=(tx-v.x)*sx+(ty-v.y)*sy;
+   if(progress>bestScore){bestScore=progress;best={x:sx,y:sy};}
+  }
+  if(best)move(v,best.x*speed*dt,best.y*speed*dt,14);
+  }
+  // Only emergency-reposition after prolonged obstruction and far from the squad.
+  if(v.stuck>5&&Math.hypot(v.x-leader.x,v.y-leader.y)>460){
+   for(const [ox,oy] of [[-45,45],[45,45],[-45,-45],[45,-45],[0,65],[65,0],[-65,0]])if(!solid(leader.x+ox,leader.y+oy,14)){
+    v.x=leader.x+ox;v.y=leader.y+oy;v.route=[];v.routeClock=0;v.stuck=0;break;
+   }
+  }
+ }else v.stuck=Math.max(0,(v.stuck||0)-dt*2);
  v.step=(v.step||0)+dt*speed/23;
  // Automatic bandage-style recovery is deliberately slow; player healing still matters.
  // Verity heals only through player-supplied Care Mints.
