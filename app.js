@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.2.9";
+const APP_VERSION = "4.3.0";
 const UPDATE_LOG = [
+  { version: "4.3.0", notes: ["Improved version visibility and refreshed the Discard loader to detect out-of-date cached scripts."] },
   { version: "4.2.9", notes: ["Dead Zone updates: Verity chats and jokes with teammates, more frequent weapon drops, Mythic rarity, stronger bosses, roulette table, and improved weapon effects."] },
   { version: "4.2.8", notes: ["Fixed zombie melee attacks after the body-collision update: zombies can damage survivors from just outside their separation radius without clipping through them."] },
   { version: "4.2.7", notes: ["Dead Zone: stronger rarity progression with higher-tier weapons outperforming max-level lower-tier weapons, six new legendary weapons, and collision separation preventing zombies from standing inside survivors or Verity."] },
@@ -286,6 +287,7 @@ const UPDATE_LOG = [
   { version: "3.5.4", notes: ["Message notifications now show while a game is open."] }
 ];
 document.querySelector("#authVersionText").textContent = `Version ${APP_VERSION}`;
+document.documentElement.dataset.discardVersion = APP_VERSION;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
 document.querySelectorAll('link[rel~="icon"]').forEach(link => link.remove());
@@ -4305,7 +4307,7 @@ messageInput.addEventListener("keydown", event => {
 
 function loadVersion() {
   api("/api/version").then(result => {
-    document.querySelector("#versionNote").textContent = `Version ${result.version}`;
+    document.querySelector("#versionNote").textContent = `Discard v${APP_VERSION}`;
   }).catch(() => {});
 }
 
