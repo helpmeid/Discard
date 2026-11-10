@@ -11,7 +11,7 @@ self.onmessage=({data})=>{
  if(data.type==='init'){
   self.currentUser={id:data.host};self.state={friends:Object.fromEntries(data.players.map(id=>[id,{}]))};
   self.viewPerson=id=>({displayName:data.names[id]||'Survivor'});
-  importScripts('dead-zone-net.js?v=2.0.0','dead-zone.js?v=6.2.4');
+  importScripts('dead-zone-net.js?v=2.0.0','dead-zone.js?v=6.2.5');
   self.deadZoneWorker.initialize(data);
   setInterval(()=>postMessage({type:'checkpoint',world:self.deadZoneWorker.getWorld()}),1000);
  }else if(data.type==='packet')self.deadZoneHandle(data.from,data.packet);
@@ -19,6 +19,7 @@ self.onmessage=({data})=>{
  else if(data.type==='equip')self.deadZoneWorker.equip(data.id,data.slot,data.hand);
  else if(data.type==='swap')self.deadZoneWorker.swap(data.id,data.hand);
  else if(data.type==='drop')self.deadZoneWorker.drop(data.id,data.request);
+ else if(data.type==='verity')self.deadZoneWorker.verity(data.id,data.request);
  else if(data.type==='merge')self.deadZoneWorker.merge(data.id,data.request);
  else if(data.type==='evolve')self.deadZoneWorker.evolve(data.id,data.request);
  else if(data.type==='pause')self.deadZoneWorker.setPaused(data.paused);
