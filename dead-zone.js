@@ -83,7 +83,7 @@ function makeVerity(){return{x:VERITY_X,y:VERITY_Y,hp:100,maxHp:100,state:'sleep
 function verityInteract(p,dt){
  const v=world.verity;if(!v||p.hp<=0||Math.hypot(v.x-p.x,v.y-p.y)>72)return false;
  if(v.state==='sleeping'){v.state='active';v.following=p.id;world.notice='☀ VERITY AWAKENED! Press G nearby to open his inventory.';burst(v.x,v.y,'#ffe762',24);return true;}
- if(v.hp<=0||v.state==='down'){v.reviveHold=(v.reviveHold||0)+dt;if(v.reviveHold>=3){v.hp=45;v.state='active';v.reviveHold=0;v.invuln=2;world.notice=name(p.id)+' revived Verity!';burst(v.x,v.y,'#ffec77',18);}return true;}
+ if(v.hp<=0||v.state==='down'){if(v.reviver&&v.reviver!==p.id)return true;v.reviver=p.id;v.reviveHold=(v.reviveHold||0)+dt;if(v.reviveHold>=3){v.hp=45;v.state='active';v.reviveHold=0;v.reviver=null;v.invuln=2;world.notice=name(p.id)+' revived Verity!';burst(v.x,v.y,'#ffec77',18);}return true;}
  return false;
 }
 function verityAction(p,req){
@@ -150,7 +150,7 @@ function verityFindPath(sx,sy,gx,gy){
  const key=(x,y)=>x+','+y,heur=(x,y)=>Math.hypot(x-end[0],y-end[1]);
  const open=[{x:start[0],y:start[1],g:0,f:heur(...start)}],cost=new Map([[key(...start),0]]),prev=new Map(),closed=new Set();
  let goal=null,closest=null,best=Infinity,iterations=0;
- while(open.length&&iterations++<1200){
+ while(open.length&&iterations++<650){
   let ix=0;for(let i=1;i<open.length;i++)if(open[i].f<open[ix].f)ix=i;
   const n=open.splice(ix,1)[0],id=key(n.x,n.y);if(closed.has(id))continue;closed.add(id);
   const dist=heur(n.x,n.y);if(dist<best){best=dist;closest=n;}
@@ -196,7 +196,7 @@ function tickVerity(dt){
  const distanceToGoal=Math.hypot(tx-v.x,ty-v.y),speed=v.roll>0?355:190;
  const direct=verityLineClear(v.x,v.y,tx,ty);
  v.routeClock=(v.routeClock||0)-dt;
- if(!v.roll&&(!direct||v.stuck>.35)&&(v.routeClock<=0||!v.route?.length||Math.hypot(tx-(v.routeGoalX||0),ty-(v.routeGoalY||0))>100)){
+ if(!v.roll&&(!direct||v.stuck>.35)&&(v.routeClock<=0||(v.route?.length&&Math.hypot(tx-(v.routeGoalX||0),ty-(v.routeGoalY||0))>100))){
   v.route=verityFindPath(v.x,v.y,tx,ty);v.routeGoalX=tx;v.routeGoalY=ty;v.routeClock=.7;
  }
  if(direct&&v.stuck<.25)v.route=[];
@@ -336,7 +336,7 @@ function input(){const watch=keys.has('Tab');if(watch&&!previousSpectate)spectat
 function tick(dt){if(!world||world.ended)return;const w=world;w.time=(w.time||0)+dt;w.effects=(w.effects||[]).filter(e=>(e.life-=dt)>0);for(const e of w.effects){e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=Math.max(0,1-dt*4);e.vy*=Math.max(0,1-dt*4);}storyTick(dt);if(w.players.every(p=>p.hp<=0)){w.ended=true;return;}if(w.ended)return;
 for(const p of w.players){const a={...(p.id===who()&&!window.__DEAD_ZONE_WORKER__?localInput:hostInput(p.id,dt))};if(p.id!==who()){const pending=inputs.get(p.id);if(pending)for(const k of ['mint','door','board','repair','swap'])pending[k]=false;}if(p.hp<=0){p.reviveHold=0;p.reviveTarget=null;continue;}const down=w.players.find(q=>q.id!==p.id&&q.hp<=0&&Math.hypot(q.x-p.x,q.y-p.y)<64);const verityNear=w.verity&&Math.hypot(w.verity.x-p.x,w.verity.y-p.y)<66;if(a.use&&down){if(p.reviveTarget!==down.id){p.reviveTarget=down.id;p.reviveHold=0;}p.reviveHold=(p.reviveHold||0)+dt;if(p.reviveHold>=3){down.hp=45;down.invuln=2;down.stamina=60;p.reviveHold=0;p.reviveTarget=null;w.notice=name(p.id)+' revived '+name(down.id)+'!';burst(down.x,down.y,'#9ee5ad',20);}}else{p.reviveHold=0;p.reviveTarget=null;}advancePlayerMovement(p,a,dt);p.cool=Math.max(0,p.cool-dt);p.invuln=Math.max(0,p.invuln-dt);p.flash=Math.max(0,(p.flash||0)-dt);p.recoil=Math.max(0,(p.recoil||0)-dt*65);p.swing=Math.max(0,(p.swing||0)-dt);if(Number.isFinite(a.ax)&&Number.isFinite(a.ay))p.face=Math.atan2(a.ay-p.y,a.ax-p.x);
 if(a.swap===1||a.swap===2)swapWeapon(p,a.swap===1?'primary':'secondary');if(a.mint&&p.mints>0&&p.hp<100){p.mints--;p.hp=Math.min(100,p.hp+22);w.notice=name(p.id)+' used Care Mints';}
-const chest=nearbyChest(p);if(down||!a.use||!chest||Math.hypot(p.x-chest.x,p.y-chest.y)>80){p.chestHold=0;p.chestTarget=null;p.chestComplete=false;}else if(p.chestTarget!==chest.id){p.chestTarget=chest.id;p.chestHold=0;p.chestComplete=false;}else if(!p.chestComplete){p.chestHold=Math.min(1.25,(p.chestHold||0)+dt);if(p.chestHold>=1.25){chest.opened=true;p.chestComplete=true;p.useLatch=true;const item=randomLoot(w.wave);const offsets=[[-25,-18],[25,-18],[-25,22],[25,22],[0,0]];let pos={x:chest.x,y:chest.y};for(const [ox,oy] of offsets){if(!solid(chest.x+ox,chest.y+oy,10)){pos={x:chest.x+ox,y:chest.y+oy};break;}}w.drops.push({id:++w.dropSerial,item,x:pos.x,y:pos.y});w.notice='Chest opened! Press E to pick up '+itemDefs[item].name;}}if(a.use&&!down&&!p.useLatch&&!verityNear&&(!chest||w.drops.some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65))&&!(w.mode==='story'&&w.story.stage<2&&Math.hypot(p.x-missionSites[w.story.stage].x,p.y-missionSites[w.story.stage].y)<70)){action(p,{use:true});p.useLatch=true;}if(a.use&&!down&&verityNear){if(w.verity.state==='down'){verityInteract(p,dt);}else if(w.verity.state==='sleeping'&&!p.useLatch){verityInteract(p,dt);p.useLatch=true;}}if(!a.use){p.useLatch=false;if(w.verity)w.verity.reviveHold=0;}if(a.door||a.board||a.repair)action(p,a);
+const chest=nearbyChest(p);if(down||!a.use||!chest||Math.hypot(p.x-chest.x,p.y-chest.y)>80){p.chestHold=0;p.chestTarget=null;p.chestComplete=false;}else if(p.chestTarget!==chest.id){p.chestTarget=chest.id;p.chestHold=0;p.chestComplete=false;}else if(!p.chestComplete){p.chestHold=Math.min(1.25,(p.chestHold||0)+dt);if(p.chestHold>=1.25){chest.opened=true;p.chestComplete=true;p.useLatch=true;const item=randomLoot(w.wave);const offsets=[[-25,-18],[25,-18],[-25,22],[25,22],[0,0]];let pos={x:chest.x,y:chest.y};for(const [ox,oy] of offsets){if(!solid(chest.x+ox,chest.y+oy,10)){pos={x:chest.x+ox,y:chest.y+oy};break;}}w.drops.push({id:++w.dropSerial,item,x:pos.x,y:pos.y});w.notice='Chest opened! Press E to pick up '+itemDefs[item].name;}}if(a.use&&!down&&!p.useLatch&&!verityNear&&(!chest||w.drops.some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65))&&!(w.mode==='story'&&w.story.stage<2&&Math.hypot(p.x-missionSites[w.story.stage].x,p.y-missionSites[w.story.stage].y)<70)){action(p,{use:true});p.useLatch=true;}if(a.use&&!down&&verityNear){if(w.verity.state==='down'){verityInteract(p,dt);}else if(w.verity.state==='sleeping'&&!p.useLatch){verityInteract(p,dt);p.useLatch=true;}}if(!a.use){p.useLatch=false;if(w.verity?.reviver===p.id){w.verity.reviveHold=0;w.verity.reviver=null;}}if(a.door||a.board||a.repair)action(p,a);
 const semiAuto=['pistol','revolver','shotgun','doublebarrel','sniper','sledge','hammer','axe'];const heldFire=Boolean(a.fire)||!!a._firePressed;const firePressed=!!a._firePressed||(heldFire&&!p.fireHeld);p.fireHeld=heldFire;
 if(heldFire&&p.cool<=0&&(!semiAuto.includes(p.weapon)||firePressed)){p.attackSerial=(p.attackSerial||0)+1;const weapon=itemDefs[p.weapon]||itemDefs.bat,vx=(Number(a.ax)||p.x+1)-p.x,vy=(Number(a.ay)||p.y)-p.y,angle=Math.atan2(vy,vx);p.face=angle;p.cool=weapon.cool;
 if(weapon.range<100){p.swing=Math.min(.62,weapon.cool+.1);p.swingTotal=p.swing;p.swingWeapon=weapon.name;p.swingDir=(p.swingDir||1)*-1;p.swingImpact=0;for(const z of w.zombies){const handX=p.x+Math.cos(angle)*9-Math.sin(angle)*10,handY=p.y+Math.sin(angle)*9+Math.cos(angle)*10,forward=(z.x-handX)*Math.cos(angle)+(z.y-handY)*Math.sin(angle),side=Math.abs(-(z.x-handX)*Math.sin(angle)+(z.y-handY)*Math.cos(angle));if(z.hp>0&&clearShot(p.x,p.y,z.x,z.y)&&forward>-14&&forward<weapon.range+24&&side<Math.min(43,23+forward*.44)){const hitDamage=Math.round(weapon.damage*(1+.22*(activeWeaponLevel(p)-1)));z.hp-=hitDamage;impact(z,p,hitDamage);z.hit=.12;if(z.hp<=0){w.score+=z.boss?500:10;p.kills++;zombieLoot(z);if(z.boss){for(let reward=0;reward<4;reward++)w.drops.push({id:++w.dropSerial,item:randomLoot(Math.max(10,w.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});w.notice='☠ BOSS DEFEATED · BONUS LOOT!';}}}}}
@@ -586,7 +586,7 @@ function stepAttackPreview(){
  for(const b of previewShots){b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(solid(b.x,b.y,3))b.life=0;}previewShots=previewShots.filter(b=>b.life>0).slice(-24);
 }
 function draw(){
- announceDeaths();
+ announceDeaths();if(verityOpen)showVerityInventory();
  if((session?.mode!=='guest'&&!hostWorker)||!world){drawScene();return;}
  const authority=world,now=performance.now();updateGuestVisuals(now);const age=Math.min(.1,Math.max(0,(now-(remoteSnapshots.samples.at(-1)?.at||now))/1000));
  const view=q=>{const v=guestVisuals.get(q.id!==undefined?'p:'+q.id:'z:'+q.netId),result=v?{...q,x:v.x,y:v.y,face:v.face??q.face,vx:v.vx??q.vx,vy:v.vy??q.vy}:q;return q.id===who()&&q.hp>0?{...result,...(attackPreview.swing>0?{swing:attackPreview.swing,swingTotal:attackPreview.swingTotal,swingDir:attackPreview.swingDir}:{}),...(attackPreview.flash>0?{flash:attackPreview.flash,flashX:attackPreview.flashX,flashY:attackPreview.flashY,flashAngle:attackPreview.flashAngle}:{})}:result;};
