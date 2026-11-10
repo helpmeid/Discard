@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.2.3";
+const APP_VERSION = "4.2.4";
 const UPDATE_LOG = [
+  { version: "4.2.4", notes: ["Dead Zone inventory now preserves backpack and supplies scroll positions when dropping, merging, upgrading, or equipping items."] },
   { version: "4.2.3", notes: ["Dead Zone automatically merges matching weapons into the strongest available copy.", "Moved the bottom-left house upward and opened space for bottom-edge house entrances and zombie navigation.", "Dead Zone team chat announces when players die."] },
   { version: "4.2.2", notes: ["Dead Zone: drop weapons, armor, ammo, medkits, Care Mints, boards and energy drinks from the inventory; dropped supplies and equipment can be picked up by teammates.", "Host-authoritative drops are synchronized in multiplayer and retain exact stack amounts and weapon levels."] },
   { version: "4.2.1", notes: ["Dead Zone multiplayer performance release: smoother non-host movement and reduced network stutter."] },
