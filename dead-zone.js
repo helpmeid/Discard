@@ -257,7 +257,7 @@ function drawVerityEquipment(v){
   const base=id==='military'?'#536a45':id==='heavy'?'#626e76':id==='tactical'?'#52675c':id==='hazmat'?'#f4bc35':id==='scrapvest'?'#7b6151':id==='jacket'?'#644b3e':'#5d6971';
   ctx.save();
   ctx.fillStyle=base;ctx.strokeStyle=heavy?'#222e31':'#25302d';ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(0,0,heavy?20.5:19.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,heavy?18.5:18,0,Math.PI*2);ctx.lineWidth=heavy?7:5;ctx.strokeStyle=base;ctx.stroke();ctx.lineWidth=1.5;ctx.strokeStyle='#25302d';ctx.beginPath();ctx.arc(0,0,heavy?21:20,0,Math.PI*2);ctx.stroke();
   if(vest||heavy){ctx.strokeStyle='#c5c9b6';ctx.lineWidth=heavy?5:3;ctx.beginPath();ctx.arc(0,0,heavy?15:16,-2.65,-.48);ctx.stroke();ctx.beginPath();ctx.arc(0,0,heavy?15:16,.48,2.65);ctx.stroke();}
   if(id==='hazmat'){ctx.strokeStyle='#fbe59b';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,15,Math.PI*1.1,Math.PI*1.9);ctx.stroke();}
   if(heavy){ctx.fillStyle='#384448';for(const x of [-15,15]){ctx.beginPath();ctx.arc(x,0,6,0,Math.PI*2);ctx.fill();}}
