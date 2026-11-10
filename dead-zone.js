@@ -421,7 +421,7 @@ const value=(far?110:0)+progress*.13-Math.abs(offset)*12+(offset===z.lastSteer?1
 if(value>score){score=value;chosen={x:ux,y:uy,offset};}}
 if(chosen){dirX=chosen.x;dirY=chosen.y;z.lastSteer=chosen.offset;}
 }
-if(doorCorridor){const vertical=Math.abs(z.x-door.doorX)<13;const speed=z.speed*dt;const nextX=vertical?0:Math.sign(door.doorX-z.x)*Math.min(Math.abs(door.doorX-z.x),speed);const nextY=vertical?Math.sign(ty-z.y)*Math.min(Math.abs(ty-z.y),speed):0;move(z,nextX,nextY,10);}else move(z,dirX*z.speed*dt,dirY*z.speed*dt,11);
+if(doorCorridor){const vertical=Math.abs(z.x-door.doorX)<13;const speed=z.speed*dt;const nextX=vertical?0:Math.sign(door.doorX-z.x)*Math.min(Math.abs(door.doorX-z.x),speed);const nextY=vertical?Math.sign(ty-z.y)*Math.min(Math.abs(ty-z.y),speed):0;move(z,nextX,nextY,10);}else move(z,dirX*z.speed*dt,dirY*z.speed*dt,11);separateZombieFromSurvivors(z);
 const moved=Math.hypot(z.x-oldX,z.y-oldY);
 if(l>22&&moved<Math.min(1.3,z.speed*dt*.33))z.stuck=(z.stuck||0)+dt;
 else z.stuck=Math.max(0,(z.stuck||0)-dt*2);
@@ -443,7 +443,7 @@ if(door&&!door.doorOpen&&door.doorHp>0&&Math.abs(z.x-door.doorX)<52&&Math.abs(z.
 
 if(p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<25&&z.attack<=0&&(p.id==='verity'?w.verity.invuln:p.invuln)<=0){const victim=p.id==='verity'?w.verity:p;victim.hp=Math.max(0,victim.hp-Math.ceil(16*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-(itemDefs[victim.armor]?.defense||0))));burst(victim.x,victim.y,'#d15a48',12);victim.invuln=.4;z.attack=.65;if(victim===w.verity&&victim.hp===0){victim.state='down';w.notice='Verity is down! Hold E nearby to revive him';}}
 }
-separateZombies(dt);for(const shot of w.shots){const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;if(solid(shot.x,shot.y,3)){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}for(const z of w.zombies)if(z.hp>0&&Math.hypot(z.x-shot.x,z.y-shot.y)<16){burst(shot.x,shot.y,'#e6b7a0',7);z.hp-=shot.damage;impact(z,shot,shot.damage);z.hit=.12;shot.life=0;if(z.hp<=0){w.score+=z.boss?500:10;zombieLoot(z);if(z.boss){for(let reward=0;reward<4;reward++)w.drops.push({id:++w.dropSerial,item:randomLoot(Math.max(10,w.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});w.notice='☠ BOSS DEFEATED · BONUS LOOT!';}const p=w.players.find(p=>p.id===shot.owner);if(p)p.kills++;}break;}}}
+separateZombies(dt);for(const z of w.zombies)separateZombieFromSurvivors(z);for(const shot of w.shots){const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;if(solid(shot.x,shot.y,3)){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}for(const z of w.zombies)if(z.hp>0&&Math.hypot(z.x-shot.x,z.y-shot.y)<16){burst(shot.x,shot.y,'#e6b7a0',7);z.hp-=shot.damage;impact(z,shot,shot.damage);z.hit=.12;shot.life=0;if(z.hp<=0){w.score+=z.boss?500:10;zombieLoot(z);if(z.boss){for(let reward=0;reward<4;reward++)w.drops.push({id:++w.dropSerial,item:randomLoot(Math.max(10,w.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});w.notice='☠ BOSS DEFEATED · BONUS LOOT!';}const p=w.players.find(p=>p.id===shot.owner);if(p)p.kills++;}break;}}}
 w.shots=w.shots.filter(b=>b.life>0);w.zombies=w.zombies.filter(z=>z.hp>0);if(w.between<=0&&!w.remaining&&!w.zombies.length){w.between=9;for(const p of w.players)if(p.hp>0)p.hp=Math.min(100,p.hp+15);}}
 function showInventory(){if(!root)return;if(!inventoryPanel){inventoryPanel=document.createElement('div');inventoryPanel.className='dz-inventory';root.append(inventoryPanel);}inventoryPanel.style.display=inventoryOpen?'flex':'none';if(!inventoryOpen)return;const scrollPositions={panel:inventoryPanel.scrollTop,backpack:inventoryPanel.querySelector('.dz-full-backpack')?.scrollTop||0,side:inventoryPanel.querySelector('.dz-full-side')?.scrollTop||0};inventoryPanel.replaceChildren();const p=world?.players.find(q=>q.id===who());if(!p)return;normalizeCopies(p);
 const el=(tag,cls,txt,parent=inventoryPanel)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;parent.append(n);return n;};
@@ -696,6 +696,30 @@ function storyTick(dt){
  }else{if(nearby.length)m.defense+=dt;if(m.defense>=45){world.won=true;world.ended=true;world.notice='Last Signal received. Your team escaped the quarantine.';}}
 }
 function clearShot(ax,ay,bx,by){const n=Math.ceil(Math.hypot(bx-ax,by-ay)/6);for(let i=1;i<n;i++)if(solid(ax+(bx-ax)*i/n,ay+(by-ay)*i/n,2))return false;return true;}
+// Zombie bodies cannot overlap living survivors. Resolve against the authoritative
+// positions after movement, without altering player prediction or blocking doorways.
+function separateZombieFromSurvivors(z){
+ if(z.hp<=0)return;
+ const allies=world.players.filter(p=>p.hp>0);
+ if(world.verity?.state==='active'&&world.verity.hp>0)allies.push(world.verity);
+ for(const p of allies){
+  const dx=z.x-p.x,dy=z.y-p.y,d=Math.hypot(dx,dy),radius=27;
+  if(d>=radius)continue;
+  const a=d>.01?Math.atan2(dy,dx):((z.netId||1)*2.399963229728653);
+  const x=p.x+Math.cos(a)*(radius+.5),y=p.y+Math.sin(a)*(radius+.5);
+  if(!solid(x,y,11)){z.x=x;z.y=y;continue;}
+  // At walls or narrow house entrances, find an unblocked point on the
+  // survivor's perimeter instead of pushing either actor through walls.
+  let closest=null,best=Infinity;
+  for(let i=0;i<16;i++){
+   const angle=a+(i%2?1:-1)*Math.ceil(i/2)*Math.PI/16,px=p.x+Math.cos(angle)*(radius+1),py=p.y+Math.sin(angle)*(radius+1);
+   if(solid(px,py,11))continue;
+   const dist=Math.hypot(px-z.x,py-z.y);
+   if(dist<best){best=dist;closest={x:px,y:py};}
+  }
+  if(closest){z.x=closest.x;z.y=closest.y;}
+ }
+}
 function separateZombies(dt){const zs=world.zombies;for(let i=0;i<zs.length;i++)for(let j=i+1;j<zs.length;j++){const a=zs[i],b=zs[j];if(a.hp<=0||b.hp<=0)continue;let dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy);if(d<23){if(d<.01){dx=1;dy=0;d=1;}const push=Math.min((23-d)*.5,40*dt);move(a,dx/d*push,dy/d*push,11);move(b,-dx/d*push,-dy/d*push,11);}}}
 function burst(x,y,color,count){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,v=30+Math.random()*130;world.effects.push({id:++world.eventSerial,x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,color,life:.25+Math.random()*.4,max:.65,size:1+Math.random()*3});}if(world.effects.length>180)world.effects.splice(0,world.effects.length-180);}
 function impact(z,source,damage){
