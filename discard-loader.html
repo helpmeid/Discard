@@ -43,7 +43,7 @@
         }
         if (!valid) throw new Error("Downloaded files have mismatched version numbers");
         scripts.forEach((match, index) => {
-          page = page.replace(match[0], () => "<script>" + inline(sources[index]) + "</script>");
+          page = page.replace(match[0], () => "<script>" + inline(sources[index]) + "<" + "/script>");
         });
         html = page.replace("<head>", `<head><base href="${base}">`);
         try { localStorage.setItem(cacheKey, html); } catch {}
