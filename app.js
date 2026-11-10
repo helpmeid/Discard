@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.2.1";
+const APP_VERSION = "4.2.2";
 const UPDATE_LOG = [
+  { version: "4.2.2", notes: ["Dead Zone: drop weapons, armor, ammo, medkits, Care Mints, boards and energy drinks from the inventory; dropped supplies and equipment can be picked up by teammates.", "Host-authoritative drops are synchronized in multiplayer and retain exact stack amounts and weapon levels."] },
   { version: "4.2.1", notes: ["Dead Zone multiplayer performance release: smoother non-host movement and reduced network stutter."] },
   { version: "4.2.0", notes: ["Rebuilt Dead Zone multiplayer with acknowledged input prediction, buffered remote movement, and a separate real-time connection. The match now runs in a worker so guests can keep playing while the host switches tabs. Saves remain compatible."] },
   { version: "4.1.3", notes: ["Dead Zone multiplayer: faster guest movement response, smoother remote movement, smaller state updates, and fewer interface redraws. Existing saves remain compatible."] },
