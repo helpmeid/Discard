@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.7',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.6';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.8',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.6';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -307,7 +307,7 @@ function concreteNavFor(target){
  const grid=new Int16Array(NAV_COLS*NAV_ROWS).fill(-1),queue=new Int32Array(grid.length),blocked=new Uint8Array(grid.length);
  const cell=(x,y)=>Math.min(NAV_ROWS-1,Math.max(0,Math.floor(y/NAV_STEP)))*NAV_COLS+Math.min(NAV_COLS-1,Math.max(0,Math.floor(x/NAV_STEP)));
  const free=i=>{if(blocked[i])return false;const xx=(i%NAV_COLS+.5)*NAV_STEP,yy=(Math.floor(i/NAV_COLS)+.5)*NAV_STEP;if(solid(xx,yy,11)){blocked[i]=1;return false;}return true;};
- let start=cell(target.x,target.y);if(!free(start)){let best=Infinity;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const cx=Math.floor(target.x/NAV_STEP)+dx,cy=Math.floor(target.y/NAV_STEP)+dy;if(cx<0||cx>=NAV_COLS||cy<0||cy>=NAV_ROWS)continue;const i=cy*NAV_COLS+cx,v=Math.hypot(cx*NAV_COLS-target.x/NAV_STEP,cy-target.y/NAV_STEP);if(v<best&&free(i)){best=v;start=i;}}}
+ let start=cell(target.x,target.y);if(!free(start)){let best=Infinity;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const cx=Math.floor(target.x/NAV_STEP)+dx,cy=Math.floor(target.y/NAV_STEP)+dy;if(cx<0||cx>=NAV_COLS||cy<0||cy>=NAV_ROWS)continue;const i=cy*NAV_COLS+cx,v=Math.hypot(cx+.5-target.x/NAV_STEP,cy+.5-target.y/NAV_STEP);if(v<best&&free(i)){best=v;start=i;}}}
  let head=0,tail=0;if(free(start)){queue[tail++]=start;grid[start]=0;}
  while(head<tail){const i=queue[head++],x=i%NAV_COLS,y=Math.floor(i/NAV_COLS);
   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=NAV_COLS||ny>=NAV_ROWS)continue;const ni=ny*NAV_COLS+nx;if(grid[ni]>=0||!free(ni))continue;grid[ni]=grid[i]+1;queue[tail++]=ni;}
