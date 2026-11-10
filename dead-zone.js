@@ -249,6 +249,56 @@ function tickVerity(dt){
  // Automatic bandage-style recovery is deliberately slow; player healing still matters.
  // Verity heals only through player-supplied Care Mints.
 }
+function drawVerityEquipment(v){
+ // Equipment is drawn in Verity's own rotating character space, so it
+ // follows his movement, rolls and facing direction rather than floating.
+ if(v.armor){
+  const id=v.armor,heavy=['heavy','military'].includes(id),vest=['vest','tactical','scrapvest'].includes(id);
+  const base=id==='military'?'#536a45':id==='heavy'?'#626e76':id==='tactical'?'#52675c':id==='hazmat'?'#f4bc35':id==='scrapvest'?'#7b6151':id==='jacket'?'#644b3e':'#5d6971';
+  ctx.save();
+  ctx.fillStyle=base;ctx.strokeStyle=heavy?'#222e31':'#25302d';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(0,0,heavy?20.5:19.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  if(vest||heavy){ctx.strokeStyle='#c5c9b6';ctx.lineWidth=heavy?5:3;ctx.beginPath();ctx.arc(0,0,heavy?15:16,-2.65,-.48);ctx.stroke();ctx.beginPath();ctx.arc(0,0,heavy?15:16,.48,2.65);ctx.stroke();}
+  if(id==='hazmat'){ctx.strokeStyle='#fbe59b';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,15,Math.PI*1.1,Math.PI*1.9);ctx.stroke();}
+  if(heavy){ctx.fillStyle='#384448';for(const x of [-15,15]){ctx.beginPath();ctx.arc(x,0,6,0,Math.PI*2);ctx.fill();}}
+  ctx.restore();
+ }
+ if(!v.weapon||v.state==='sleeping')return;
+ const id=v.weapon,def=itemDefs[id];if(!def)return;
+ ctx.save();
+ // Verity faces the target when fighting and carries the weapon beside him.
+ // Compensate for his idle/roll animation so the weapon points forward.
+ const bodyTurn=v.state==='down'?0:v.roll>0?v.step*1.8:Math.sin(v.step||0)*.11;
+ ctx.rotate(-bodyTurn+(v.face||0));
+ ctx.translate(17,5);
+ const ranged=def.range>=100,blade=['machete','katana','axe','reaper','voidblade','sunbreaker','crowbar'].includes(id);
+ const metallic=id==='voidblade'?'#ae82ed':id==='sunbreaker'?'#ffd06a':id==='reaper'?'#cc5660':'#dce5e4';
+ ctx.lineCap='round';ctx.lineJoin='round';
+ if(ranged){
+  ctx.fillStyle=['railgun','sniper','rifle','hellfire','thunderbolt'].includes(id)?'#475e69':'#434d4f';
+  ctx.strokeStyle='#1b262b';ctx.lineWidth=2;
+  const long=['sniper','rifle','railgun','hellfire','thunderbolt'].includes(id);
+  ctx.fillRect(-3,-5,long?40:26,10);ctx.strokeRect(-3,-5,long?40:26,10);
+  ctx.fillStyle='#aebcc0';ctx.fillRect(long?24:17,-2,long?17:10,4);
+  ctx.fillStyle='#74563f';ctx.fillRect(3,4,7,11);
+  if(['shotgun','doublebarrel'].includes(id)){ctx.fillStyle='#b2bdc0';ctx.fillRect(12,-5,21,3);}
+  if(long){ctx.fillStyle='#293b42';ctx.fillRect(10,-10,12,5);}
+ }else if(blade){
+  ctx.strokeStyle='#583f32';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(6,0);ctx.stroke();
+  ctx.strokeStyle='#b29c70';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(5,-6);ctx.lineTo(5,6);ctx.stroke();
+  ctx.fillStyle=metallic;ctx.strokeStyle='#46525a';ctx.lineWidth=1.4;
+  const reach=id==='katana'||id==='reaper'?34:id==='machete'?27:id==='axe'?24:29;
+  if(id==='axe'){ctx.fillStyle='#abb7b8';ctx.beginPath();ctx.moveTo(8,-5);ctx.lineTo(21,-12);ctx.lineTo(26,-9);ctx.lineTo(26,9);ctx.lineTo(21,12);ctx.lineTo(8,5);ctx.closePath();ctx.fill();ctx.stroke();}
+  else{ctx.beginPath();ctx.moveTo(7,-5);ctx.lineTo(reach,-(id==='katana'?4:8));ctx.lineTo(reach+6,0);ctx.lineTo(reach,4);ctx.lineTo(7,5);ctx.closePath();ctx.fill();ctx.stroke();}
+ }else{
+  ctx.strokeStyle=['bat','pipe','crowbar'].includes(id)?'#7d6552':'#b1b9bb';
+  ctx.lineWidth=['sledge','hammer'].includes(id)?7:5;
+  ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(30,0);ctx.stroke();
+  if(['sledge','hammer'].includes(id)){ctx.fillStyle='#79888b';ctx.fillRect(23,-9,13,18);}
+  if(id==='chainsaw'){ctx.fillStyle='#d18535';ctx.fillRect(0,-9,20,18);ctx.fillStyle='#b9c3c1';ctx.fillRect(17,-5,24,10);ctx.strokeStyle='#35403f';ctx.lineWidth=2;for(let x=20;x<41;x+=5){ctx.beginPath();ctx.moveTo(x,-6);ctx.lineTo(x+3,-9);ctx.stroke();}}
+ }
+ ctx.restore();
+}
 function drawVerity(v){
  ctx.save();ctx.translate(v.x,v.y);
  ctx.fillStyle='#06110e80';ctx.beginPath();ctx.ellipse(3,13,22,9,0,0,Math.PI*2);ctx.fill();
@@ -256,7 +306,7 @@ function drawVerity(v){
  ctx.fillStyle=v.state==='down'?'#b28c2a':'#ffdf00';ctx.strokeStyle='#e9ba00';ctx.lineWidth=2;
  ctx.beginPath();ctx.arc(0,0,19,0,Math.PI*2);ctx.fill();ctx.stroke();
  ctx.fillStyle='#111';if(v.state==='sleeping'){ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(-10,-4);ctx.lineTo(-4,-4);ctx.moveTo(4,-4);ctx.lineTo(10,-4);ctx.stroke();}else{ctx.beginPath();ctx.ellipse(-7,-5,2.2,3.5,0,0,7);ctx.ellipse(7,-5,2.2,3.5,0,0,7);ctx.fill();}
- ctx.strokeStyle='#111';ctx.lineWidth=2.2;ctx.beginPath();ctx.arc(0,-1,12,.18,Math.PI-.18);ctx.stroke();ctx.restore();
+ ctx.strokeStyle='#111';ctx.lineWidth=2.2;ctx.beginPath();ctx.arc(0,-1,12,.18,Math.PI-.18);ctx.stroke();drawVerityEquipment(v);ctx.restore();
  ctx.textAlign='center';ctx.font='bold 11px system-ui';ctx.fillStyle='#ffef97';ctx.fillText('VERITY'+(v.state==='sleeping'?' · Zzz':v.state==='down'?' · DOWN':''),v.x,v.y-33);
  if(v.state!=='sleeping'){ctx.fillStyle='#1a211d';ctx.fillRect(v.x-25,v.y-28,50,5);ctx.fillStyle='#8be28b';ctx.fillRect(v.x-25,v.y-28,50*Math.max(0,v.hp)/100,5);}
 }
