@@ -11,7 +11,7 @@ self.onmessage=({data})=>{
  if(data.type==='init'){
   self.currentUser={id:data.host};self.state={friends:Object.fromEntries(data.players.map(id=>[id,{}]))};
   self.viewPerson=id=>({displayName:data.names[id]||'Survivor'});
-  importScripts('dead-zone-net.js?v=2.0.1','dead-zone.js?v=6.5.0');
+  importScripts('dead-zone-net.js?v=2.0.1','dead-zone.js?v=6.5.1');
   self.deadZoneWorker.initialize(data);
   setInterval(()=>postMessage({type:'checkpoint',world:self.deadZoneWorker.getWorld()}),1000);
  }else if(data.type==='packet')self.deadZoneHandle(data.from,data.packet);
