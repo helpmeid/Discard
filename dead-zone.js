@@ -30,17 +30,17 @@ reaper:{name:'Reaper Scythe',type:'weapon',damage:165,range:91,cool:.39},
 voidblade:{name:'Voidblade',type:'weapon',damage:135,range:79,cool:.23},
 railgun:{name:'Railgun',type:'weapon',damage:410,range:1150,cool:1.1},
 hellfire:{name:'Hellfire Shotgun',type:'weapon',damage:115,range:490,cool:.54},
-thunderbolt:{name:'Thunderbolt LMG',type:'weapon',damage:78,range:800,cool:.14}};
+thunderbolt:{name:'Thunderbolt LMG',type:'weapon',damage:78,range:800,cool:.14},eclipse:{name:'Eclipse Annihilator',type:'weapon',damage:550,range:1120,cool:.16}};
 
-const WEAPON_TIERS=[['bat','pipe','hammer'],['crowbar','axe','pistol'],['machete','shotgun','smg','revolver'],['katana','rifle','sledge','doublebarrel'],['chainsaw','sniper','sunbreaker','reaper','voidblade','railgun','hellfire','thunderbolt']];
-const WEAPON_TIER_NAMES=['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY'],WEAPON_TIER_COLORS=['#839289','#65c884','#579ef5','#b880ed','#ffbd55'];
+const WEAPON_TIERS=[['bat','pipe','hammer'],['crowbar','axe','pistol'],['machete','shotgun','smg','revolver'],['katana','rifle','sledge','doublebarrel'],['chainsaw','sniper','sunbreaker','reaper','voidblade','railgun','hellfire','thunderbolt'],['eclipse']];
+const WEAPON_TIER_NAMES=['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY','MYTHIC'],WEAPON_TIER_COLORS=['#839289','#65c884','#579ef5','#b880ed','#ffbd55','#ff4df2'];
 const weaponTier=id=>WEAPON_TIERS.findIndex(t=>t.includes(id));
 const nextWeapons=id=>WEAPON_TIERS[weaponTier(id)+1]||[];
-const ROULETTE_X=1900,ROULETTE_Y=1260,ROULETTE_ODDS=[.50,.25,.15,.05];
+const ROULETTE_X=1900,ROULETTE_Y=1260,ROULETTE_ODDS=[.50,.25,.15,.05,.005];
 const rouletteNearby=p=>!!p&&Math.hypot(p.x-ROULETTE_X,p.y-ROULETTE_Y)<=110;
 // Effective DPS bands intentionally do not overlap across adjacent rarities.
 // Fast weapons do less per strike; slower weapons are much heavier hitters.
-const TIER_DPS=[52,118,260,575,1280];
+const TIER_DPS=[52,118,260,575,1280,4800];
 const shotgunPellets=id=>['shotgun','doublebarrel','hellfire'].includes(id)?3:1;
 function weaponDamage(id,level=1){
  const def=itemDefs[id]||itemDefs.bat,tier=Math.max(0,weaponTier(id));
@@ -84,9 +84,10 @@ function autoMergeCopies(p,id){
 function evolveWeapon(p,r){
  if(!world||world.wave<5||!p||p.hp<=0||!rouletteNearby(p)||!Number.isSafeInteger(r?.slot)||typeof r.choice!=='string')return false;
  normalizeCopies(p);const i=r.slot,id=p.inventory[i],tier=weaponTier(id);
- if(tier<0||tier>=4||!nextWeapons(id).includes(r.choice))return false;
+ if(tier<0||tier>=5||!nextWeapons(id).includes(r.choice))return false;
+ if(r.choice==='eclipse'&&world.mythicCreated)return false;
  const chance=ROULETTE_ODDS[tier],success=Math.random()<chance,oldName=itemDefs[id].name;
- if(success){p.inventory[i]=r.choice;p.itemLevels[i]=1;}
+ if(success){p.inventory[i]=r.choice;p.itemLevels[i]=1;if(r.choice==='eclipse')world.mythicCreated=true;}
  else{
   p.inventory.splice(i,1);p.itemLevels.splice(i,1);
   for(const hand of ['primary','secondary']){const k=p.equippedIndices[hand];p.equippedIndices[hand]=k===i?-1:k>i?k-1:k;}
@@ -327,7 +328,7 @@ function drawVerity(v){
  if(v.state!=='sleeping'){ctx.fillStyle='#1a211d';ctx.fillRect(v.x-25,v.y-28,50,5);ctx.fillStyle='#8be28b';ctx.fillRect(v.x-25,v.y-28,50*Math.max(0,v.hp)/100,5);}
 }
 
-function newWorld(ids){const m=makeMap();return{mode:session?.gameMode||'endless',story:{stage:0,hold:0,defense:0},effects:[],blood:[],eventSerial:0,time:0,won:false,wave:0,difficulty:session?.difficulty||'normal',score:0,players:ids.map((id,i)=>player(id,i)),zombies:[],zombieSerial:0,shots:[],spawned:0,remaining:0,between:2,ended:false,houses:m.houses,chests:m.chests,barriers:[],barrierSerial:0,barrierRevision:0,drops:[],dropSerial:0,verity:null,notice:''};}
+function newWorld(ids){const m=makeMap();return{mode:session?.gameMode||'endless',story:{stage:0,hold:0,defense:0},effects:[],blood:[],eventSerial:0,time:0,won:false,wave:0,difficulty:session?.difficulty||'normal',score:0,players:ids.map((id,i)=>player(id,i)),zombies:[],zombieSerial:0,shots:[],spawned:0,remaining:0,between:2,ended:false,houses:m.houses,chests:m.chests,barriers:[],barrierSerial:0,barrierRevision:0,drops:[],dropSerial:0,mythicCreated:false,verity:null,notice:''};}
 function houseAt(x,y){return(world?.houses||[]).find(h=>x>h.x+10&&x<h.x+h.w-10&&y>h.y+10&&y<h.y+h.h-10);}
 function nearDoor(p){let best=null,d=85;for(const h of world?.houses||[]){let dist=Math.hypot(p.x-h.doorX,p.y-h.doorY);if(dist<d){best=h;d=dist;}}return best;}
 function carCollision(x,y,r=12){for(let i=0;i<70;i++){const cx=90+(i%7)*500,cy=155+Math.floor(i/7)*245;const nearX=Math.max(cx-24,Math.min(x,cx+29)),nearY=Math.max(cy-43,Math.min(y,cy+47));if((x-nearX)**2+(y-nearY)**2<r*r)return true;}return false;}
@@ -607,12 +608,12 @@ function showRoulette(){
  if(!p||p.hp<=0||world.wave<5||!rouletteNearby(p)){rouletteOpen=false;roulettePanel.style.display='none';rouletteStamp='';roulettePending=false;return;}
  normalizeCopies(p);
  if((p.rouletteSerial||0)>rouletteLastSerial){rouletteLastSerial=p.rouletteSerial;roulettePending=false;rouletteSelectedSlot=-1;rouletteSelectedChoice='';}
- const gear=p.inventory.map((id,i)=>({id,i})).filter(q=>weaponTier(q.id)>=0&&weaponTier(q.id)<4);
+ const gear=p.inventory.map((id,i)=>({id,i})).filter(q=>weaponTier(q.id)>=0&&weaponTier(q.id)<5&&!(weaponTier(q.id)===4&&world.mythicCreated));
  if(!gear.some(g=>g.i===rouletteSelectedSlot)){rouletteSelectedSlot=gear[0]?.i??-1;rouletteSelectedChoice='';}
  const picked=gear.find(g=>g.i===rouletteSelectedSlot),choices=picked?nextWeapons(picked.id):[];
  if(!choices.includes(rouletteSelectedChoice))rouletteSelectedChoice=choices[0]||'';
  const result=p.rouletteResult||null;
- const stamp=JSON.stringify([p.inventory,p.itemLevels,p.rouletteSerial,rouletteSelectedSlot,rouletteSelectedChoice,roulettePending,p.hp,world.wave]);
+ const stamp=JSON.stringify([p.inventory,p.itemLevels,p.rouletteSerial,rouletteSelectedSlot,rouletteSelectedChoice,roulettePending,p.hp,world.wave,world.mythicCreated]);
  if(stamp===rouletteStamp)return;rouletteStamp=stamp;
  const scroll=roulettePanel.scrollTop;roulettePanel.replaceChildren();
  const make=(tag,text,parent=roulettePanel)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;parent.append(el);return el;};
@@ -620,14 +621,14 @@ function showRoulette(){
  const title=make('h2','🎰 THE RARITY ROULETTE',heading);title.style.cssText='margin:0;color:#ffe3a1;font-size:25px';
  const close=make('button','✕ CLOSE',heading);close.onclick=()=>{rouletteOpen=false;showRoulette();canvas?.focus();};close.style.cssText='background:#3a3036;color:#fff;border:1px solid #7a6565;border-radius:8px;padding:9px 13px;cursor:pointer';
  const intro=make('p','Select a weapon and the next rarity reward. WIN: upgrade to the chosen weapon at level 1. LOSE: the original weapon is permanently destroyed.');intro.style.cssText='font-size:13px;color:#e3cbb2;line-height:1.5';
- const rates=make('div','COMMON 50%  ·  UNCOMMON 25%  ·  RARE 15%  ·  EPIC 5%');rates.style.cssText='padding:12px;background:#322b24;border:1px solid #74644a;border-radius:10px;font-weight:800;font-size:12px;color:#ffd98f';
+ const rates=make('div','COMMON 50%  ·  UNCOMMON 25%  ·  RARE 15%  ·  EPIC 5%  ·  LEGENDARY 0.5%');rates.style.cssText='padding:12px;background:#322b24;border:1px solid #74644a;border-radius:10px;font-weight:800;font-size:12px;color:#ffd98f';
  const wheel=make('div',roulettePending?'🎰 ROLLING…':result&&rouletteLastSerial===result.serial?(result.success?'★ JACKPOT ★':'✕ SHATTERED ✕'):'🎰');wheel.style.cssText='font-size:33px;margin:12px auto 2px;text-align:center;color:'+(result?.success?'#9fefb1':'#ffc47f');
  if(roulettePending){wheel.style.animation='dz-roulette-spin .5s linear infinite';}
  if(result&&rouletteLastSerial===result.serial&&!roulettePending){const output=make('p',result.success?'SUCCESS! '+(itemDefs[result.from]?.name||result.from)+' became '+(itemDefs[result.to]?.name||result.to):'FAILED! '+(itemDefs[result.from]?.name||result.from)+' broke and is gone.');output.style.cssText='text-align:center;font-size:14px;font-weight:800;color:'+(result.success?'#9eedb4':'#ff9993');}
  make('h3','CHOOSE WEAPON').style.cssText='color:#ffdeaa;margin:15px 0 8px';
  const weapons=make('div');weapons.style.cssText='display:flex;gap:7px;flex-wrap:wrap';
  for(const {id,i} of gear){const b=make('button',(i===rouletteSelectedSlot?'✓ ':'')+(itemDefs[id]?.name||id)+' · LV '+levelOf(p,i),weapons);b.disabled=roulettePending;b.style.cssText='padding:9px;background:'+(i===rouletteSelectedSlot?'#75603e':'#273b37')+';color:#fff;border:1px solid #ab9c74;border-radius:8px;cursor:pointer';b.onclick=()=>{rouletteSelectedSlot=i;rouletteSelectedChoice='';rouletteStamp='';showRoulette();};}
- if(!gear.length)make('p','You have no eligible weapons. Find a common, uncommon, rare, or epic weapon first.');
+ if(!gear.length)make('p','No eligible weapons. The Mythic can only be created once per match.');
  if(picked){
   make('h3','CHOOSE '+WEAPON_TIER_NAMES[weaponTier(picked.id)+1]+' REWARD').style.cssText='color:#ffdeaa;margin:15px 0 8px';
   const options=make('div');options.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
@@ -772,10 +773,10 @@ function networkSnapshot(){
  const shots=world.shots.slice(-32).map(b=>[Math.round(b.x),Math.round(b.y),Math.round(b.vx),Math.round(b.vy),b.life,b.kind,b.owner]);
  const effects=world.effects.slice(-12).map(e=>[e.id,Math.round(e.x),Math.round(e.y),Math.round(e.vx),Math.round(e.vy),e.color,e.life,e.max,e.size,e.blood?1:0]);
  const ack={};for(const [id,stream]of hostStreams)ack[id]=stream.ack;
- return{t:'dz-state',protocol:2,epoch:inputEpoch,id:session.id,seq:++snapshotSerial,ack,world:{players,zombies,shots,effects,time:world.time,wave:world.wave,score:world.score,remaining:world.remaining,between:world.between,ended:world.ended,won:world.won,story:{...world.story},notice:world.notice,verity:world.verity}};
+ return{t:'dz-state',protocol:2,epoch:inputEpoch,id:session.id,seq:++snapshotSerial,ack,world:{players,zombies,shots,effects,time:world.time,wave:world.wave,score:world.score,remaining:world.remaining,between:world.between,ended:world.ended,won:world.won,story:{...world.story},notice:world.notice,verity:world.verity,mythicCreated:!!world.mythicCreated}};
 }
 function sendMetadata(){
- const data={barriers:world.barriers||[],players:world.players.map(p=>{const q={id:p.id};for(const k of inventoryFields)q[k]=p[k];return q;}),doors:world.houses.map(h=>[h.doorOpen,h.doorHp,h.boards,h.doorMaxHp]),chests:world.chests.map(c=>!!c.opened),drops:world.drops};
+ const data={mythicCreated:!!world.mythicCreated,barriers:world.barriers||[],players:world.players.map(p=>{const q={id:p.id};for(const k of inventoryFields)q[k]=p[k];return q;}),doors:world.houses.map(h=>[h.doorOpen,h.doorHp,h.boards,h.doorMaxHp]),chests:world.chests.map(c=>!!c.opened),drops:world.drops};
  const signature=JSON.stringify(data);
  for(const [id,g]of [...peers(),...(window.__DEAD_ZONE_WORKER__?[[who(),{netReady:true}]]:[])]){
   if(!g.netReady)continue;const previous=metadataSent.get(id)||{blood:0};
@@ -787,7 +788,7 @@ function sendMetadata(){
 }
 function receiveMetadata(d){
  if(!world||(inputEpoch&&d.epoch!==inputEpoch)||!Number.isSafeInteger(d.seq)||d.seq<=lastMetadataSerial)return;lastMetadataSerial=d.seq;
- const data=d.data;if(data){
+ const data=d.data;if(data){if(typeof data.mythicCreated==='boolean')world.mythicCreated=data.mythicCreated;
   if(Array.isArray(data.players))for(const value of data.players){const p=world.players.find(p=>p.id===value.id);if(p)for(const k of inventoryFields)if(value[k]!==undefined)p[k]=value[k];}
   if(Array.isArray(data.doors)&&data.doors.length===world.houses.length)world.houses.forEach((h,i)=>{[h.doorOpen,h.doorHp,h.boards,h.doorMaxHp]=data.doors[i];});
   if(Array.isArray(data.chests))world.chests.forEach((c,i)=>c.opened=!!data.chests[i]);
@@ -802,7 +803,7 @@ function receiveSnapshot(d,now){
  world.players=next.players.map(value=>Object.assign(oldPlayers.get(value.id)||player(value.id,0),value));
  world.zombies=next.zombies.map(z=>Object.assign(oldZombies.get(z[0])||{},{netId:z[0],x:z[1],y:z[2],hp:z[3],maxHp:z[4],kind:z[5],hit:z[6],boss:z[7]}));
  world.shots=(next.shots||[]).map(b=>({x:b[0],y:b[1],vx:b[2],vy:b[3],life:b[4],kind:b[5],owner:b[6]}));
- for(const k of ['time','wave','score','remaining','between','ended','won','story','notice','verity'])if(next[k]!==undefined)world[k]=next[k];
+ for(const k of ['time','wave','score','remaining','between','ended','won','story','notice','verity','mythicCreated'])if(next[k]!==undefined)world[k]=next[k];
  for(const e of next.effects||[]){if(guestEffectsSeen.has(e[0]))continue;guestEffectsSeen.add(e[0]);world.effects.push({id:e[0],x:e[1],y:e[2],vx:e[3],vy:e[4],color:e[5],life:e[6],max:e[7],size:e[8],blood:e[9]===1});}
  if(guestEffectsSeen.size>1024)guestEffectsSeen=new Set([...guestEffectsSeen].slice(-256));if(world.effects.length>180)world.effects.splice(0,world.effects.length-180);
  const own=world.players.find(p=>p.id===who());if(own)prediction.reconcile(own,d.ack?.[who()]||0);
