@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.2.5";
+const APP_VERSION = "4.2.6";
 const UPDATE_LOG = [
+  { version: "4.2.6", notes: ["Verity: hold E to revive, follow on-screen help and radar marker when down, press G to share weapons and armor through companion inventory, press V or use companion inventory to heal with Care Mints. Improved AI house avoidance, pathfinding and stuck recovery."] },
   { version: "4.2.5", notes: ["Dead Zone: improved zombie blood sprays and ground stains, synced blood particles for teammates, and added a pulsing red warning vignette below 35 HP."] },
   { version: "4.2.4", notes: ["Dead Zone inventory now preserves backpack and supplies scroll positions when dropping, merging, upgrading, or equipping items."] },
   { version: "4.2.3", notes: ["Dead Zone automatically merges matching weapons into the strongest available copy.", "Moved the bottom-left house upward and opened space for bottom-edge house entrances and zombie navigation.", "Dead Zone team chat announces when players die."] },
