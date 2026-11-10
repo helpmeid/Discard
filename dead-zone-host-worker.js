@@ -19,6 +19,8 @@ self.onmessage=({data})=>{
  else if(data.type==='equip')self.deadZoneWorker.equip(data.id,data.slot,data.hand);
  else if(data.type==='swap')self.deadZoneWorker.swap(data.id,data.hand);
  else if(data.type==='drop')self.deadZoneWorker.drop(data.id,data.request);
+ else if(data.type==='merge')self.deadZoneWorker.merge(data.id,data.request);
+ else if(data.type==='evolve')self.deadZoneWorker.evolve(data.id,data.request);
  else if(data.type==='pause')self.deadZoneWorker.setPaused(data.paused);
  else if(data.type==='save')self.deadZoneHostSave(self.deadZoneWorker.getWorld());
 };
