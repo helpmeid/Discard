@@ -426,7 +426,7 @@ function networkSnapshot(){
  const players=world.players.map(p=>{const q={id:p.id};for(const k of motionFields)if(p[k]!==undefined)q[k]=typeof p[k]==='number'?Math.round(p[k]*1000)/1000:p[k];return q;});
  const zombies=world.zombies.map(z=>[z.netId??(z.netId=world.zombieSerial=(world.zombieSerial||0)+1),Math.round(z.x*10)/10,Math.round(z.y*10)/10,z.hp,z.maxHp,z.kind,z.hit||0,!!z.boss]);
  const shots=world.shots.slice(-32).map(b=>[Math.round(b.x),Math.round(b.y),Math.round(b.vx),Math.round(b.vy),b.life,b.kind,b.owner]);
- const effects=world.effects.slice(-12).map(e=>[e.id,Math.round(e.x),Math.round(e.y),Math.round(e.vx),Math.round(e.vy),e.color,e.life,e.max,e.size]);
+ const effects=world.effects.slice(-12).map(e=>[e.id,Math.round(e.x),Math.round(e.y),Math.round(e.vx),Math.round(e.vy),e.color,e.life,e.max,e.size,e.blood?1:0]);
  const ack={};for(const [id,stream]of hostStreams)ack[id]=stream.ack;
  return{t:'dz-state',protocol:2,epoch:inputEpoch,id:session.id,seq:++snapshotSerial,ack,world:{players,zombies,shots,effects,time:world.time,wave:world.wave,score:world.score,remaining:world.remaining,between:world.between,ended:world.ended,won:world.won,story:{...world.story},notice:world.notice,verity:world.verity}};
 }
@@ -459,7 +459,7 @@ function receiveSnapshot(d,now){
  world.zombies=next.zombies.map(z=>Object.assign(oldZombies.get(z[0])||{},{netId:z[0],x:z[1],y:z[2],hp:z[3],maxHp:z[4],kind:z[5],hit:z[6],boss:z[7]}));
  world.shots=(next.shots||[]).map(b=>({x:b[0],y:b[1],vx:b[2],vy:b[3],life:b[4],kind:b[5],owner:b[6]}));
  for(const k of ['time','wave','score','remaining','between','ended','won','story','notice','verity'])if(next[k]!==undefined)world[k]=next[k];
- for(const e of next.effects||[]){if(guestEffectsSeen.has(e[0]))continue;guestEffectsSeen.add(e[0]);world.effects.push({id:e[0],x:e[1],y:e[2],vx:e[3],vy:e[4],color:e[5],life:e[6],max:e[7],size:e[8]});}
+ for(const e of next.effects||[]){if(guestEffectsSeen.has(e[0]))continue;guestEffectsSeen.add(e[0]);world.effects.push({id:e[0],x:e[1],y:e[2],vx:e[3],vy:e[4],color:e[5],life:e[6],max:e[7],size:e[8],blood:e[9]===1});}
  if(guestEffectsSeen.size>1024)guestEffectsSeen=new Set([...guestEffectsSeen].slice(-256));if(world.effects.length>180)world.effects.splice(0,world.effects.length-180);
  const own=world.players.find(p=>p.id===who());if(own)prediction.reconcile(own,d.ack?.[who()]||0);
  const entities=new Map();for(const p of world.players)entities.set('p:'+p.id,{x:p.x,y:p.y,vx:p.vx,vy:p.vy,face:p.face,hp:p.hp});for(const z of world.zombies)entities.set('z:'+z.netId,{x:z.x,y:z.y,hp:z.hp});
