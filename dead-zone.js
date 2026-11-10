@@ -310,7 +310,7 @@ function concreteNavFor(target){
  let start=cell(target.x,target.y);if(!free(start)){let best=Infinity;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const cx=Math.floor(target.x/NAV_STEP)+dx,cy=Math.floor(target.y/NAV_STEP)+dy;if(cx<0||cx>=NAV_COLS||cy<0||cy>=NAV_ROWS)continue;const i=cy*NAV_COLS+cx,v=Math.hypot(cx+.5-target.x/NAV_STEP,cy+.5-target.y/NAV_STEP);if(v<best&&free(i)){best=v;start=i;}}}
  let head=0,tail=0;if(free(start)){queue[tail++]=start;grid[start]=0;}
  while(head<tail){const i=queue[head++],x=i%NAV_COLS,y=Math.floor(i/NAV_COLS);
-  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=NAV_COLS||ny>=NAV_ROWS)continue;const ni=ny*NAV_COLS+nx;if(grid[ni]>=0||!free(ni))continue;grid[ni]=grid[i]+1;queue[tail++]=ni;}
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=NAV_COLS||ny>=NAV_ROWS)continue;const ni=ny*NAV_COLS+nx;if(grid[ni]>=0||!free(ni))continue;let edgeBlocked=false;for(const part of [.25,.5,.75]){if(solid((x+.5+dx*part)*NAV_STEP,(y+.5+dy*part)*NAV_STEP,11)){edgeBlocked=true;break;}}if(edgeBlocked)continue;grid[ni]=grid[i]+1;queue[tail++]=ni;}
  }
  const result={grid,blocked,cell,rev,time:now,x:target.x,y:target.y};concreteNavCache.set(key,result);return result;
 }
