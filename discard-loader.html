@@ -17,7 +17,9 @@
       const cacheKey = "discard-loader-cache";
       const status = document.getElementById("status");
       const get = async name => {
-        const response = await fetch(base + name + "?t=" + Date.now(), { cache: "no-store" });
+        // A fresh URL on every attempt bypasses cached raw file responses.
+        const url = base + name + "?update=" + Date.now() + "-" + Math.random().toString(36).slice(2);
+        const response = await fetch(url, { cache: "no-store", mode: "cors" });
         if (!response.ok) throw new Error(name + " " + response.status);
         return response.text();
       };
@@ -26,9 +28,20 @@
       let html;
       let offlineReason = "";
       try {
-        let page = await get("index.html");
-        const scripts = [...page.matchAll(/<script src="((?!https?:)[^"]+)"><\/script>/g)];
-        const sources = await Promise.all(scripts.map(match => get(match[1].split("?")[0])));
+        // Retry when GitHub's edge servers briefly disagree about which
+        // version of index.html/app.js is current.
+        let page, scripts, sources, valid = false;
+        for (let attempt = 0; attempt < 3 && !valid; attempt++) {
+          page = await get("index.html");
+          scripts = [...page.matchAll(/<script src="((?!https?:)[^"]+)"><\/script>/g)];
+          sources = await Promise.all(scripts.map(match => get(match[1].split("?")[0])));
+          const appIndex = scripts.findIndex(match => match[1].startsWith("app.js?v="));
+          const expected = appIndex < 0 ? "" : scripts[appIndex][1].split("?v=")[1];
+          const version = appIndex < 0 ? "" : sources[appIndex].match(/const APP_VERSION\s*=\s*["']([^"']+)/)?.[1];
+          valid = !!expected && version === expected;
+          if (!valid) status.textContent = "Checking the newest Discard version…";
+        }
+        if (!valid) throw new Error("Downloaded files have mismatched version numbers");
         scripts.forEach((match, index) => {
           page = page.replace(match[0], () => "<script>" + inline(sources[index]) + "</script>");
         });
