@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.2.8";
+const APP_VERSION = "4.2.9";
 const UPDATE_LOG = [
+  { version: "4.2.9", notes: ["Dead Zone updates: Verity chats and jokes with teammates, more frequent weapon drops, Mythic rarity, stronger bosses, roulette table, and improved weapon effects."] },
   { version: "4.2.8", notes: ["Fixed zombie melee attacks after the body-collision update: zombies can damage survivors from just outside their separation radius without clipping through them."] },
   { version: "4.2.7", notes: ["Dead Zone: stronger rarity progression with higher-tier weapons outperforming max-level lower-tier weapons, six new legendary weapons, and collision separation preventing zombies from standing inside survivors or Verity."] },
   { version: "4.2.6", notes: ["Verity: hold E to revive, follow on-screen help and radar marker when down, press G to share weapons and armor through companion inventory, press V or use companion inventory to heal with Care Mints. Improved AI house avoidance, pathfinding and stuck recovery."] },
