@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.4.1";
+const APP_VERSION = "4.5.0";
 const UPDATE_LOG = [
+  { version: "4.5.0", notes: ["Dead Zone multiplayer: host saves squad world and each player’s loot, disconnected players can rejoin an active match, active join code appears in the pause menu, lobby registration stays alive during play, and late-wave network data and worker checkpoint frequency are reduced. Saves are stored on the host device."] },
   { version: "4.4.1", notes: ["Dead Zone: 15-second intervals between completed waves; railgun projectiles pass through walls and obstacles, including when Verity uses a railgun."] },
   { version: "4.4.0", notes: ["Dead Zone late-wave optimization: nearby-only zombie collision checks, staggered line-of-sight tests, shared target lists, and longer path cache reuse without reducing horde sizes."] },
   { version: "4.3.9", notes: ["Dead Zone: Verity now spawns beside the central bell, with collision-safe fallback spots so the bell stays accessible."] },
