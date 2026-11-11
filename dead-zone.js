@@ -130,7 +130,7 @@ function normalizeCopies(p){
 }
 function effectiveWeapon(p){const equipped=p.weapon||p[p.activeSlot]||p.primary||p.secondary||'bat';return (p.cyberMods||[]).includes('mantis')&&itemDefs[equipped]?.range<100?'mantisblades':equipped;}
 function levelOf(p,i){normalizeCopies(p);return Math.max(1,Math.min(5,Math.floor(Number(p.itemLevels[i])||1)))}
-function activeWeaponLevel(p){normalizeCopies(p);if(p.weapon==='mantisblades')return 1;let i=p.equippedIndices[p.activeSlot];if(p.inventory[i]!==p.weapon)i=p.inventory.indexOf(p.weapon);return levelOf(p,i)}
+function activeWeaponLevel(p){normalizeCopies(p);if(effectiveWeapon(p)==='mantisblades')return 1;let i=p.equippedIndices[p.activeSlot];if(p.inventory[i]!==p.weapon)i=p.inventory.indexOf(p.weapon);return levelOf(p,i)}
 function mergeWeapon(p,r){
  if(!world||!p||p.hp<=0||!Number.isSafeInteger(r?.target)||!Number.isSafeInteger(r?.source))return false;
  normalizeCopies(p);const {target,source}=r,id=p.inventory[target];
