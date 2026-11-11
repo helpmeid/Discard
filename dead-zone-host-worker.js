@@ -12,7 +12,7 @@ self.onmessage=({data})=>{
  if(data.type==='init'){
   self.currentUser={id:data.host};self.state={friends:Object.fromEntries(data.players.map(id=>[id,{}]))};
   self.viewPerson=id=>({displayName:data.names[id]||'Survivor'});
-  importScripts('dead-zone-net.js?v=2.0.2','dead-zone.js?v=7.2.9');
+  importScripts('dead-zone-net.js?v=2.0.2','dead-zone.js?v=7.3.0');
   self.deadZoneWorker.initialize(data);
   setInterval(()=>postMessage({type:'checkpoint',world:self.deadZoneWorker.getWorld()}),4000);
  }else if(data.type==='addPeer')self.deadZoneWorker.addPeer(data.id);
