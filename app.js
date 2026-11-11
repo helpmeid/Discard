@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.5.0";
+const APP_VERSION = "4.6.0";
 const UPDATE_LOG = [
+  { version: "4.6.0", notes: ["Dead Zone 7.0: three separate squad save slots; randomly placed, four-way rotated enterable buildings; a large cyberware clinic with Gorilla Arms and other upgrades; cyberpsychosis turns overmodified survivors hostile and removes implants when they are killed; level-five weapons upgrade directly to the next rarity; radar shows only building outlines plus cars and roads; optimizations to radar and building collision checks."] },
   { version: "4.5.0", notes: ["Dead Zone multiplayer: host saves squad world and each player’s loot, disconnected players can rejoin an active match, active join code appears in the pause menu, lobby registration stays alive during play, and late-wave network data and worker checkpoint frequency are reduced. Saves are stored on the host device."] },
   { version: "4.4.1", notes: ["Dead Zone: 15-second intervals between completed waves; railgun projectiles pass through walls and obstacles, including when Verity uses a railgun."] },
   { version: "4.4.0", notes: ["Dead Zone late-wave optimization: nearby-only zombie collision checks, staggered line-of-sight tests, shared target lists, and longer path cache reuse without reducing horde sizes."] },
