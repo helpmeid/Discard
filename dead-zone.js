@@ -1326,7 +1326,8 @@ function showRoulette(){
  // Green occupies 0–180°; red occupies 180–360°. The pointer is at 12 o'clock.
  // -90° modulo 360 (2430°) lands at green's center; +90° modulo 360 (2250°) at red's center.
  wheel.style.animation=rouletteSpinPhase==='green'?'dz-wheel-jackpot 2.25s cubic-bezier(.12,.73,.16,1) forwards':rouletteSpinPhase==='red'?'dz-wheel-loss 2.25s cubic-bezier(.12,.73,.16,1) forwards':rouletteSpinPhase==='waiting'?'dz-wheel-wait .45s linear infinite':'none';
- const center=make('span',rouletteSpinPhase==='red'?'✕':'★',wheel);center.style.cssText='display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#312d31;color:#fff7d7;font-size:25px;border:3px solid #fff2c2';
+ if(rouletteSpinPhase==='idle'&&result&&rouletteLastSerial===result.serial)wheel.style.transform='rotate('+(result.success?270:90)+'deg)';
+ const center=make('span',rouletteSpinPhase==='red'||(rouletteSpinPhase==='idle'&&result&&!result.success)?'✕':'★',wheel);center.style.cssText='display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#312d31;color:#fff7d7;font-size:25px;border:3px solid #fff2c2';
  const pointer=make('div','▼',wheelWrap);pointer.style.cssText='font-size:24px;color:#ffdb76;margin-top:-173px;position:relative;z-index:2;pointer-events:none';
  const status=make('p',spinning?'🎰 SPINNING · '+(rouletteSpinPhase==='waiting'?'CALCULATING…':'LANDING ON '+(rouletteSpinPhase==='green'?'GREEN':'RED')):result&&rouletteLastSerial===result.serial?(result.success?'🟢 GREEN · JACKPOT!':'🔴 RED · FAILED!'):'🟢 GREEN: JACKPOT  ·  🔴 RED: LOSS',wheelWrap);status.style.cssText='font-size:17px;font-weight:bold;margin-top:143px;color:'+(result?.success?'#9fefb1':'#ffc47f');
  if(result&&rouletteLastSerial===result.serial&&!roulettePending&&!spinning){const output=make('p',result.success?'SUCCESS! '+(itemDefs[result.from]?.name||result.from)+' became '+(itemDefs[result.to]?.name||result.to):'FAILED! '+(itemDefs[result.from]?.name||result.from)+' broke and is gone.');output.style.cssText='text-align:center;font-size:14px;font-weight:800;color:'+(result.success?'#9eedb4':'#ff9993');}
@@ -1345,10 +1346,11 @@ function showRoulette(){
   gamble.onclick=()=>{if(roulettePending||spinning||!rouletteSelectedChoice)return;
    roulettePending=true;rouletteSpinPhase='waiting';rouletteLastSerial=p.rouletteSerial||0;rouletteStamp='';
    const selectedSlot=rouletteSelectedSlot,selectedChoice=rouletteSelectedChoice;
-   showRoulette();weaponProgress('evolve',selectedSlot,selectedChoice);
-   // An unavailable host must not leave the roulette controls stuck forever.
+   showRoulette();
+   // Install the fallback before submitting: a solo-host result may arrive synchronously.
    if(rouletteSpinTimer)clearTimeout(rouletteSpinTimer);
    rouletteSpinTimer=setTimeout(()=>{if(rouletteSpinPhase==='waiting'){rouletteSpinPhase='idle';roulettePending=false;rouletteStamp='';if(rouletteOpen)showRoulette();}},8000);
+   weaponProgress('evolve',selectedSlot,selectedChoice);
   };
   const warn=make('p','⚠ A failed roll destroys the selected weapon, even if it is equipped or your only weapon.');warn.style.cssText='font-size:12px;color:#f7a6a0';
  }
