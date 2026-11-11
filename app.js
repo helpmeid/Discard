@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.3.9";
+const APP_VERSION = "4.4.0";
 const UPDATE_LOG = [
+  { version: "4.4.0", notes: ["Dead Zone late-wave optimization: nearby-only zombie collision checks, staggered line-of-sight tests, shared target lists, and longer path cache reuse without reducing horde sizes."] },
   { version: "4.3.9", notes: ["Dead Zone: Verity now spawns beside the central bell, with collision-safe fallback spots so the bell stays accessible."] },
   { version: "4.3.8", notes: ["Dead Zone: reduced the preparation break between completed waves from 45 seconds to 20 seconds."] },
   { version: "4.3.7", notes: ["Dead Zone: visibly rendered parked cars, gunshots attract running zombies, and a nearby bell interaction prompt with expanding on-screen ringing waves."] },
