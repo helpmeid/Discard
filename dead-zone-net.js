@@ -13,8 +13,8 @@ function stepMovement(p,a,move,dt=STEP){
  if((p.stamina??100)<=1)p.exhausted=true;if(p.stamina>=25)p.exhausted=false;
  if((p.energy||0)>0&&(p.stamina??100)<30){p.energy--;p.stamina=Math.min(100,p.stamina+75);p.exhausted=false;}
  const dx=finite(a.x,-1,1),dy=finite(a.y,-1,1),len=Math.max(1,Math.hypot(dx,dy));
- const sprint=!!a.sprint&&Math.hypot(dx,dy)>.1&&!p.exhausted&&(p.stamina??100)>1,speed=sprint?245:112,accel=sprint?10:15;
- p.stamina=Math.max(0,Math.min(100,(p.stamina??100)+(sprint?-27:18)*dt));
+ const sprint=!!a.sprint&&Math.hypot(dx,dy)>.1&&!p.exhausted&&(p.stamina??100)>1,speed=(sprint?245:112)*(p.sandyBoost?2.15:1),accel=p.sandyBoost?23:(sprint?10:15);
+ p.stamina=Math.max(0,Math.min(100,(p.stamina??100)+(p.sandyBoost?30:(sprint?-27:18))*dt));
  p.vx=(p.vx||0)+(dx/len*speed-(p.vx||0))*Math.min(1,dt*accel);p.vy=(p.vy||0)+(dy/len*speed-(p.vy||0))*Math.min(1,dt*accel);
  move(p,p.vx*dt,p.vy*dt);
  if(Number.isFinite(a.ax)&&Number.isFinite(a.ay))p.face=Math.atan2(a.ay-p.y,a.ax-p.x);
