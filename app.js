@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.3.6";
+const APP_VERSION = "4.3.7";
 const UPDATE_LOG = [
+  { version: "4.3.7", notes: ["Dead Zone: visibly rendered parked cars, gunshots attract running zombies, and a nearby bell interaction prompt with expanding on-screen ringing waves."] },
   { version: "4.3.6", notes: ["Fixed the Dead Zone startup JavaScript syntax error introduced by Verity’s infinite-ammo display."] },
   { version: "4.3.5", notes: ["Dead Zone: Verity now has unlimited ammunition for ranged weapons without consuming player ammo."] },
   { version: "4.3.4", notes: ["Dead Zone: blood stains render underneath scenery, zombies roam until they see or hear survivors, gunshots attract infected, and a central bell can lure a horde."] },
