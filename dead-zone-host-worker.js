@@ -27,6 +27,7 @@ self.onmessage=({data})=>{
  else if(data.type==='evolve')self.deadZoneWorker.evolve(data.id,data.request);
  else if(data.type==='upgrade')self.deadZoneWorker.upgrade(data.id,data.request);
  else if(data.type==='cyber')self.deadZoneWorker.cyber(data.id,data.request);
+ else if(data.type==='skipVote')self.deadZoneWorker.skipVote(data.id);
  else if(data.type==='setWave')self.deadZoneWorker.setWave(data.wave);
  else if(data.type==='pause')self.deadZoneWorker.setPaused(data.paused);
  else if(data.type==='save')self.deadZoneHostSave(self.deadZoneWorker.getWorld());
