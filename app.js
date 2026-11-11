@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.13";
+const APP_VERSION = "4.8.14";
 const UPDATE_LOG = [
+  { version: "4.8.14", notes: ["Dead Zone: flame particles now roll forward as turbulent tongues instead of a solid cone. Burning zombies have more visible animated fire."] },
   { version: "4.8.13", notes: ["Dead Zone: rebuilt flamethrower with a continuous turbulent flame cone and direct ignition damage, removing short-lived fireball visuals."] },
   { version: "4.8.12", notes: ["Dead Zone: Inferno Flamethrower has a fuller, flickering three-jet spray with glowing flame tongues. Story Mode was removed from new matches; Endless is the default."] },
   { version: "4.8.11", notes: ["Dead Zone: flamethrower now ignites zombies for 4.5 seconds, with visible animated flames and continuing burn damage that can finish enemies off. Burning state syncs to teammates."] },
