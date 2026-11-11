@@ -849,6 +849,8 @@ function setCreativeWave(wave){
  const goal=Math.max(1,Math.min(100,Math.floor(Number(wave)||1)));
  world.wave=goal-1;world.between=2;world.remaining=0;world.spawned=0;
  world.zombies=[];world.shots=[];world.effects=[];world.ended=false;world.won=false;world.sandevistan=null;
+ world.casinoUnlocked=world.wave>=5;const casino=venue('casino');if(casino){casino.doorOpen=world.casinoUnlocked;casino.doorHp=100;casino.boards=0;}
+ world.warehouseUnlocked=world.wave>=20;const warehouse=venue('clinic');if(warehouse){warehouse.doorOpen=world.warehouseUnlocked;warehouse.doorHp=100;warehouse.boards=0;}
  updateCasino();world.notice='CREATIVE MODE · Jumping to Wave '+goal;
  return true;
 }
