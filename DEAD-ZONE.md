@@ -59,3 +59,20 @@ failures; the original commit has 115 passes and the same 11 failures in Oakhave
 tests. Real accounts over the production peer transport, four-player latency,
 long sessions and mobile input have not been tested. Furnishings and vehicles
 are visual dressing; existing house walls and doors remain the collision layout.
+
+## Weapon and healing presentation (6.5.4)
+
+Every weapon now has its own silhouette, shared by survivors and Verity. Guns
+have visible recoil and barrel-aligned muzzle flashes, including wider shotgun
+flashes and colored energy flashes for special weapons.
+
+Actual healing produces a small green particle burst and a floating restored-HP
+number. The healed local player also gets a brief green screen-edge glow. This
+covers mints, medkits, bandages, revives, wave recovery and healing Verity; healing
+counters travel in authoritative snapshots so teammates see the feedback too.
+Survivors below 25 HP get a subtle pulsing red screen edge. No healing ring or
+armor-hit sparks were added.
+
+Validation: syntax check and all three targeted effect tests pass. The existing
+suite has 16 passes and one house-entry navigation failure, reproduced unchanged
+on the pre-update source. Live browser visuals have not been verified.
