@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='6.7.9';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.24',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.24';
+const DEAD_ZONE_VERSION='6.8.0';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.25',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.25';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -323,8 +323,8 @@ function aiField(layout,gx,gy,key){
 function aiWaypoint(actor,gx,gy,key){
  const signature=world.houses.map(h=>doorPassable(h)?1:0).join('')+':'+(world.barrierRevision||0);
  const cached=actor.aiRoute;
- if(cached&&cached.key===key&&cached.signature===signature&&cached.until>(world.time||0)&&Math.hypot(cached.gx-gx,cached.gy-gy)<20&&Math.hypot(actor.x-cached.point.x,actor.y-cached.point.y)>8)return cached.point;
- const remember=point=>{actor.aiRoute={key,signature,gx,gy,point,until:(world.time||0)+.22};return point;};
+ if(cached&&cached.key===key&&cached.signature===signature&&cached.until>(world.time||0)&&Math.hypot(cached.gx-gx,cached.gy-gy)<32&&Math.hypot(actor.x-cached.point.x,actor.y-cached.point.y)>8)return cached.point;
+ const remember=point=>{actor.aiRoute={key,signature,gx,gy,point,until:(world.time||0)+.32};return point;};
  if(aiLineClear(actor.x,actor.y,gx,gy))return remember({x:gx,y:gy});
  const layout=aiGrid(),dist=aiField(layout,gx,gy,key);if(!dist)return null;
  let i=aiCellNear(layout,actor.x,actor.y,dist);if(i<0)return null;
@@ -843,13 +843,20 @@ else if(p.ammo>0){p.ammo--;makeNoise(p.x,p.y,1250,6);p.flash=p.weapon==='crossbo
 if(w.between>0){w.between-=dt;if(w.between<=0){w.wave++;updateCasino();if(w.mode==='endless'&&w.wave===10&&!w.verity){w.verity=makeVerity();w.notice='☀ WAVE 10 OBJECTIVE: GO TO THE MIDDLE! Verity has arrived in a cardboard box. Open it with your Interact key!';}w.remaining=Math.ceil((5+w.wave*4)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count);w.spawned=0;if(w.wave%10===0){const boss=zombieSpawn(true);w.zombies.push(boss);w.notice='☠ BOSS HORDE · THE '+BOSS_NAMES[boss.kind]+' HAS ARRIVED!';}if(w.wave>=2)spawnDrop();}}
 if(w.remaining>0&&w.between<=0){w.spawned+=dt*(1.3+w.wave*.25)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count;while(w.spawned>=1&&w.remaining>0&&w.zombies.length<65){w.zombies.push(zombieSpawn());w.spawned--;w.remaining--;if(w.wave>=4&&w.remaining===Math.floor((5+w.wave*4)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count/2))spawnDrop();}}
 tickVerity(dt);verityBanter(dt);
+const activeZombieTargets=w.players.filter(p=>p.hp>0);if(w.verity?.state==='active'&&w.verity.hp>0)activeZombieTargets.push({...w.verity,id:'verity'});
 for(const z of w.zombies){if(z.hp<=0)continue;if(z.kvx||z.kvy){move(z,(z.kvx||0)*dt,(z.kvy||0)*dt,11);z.kvx*=Math.max(0,1-dt*12);z.kvy*=Math.max(0,1-dt*12);}
-const living=w.players.filter(p=>p.hp>0);if(w.verity?.state==='active'&&w.verity.hp>0)living.push({...w.verity,id:'verity'});if(!living.length){w.ended=true;break;}
+const living=activeZombieTargets;if(!living.length){w.ended=true;break;}
 // Infected roam until sight or sound draws their attention.
 let best=null,bestScore=Infinity;
 for(const candidate of living){
  const dist=Math.hypot(candidate.x-z.x,candidate.y-z.y);
- const visible=dist<(z.boss?560:370)&&clearShot(z.x,z.y,candidate.x,candidate.y);
+ // Cache sight briefly; stagger checks so big hordes do not raycast every frame.
+ const sightKey=candidate.id;
+ const visible=dist<(z.boss?560:370)&&(
+  z.sightCache?.[sightKey]?.until>w.time
+   ?z.sightCache[sightKey].visible
+   :(z.sightCache??={},z.sightCache[sightKey]={visible:clearShot(z.x,z.y,candidate.x,candidate.y),until:w.time+.12+((z.netId||0)%6)*.015}).visible
+ );
  if(!visible&&!(candidate.id===z.targetId&&z.alertUntil>w.time&&dist<750))continue;
  const score=dist*(candidate.id===z.targetId?.72:1);
  if(score<bestScore){best=candidate;bestScore=score;}
@@ -1305,7 +1312,31 @@ function separateZombieFromSurvivors(z){
   if(closest){z.x=closest.x;z.y=closest.y;}
  }
 }
-function separateZombies(dt){const zs=world.zombies;for(let i=0;i<zs.length;i++)for(let j=i+1;j<zs.length;j++){const a=zs[i],b=zs[j];if(a.hp<=0||b.hp<=0)continue;let dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy);if(d<23){if(d<.01){dx=1;dy=0;d=1;}const push=Math.min((23-d)*.5,40*dt);move(a,dx/d*push,dy/d*push,11);move(b,-dx/d*push,-dy/d*push,11);}}}
+function separateZombies(dt){
+ // Spatial buckets avoid checking every pair of zombies on crowded later waves.
+ const zs=world.zombies,cellSize=32,buckets=new Map();
+ const key=(x,y)=>x+','+y;
+ for(let i=0;i<zs.length;i++){
+  const z=zs[i];if(z.hp<=0)continue;
+  const cx=Math.floor(z.x/cellSize),cy=Math.floor(z.y/cellSize),k=key(cx,cy);
+  let bucket=buckets.get(k);if(!bucket){bucket=[];buckets.set(k,bucket);}bucket.push(i);
+ }
+ for(let i=0;i<zs.length;i++){
+  const a=zs[i];if(a.hp<=0)continue;
+  const cx=Math.floor(a.x/cellSize),cy=Math.floor(a.y/cellSize);
+  for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+   const nearby=buckets.get(key(cx+ox,cy+oy));if(!nearby)continue;
+   for(const j of nearby){if(j<=i)continue;
+    const b=zs[j];if(b.hp<=0)continue;
+    let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
+    if(d2>=529)continue;
+    let d=Math.sqrt(d2);if(d<.01){dx=1;dy=0;d=1;}
+    const push=Math.min((23-d)*.5,40*dt);
+    move(a,dx/d*push,dy/d*push,11);move(b,-dx/d*push,-dy/d*push,11);
+   }
+  }
+ }
+}
 function weaponParticles(id,x,y,angle=0){
  const colors={chainsaw:['#ffe7a1','#f6a33c','#ffffff'],sunbreaker:['#ffef98','#ffac2c','#fff6c2'],reaper:['#d54f80','#7837a9','#f4aad0'],voidblade:['#ad67ff','#5de0ee','#e3baff'],railgun:['#72e6ff','#aefcff','#587eff'],hellfire:['#ff693b','#ffbf4c','#ffea89'],thunderbolt:['#80bdff','#e8f9ff','#ad8aff'],eclipse:['#ff52da','#85f7ff','#fff7b0']};
  const palette=colors[id]||itemDefs[id]?.effectColors;if(!palette||!world)return;
