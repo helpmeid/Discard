@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.7.0";
+const APP_VERSION = "4.7.1";
 const UPDATE_LOG = [
+  { version: "4.7.1", notes: ["Dead Zone: 10-second between-wave breaks, zombies spawn only outdoors, previously trapped zombies are moved out of locked venues, and both wave-locked locations have opaque black roofs labeled only by their unlock wave."] },
   { version: "4.7.0", notes: ["Dead Zone: fixed rotated casino roof and warehouse door states, cyberware is now in a dark wave-20 locked Blacksite warehouse with much higher prices, the Sandevistan activates with Q for five seconds of shared time dilation (40-second recharge), and new Creative mode provides all weapons, unlimited ammunition and credits, and selectable waves 1–100."] },
   { version: "4.6.0", notes: ["Dead Zone 7.0: three separate squad save slots; randomly placed, four-way rotated enterable buildings; a large cyberware clinic with Gorilla Arms and other upgrades; cyberpsychosis turns overmodified survivors hostile and removes implants when they are killed; level-five weapons upgrade directly to the next rarity; radar shows only building outlines plus cars and roads; optimizations to radar and building collision checks."] },
   { version: "4.5.0", notes: ["Dead Zone multiplayer: host saves squad world and each player’s loot, disconnected players can rejoin an active match, active join code appears in the pause menu, lobby registration stays alive during play, and late-wave network data and worker checkpoint frequency are reduced. Saves are stored on the host device."] },
