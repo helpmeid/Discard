@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.1.0';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.30',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.30';
+const DEAD_ZONE_VERSION='7.1.1';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.31',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.31';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -342,7 +342,19 @@ const bossSize=z=>z.kind==='apocalypse'?3.4:z.kind==='dreadnought'?3:z.kind==='c
 function chooseZombieType(wave){const choices=['walker','walker','walker','runner','crawler'];if(wave>=3)choices.push('stalker','toxic');if(wave>=5)choices.push('armored','brute','sprinter');if(wave>=7)choices.push('berserker');if(wave>=9)choices.push('juggernaut');return choices[Math.floor(Math.random()*choices.length)];}
 const BELL_X=MAPW/2,BELL_Y=MAPH/2;
 function makeNoise(x,y,radius=650,duration=4){if(!world)return;world.noise={x,y,radius,until:world.time+duration,serial:(world.noise?.serial||0)+1};}
-function zombieSpawn(boss=false){world.zombieSerial=world.zombieSerial||0;const living=world.players.filter(p=>p.hp>0);const target=living[Math.floor(Math.random()*living.length)]||world.players[0];let x=target.x+600,y=target.y;for(let attempt=0;attempt<28;attempt++){const angle=Math.random()*Math.PI*2,dist=520+Math.random()*180;const nx=Math.max(15,Math.min(MAPW-15,target.x+Math.cos(angle)*dist)),ny=Math.max(15,Math.min(MAPH-15,target.y+Math.sin(angle)*dist));if(!solid(nx,ny,14)&&!casinoLocked(houseAt(nx,ny))){x=nx;y=ny;break;}}const bossKinds=['boss','colossus','plague','dreadnought','apocalypse'];const kind=boss?bossKinds[Math.min(bossKinds.length-1,Math.floor(world.wave/10)-1)]:chooseZombieType(world.wave),cfg=ZOMBIE_TYPES[kind];const hp=Math.round(cfg.hp*(38+world.wave*12)*(DIFFICULTIES[world.difficulty||'normal']||DIFFICULTIES.normal).hp);return{netId:++world.zombieSerial,kind,maxHp:hp,hp,x,y,speed:cfg.speed*(90+Math.min(110,world.wave*6))*(DIFFICULTIES[world.difficulty||'normal']||DIFFICULTIES.normal).speed,attack:0,wanderX:x,wanderY:y,wanderUntil:0,alertUntil:0,boss,attackPower:boss?(1.4+Math.min(1.8,world.wave/30)):1};}
+function zombieSpawn(boss=false){world.zombieSerial=world.zombieSerial||0;const living=world.players.filter(p=>p.hp>0);const target=living[Math.floor(Math.random()*living.length)]||world.players[0];// Check both solid walls AND building interiors: solid() intentionally allows enterable rooms.
+ let x=null,y=null;
+ const valid=(px,py)=>!houseAt(px,py)&&!solid(px,py,18);
+ for(let attempt=0;attempt<90;attempt++){
+  const angle=Math.random()*Math.PI*2,dist=450+Math.random()*360;
+  const nx=Math.max(22,Math.min(MAPW-22,target.x+Math.cos(angle)*dist));
+  const ny=Math.max(22,Math.min(MAPH-22,target.y+Math.sin(angle)*dist));
+  if(valid(nx,ny)){x=nx;y=ny;break;}
+ }
+ // Deterministic outdoor fallback if all randomly tested spawn points are obstructed.
+ if(x===null)for(let row=0;row<MAPH&&x===null;row+=72)
+  for(let col=0;col<MAPW;col+=72){const nx=36+col,ny=36+row;if(valid(nx,ny)){x=nx;y=ny;break;}}
+ if(x===null){x=36;y=36;}const bossKinds=['boss','colossus','plague','dreadnought','apocalypse'];const kind=boss?bossKinds[Math.min(bossKinds.length-1,Math.floor(world.wave/10)-1)]:chooseZombieType(world.wave),cfg=ZOMBIE_TYPES[kind];const hp=Math.round(cfg.hp*(38+world.wave*12)*(DIFFICULTIES[world.difficulty||'normal']||DIFFICULTIES.normal).hp);return{netId:++world.zombieSerial,kind,maxHp:hp,hp,x,y,speed:cfg.speed*(90+Math.min(110,world.wave*6))*(DIFFICULTIES[world.difficulty||'normal']||DIFFICULTIES.normal).speed,attack:0,wanderX:x,wanderY:y,wanderUntil:0,alertUntil:0,boss,attackPower:boss?(1.4+Math.min(1.8,world.wave/30)):1};}
 
 const VERITY_X=BELL_X-145,VERITY_Y=BELL_Y+95;
 function makeVerity(){
@@ -491,6 +503,21 @@ function aiDoorGoal(actor,gx,gy){
  if(h&&!doorPassable(h)){const f=houseFrame(h),sign=from===h?-1:1;return{door:h,x:h.doorX-Math.sin(f.angle)*sign*42,y:h.doorY+Math.cos(f.angle)*sign*42};}
  return{door:null,x:gx,y:gy};
 }
+function evacuateLockedVenueZombie(z){
+ // Older saved games may contain zombies that previously spawned inside locked buildings.
+ const h=houseAt(z.x,z.y);
+ if(!h||!(casinoLocked(h)||warehouseLocked(h)))return false;
+ const f=houseFrame(h),normalX=-Math.sin(f.angle),normalY=Math.cos(f.angle);
+ const candidates=[
+  [h.doorX+normalX*65,h.doorY+normalY*65],
+  [h.x-55,z.y],[h.x+h.w+55,z.y],[z.x,h.y-55],[z.x,h.y+h.h+55],
+  [h.x-55,h.y-55],[h.x+h.w+55,h.y-55],[h.x-55,h.y+h.h+55],[h.x+h.w+55,h.y+h.h+55]
+ ];
+ const clear=candidates.find(([x,y])=>x>25&&y>25&&x<MAPW-25&&y<MAPH-25&&!houseAt(x,y)&&!solid(x,y,16));
+ if(!clear)return false;
+ z.x=clear[0];z.y=clear[1];z.wanderX=z.x;z.wanderY=z.y;z.wanderUntil=0;z.aiRoute=null;z.aiEscape=null;z.stuck=0;
+ return true;
+}
 function aiRecover(actor,speed,dt){
  if(!solid(actor.x,actor.y,14)){actor.aiEscape=null;return false;}
  let point=actor.aiEscape;
@@ -615,7 +642,7 @@ function tickVerity(dt){
  // Follow a reachable spot near the leader instead of chasing a point in a wall.
  if(solid(tx,ty,14)){tx=leader.x;ty=leader.y;}
  const goal=aiDoorGoal(v,tx,ty);
- if(goal.door&&!casinoLocked(goal.door)&&Math.hypot(v.x-goal.door.doorX,v.y-goal.door.doorY)<70){goal.door.doorOpen=true;v.routeClock=0;}
+ if(goal.door&&!casinoLocked(goal.door)&&!warehouseLocked(goal.door)&&Math.hypot(v.x-goal.door.doorX,v.y-goal.door.doorY)<70){goal.door.doorOpen=true;v.routeClock=0;}
  const point=aiWaypoint(v,goal.x,goal.y,'verity');
  const oldX=v.x,oldY=v.y,speed=v.roll>0?355:190;
  if(v.roll>0)move(v,(v.dodgeX||0)*speed*dt,(v.dodgeY||0)*speed*dt,14);
@@ -777,9 +804,9 @@ function drawCyberClinic(h){
   ctx.fillStyle='#e65e50';ctx.fillRect(h.doorX-26,h.doorY-9,52,9);
  }else{ctx.fillStyle='#7adfc7';ctx.fillRect(h.doorX-36,h.doorY-8,9,28);}
  ctx.textAlign='center';ctx.font='bold 17px monospace';ctx.fillStyle='#d9c49d';
- ctx.fillText('BLACKSITE · CYBERWARE DEPOT',x+w/2,y-19);
+ if(!locked)ctx.fillText('BLACKSITE · CYBERWARE DEPOT',x+w/2,y-19);
  ctx.font='bold 15px monospace';ctx.fillStyle=locked?'#ff7e76':'#86e6c8';
- ctx.fillText(locked?'LOCKED · OPENS AT WAVE 20':'[E] INSTALL MILITARY CYBERWARE',x+w/2,y+ht/2);
+ if(!locked)ctx.fillText('[E] INSTALL MILITARY CYBERWARE',x+w/2,y+ht/2);
  ctx.restore();
 }
 function drawVenueHouse(h){
@@ -799,8 +826,8 @@ function drawVenueHouse(h){
  ctx.strokeStyle=shop?'#bcc8ad':'#b6a4c5';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(h.x,h.doorY);ctx.lineTo(h.x,h.y);ctx.lineTo(h.x+h.w,h.y);ctx.lineTo(h.x+h.w,h.doorY);ctx.lineTo(h.doorX+34,h.doorY);ctx.moveTo(h.doorX-34,h.doorY);ctx.lineTo(h.x,h.doorY);ctx.stroke();
  ctx.fillStyle=locked?'#6d334c':'#8f7451';if(doorPassable(h))ctx.fillRect(h.doorX-37,h.doorY-28,8,35);else ctx.fillRect(h.doorX-33,h.doorY-8,66,16);
  if(locked){ctx.fillStyle='#f0c76a';ctx.fillRect(h.doorX-7,h.doorY-8,14,13);ctx.strokeStyle='#f0c76a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(h.doorX,h.doorY-9,5,Math.PI,Math.PI*2);ctx.stroke();}
- ctx.textAlign='center';ctx.font='bold 13px monospace';ctx.fillStyle=accent;ctx.fillText(shop?'SECTOR SUPPLY / WEAPON SHOP':locked?'CASINO / LOCKED UNTIL WAVE 5':'CASINO / RARITY ROULETTE',h.x+h.w/2,h.y-15);
- if(locked){ctx.font='bold 10px monospace';ctx.fillText('OPENS AT WAVE 5',h.doorX,h.doorY+31);}
+ ctx.textAlign='center';ctx.font='bold 13px monospace';ctx.fillStyle=accent;ctx.fillText(shop?'SECTOR SUPPLY / WEAPON SHOP':locked?'':'CASINO / RARITY ROULETTE',h.x+h.w/2,h.y-15);
+ if(locked){ctx.font='bold 10px monospace';ctx.fillText('UNLOCKS ON WAVE 5',h.doorX,h.doorY+31);}
  glow(h.x+h.w/2,h.y-8,60,shop?'#76c894':'#b771d4');ctx.restore();
 }
 function drawDeliveryBox(box,opened){
@@ -1062,7 +1089,7 @@ if(w.between>0){w.between-=dt;if(w.between<=0){w.wave++;updateCasino();if(['endl
 if(w.remaining>0&&w.between<=0){w.spawned+=dt*(1.3+w.wave*.25)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count;while(w.spawned>=1&&w.remaining>0&&w.zombies.length<65){w.zombies.push(zombieSpawn());w.spawned--;w.remaining--;if(w.wave>=4&&w.remaining===Math.floor((5+w.wave*4)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).count/2))spawnDrop();}}
 tickVerity(w.sandevistan?dt*.2:dt);verityBanter(dt);
 const activeZombieTargets=w.players.filter(p=>p.hp>0);if(w.verity?.state==='active'&&w.verity.hp>0)activeZombieTargets.push({...w.verity,id:'verity'});
-for(const z of w.zombies){const dt=w.sandevistan?stepDt*.2:stepDt;if(z.hp<=0)continue;if(z.kvx||z.kvy){move(z,(z.kvx||0)*dt,(z.kvy||0)*dt,11);z.kvx*=Math.max(0,1-dt*12);z.kvy*=Math.max(0,1-dt*12);}
+for(const z of w.zombies){const dt=w.sandevistan?stepDt*.2:stepDt;if(z.hp<=0)continue;evacuateLockedVenueZombie(z);if(z.kvx||z.kvy){move(z,(z.kvx||0)*dt,(z.kvy||0)*dt,11);z.kvx*=Math.max(0,1-dt*12);z.kvy*=Math.max(0,1-dt*12);}
 const living=activeZombieTargets;if(!living.length){w.ended=true;break;}
 // Infected roam until sight or sound draws their attention.
 let best=null,bestScore=Infinity;
@@ -1094,7 +1121,7 @@ const p=best,goalX=p?p.x:z.wanderX,goalY=p?p.y:z.wanderY;
 if(aiRecover(z,z.speed,dt))continue;
 z.hit=Math.max(0,(z.hit||0)-dt);z.attack=Math.max(0,z.attack-dt);
 const goal=aiDoorGoal(z,goalX,goalY),door=goal.door;
-if(door&&!casinoLocked(door)&&Math.hypot(z.x-door.doorX,z.y-door.doorY)<58&&z.attack<=0){
+if(door&&!casinoLocked(door)&&!warehouseLocked(door)&&Math.hypot(z.x-door.doorX,z.y-door.doorY)<58&&z.attack<=0){
  door.doorHp=Math.max(0,door.doorHp-(12+w.wave*2));z.attack=.8;
  if(door.doorHp<=0){door.doorOpen=true;door.boards=0;w.notice='Zombies broke down a door!';}
 }
@@ -1119,7 +1146,7 @@ separateZombieFromSurvivors(z);
 if(p&&p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<(z.boss?31+bossSize(z)*9:34)&&z.attack<=0&&(p.id==='verity'?w.verity.invuln:p.invuln)<=0){const victim=p.id==='verity'?w.verity:p;victim.hp=Math.max(0,victim.hp-Math.ceil(16*(z.attackPower||1)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-Math.min(.82,(itemDefs[victim.armor]?.defense||0)+((victim.cyberMods||[]).includes('skeleton')?.25:0)))));burst(victim.x,victim.y,'#d15a48',12);victim.invuln=.4;z.attack=.65;if(victim===w.verity&&victim.hp===0){victim.state='down';w.notice='Verity is down! Hold E nearby to revive him';}}
 }
 separateZombies(w.sandevistan?dt*.2:dt);for(const z of w.zombies)separateZombieFromSurvivors(z);for(const shot of w.shots){const dt=w.sandevistan&&shot.owner!==w.sandevistan.owner?stepDt*.2:stepDt;const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;if((shot.kind==='railgun'?(shot.x<3||shot.y<3||shot.x>MAPW-3||shot.y>MAPH-3):solid(shot.x,shot.y,3))){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}for(const victim of w.players){const owner=w.players.find(p=>p.id===shot.owner);if(victim.id===shot.owner||victim.hp<=0||!(victim.cyberPsycho||owner?.cyberPsycho)||Math.hypot(victim.x-shot.x,victim.y-shot.y)>17)continue;victim.hp=Math.max(0,victim.hp-shot.damage);burst(victim.x,victim.y,'#f55d85',10);shot.life=0;if(victim.hp<=0&&victim.cyberPsycho)clearCyberware(victim);break;}if(shot.life<=0)continue;for(const z of w.zombies)if(z.hp>0&&Math.hypot(z.x-shot.x,z.y-shot.y)<(z.boss?14+bossSize(z)*9:16)){burst(shot.x,shot.y,'#e6b7a0',7);z.hp-=shot.damage;impact(z,shot,shot.damage);z.hit=.12;shot.life=0;if(z.hp<=0){w.score+=z.boss?500:10;zombieLoot(z);if(z.boss){for(let reward=0;reward<3;reward++)w.drops.push({id:++w.dropSerial,item:randomLoot(Math.max(10,w.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});w.notice='☠ '+(BOSS_NAMES[z.kind]||'BOSS')+' DEFEATED · BONUS LOOT!';}const p=w.players.find(p=>p.id===shot.owner);if(p)p.kills++;}break;}}}
-w.shots=w.shots.filter(b=>b.life>0);w.zombies=w.zombies.filter(z=>z.hp>0);if(w.between<=0&&!w.remaining&&!w.zombies.length){w.between=15;for(const p of w.players)if(p.hp>0)healActor(p,15);}}
+w.shots=w.shots.filter(b=>b.life>0);w.zombies=w.zombies.filter(z=>z.hp>0);if(w.between<=0&&!w.remaining&&!w.zombies.length){w.between=10;for(const p of w.players)if(p.hp>0)healActor(p,15);}}
 function requestCyberware(id){
  const p=world?.players.find(q=>q.id===who());if(!p||!cyberwareNearby(p))return;
  const request={mod:id};
@@ -1287,20 +1314,19 @@ function drawHitOverlay(now){
  ctx.strokeStyle='#d9342bbb';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x-23,y-35);ctx.quadraticCurveTo(x+14,y-3,x+28,y+37);ctx.stroke();}
  ctx.restore();
 }
-function drawCasinoRoof(){
- const original=venue('casino');if(!original||!casinoLocked(original))return;
- // Cover the true rotated footprint of the locked casino.
- const frame=houseFrame(original),h=original.turn?{...original,x:-frame.w/2,y:-frame.h/2,w:frame.w,h:frame.h,doorX:0,doorY:frame.h/2}:original;
- ctx.save();if(original.turn){ctx.translate(frame.cx,frame.cy);ctx.rotate(frame.angle);}ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
- ctx.fillStyle='#292332';ctx.fillRect(h.x-6,h.y-6,h.w+12,h.h+12);
- ctx.strokeStyle='#48364f';ctx.lineWidth=2;
- for(let y=h.y+22;y<h.doorY-9;y+=24){ctx.beginPath();ctx.moveTo(h.x+10,y);ctx.lineTo(h.x+h.w-10,y);ctx.stroke();}
- ctx.strokeStyle='#725779';ctx.lineWidth=3;ctx.strokeRect(h.x+9,h.y+9,h.w-18,h.h-18);
- ctx.textAlign='center';ctx.font='bold 18px monospace';ctx.fillStyle='#cfacd9';ctx.fillText('CASINO',h.x+h.w/2,h.y+h.h/2-5);
- ctx.font='bold 11px monospace';ctx.fillStyle='#ddbbd9';ctx.fillText('OPENS AT WAVE 5',h.x+h.w/2,h.y+h.h/2+16);
- ctx.fillStyle='#6d334c';ctx.fillRect(h.doorX-33,h.doorY-8,66,16);
- ctx.fillStyle='#f0c76a';ctx.fillRect(h.doorX-7,h.doorY-8,14,13);ctx.strokeStyle='#f0c76a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(h.doorX,h.doorY-9,5,Math.PI,Math.PI*2);ctx.stroke();
- ctx.restore();
+function drawLockedVenueRoofs(){
+ // Draw AFTER all survivors, zombies and particles: locked rooms are completely concealed.
+ for(const [h,wave] of [[venue('casino'),5],[venue('clinic'),20]]){
+  if(!h||world.wave>=wave)continue;
+  const f=houseFrame(h),rw=f.w,rh=f.h;
+  ctx.save();ctx.translate(f.cx,f.cy);ctx.rotate(f.angle);
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+  ctx.fillStyle='#050505';ctx.fillRect(-rw/2-8,-rh/2-8,rw+16,rh+16);
+  ctx.strokeStyle='#252525';ctx.lineWidth=6;ctx.strokeRect(-rw/2-5,-rh/2-5,rw+10,rh+10);
+  ctx.fillStyle='#eeeeee';ctx.font='bold 19px monospace';ctx.textAlign='center';
+  ctx.fillText('UNLOCKS ON WAVE '+wave,0,-6);
+  ctx.restore();
+ }
 }
 function drawRouletteTable(){const h=venue('casino');if(!h||casinoLocked(h))return;const point=roulettePoint();ctx.save();ctx.translate(point.x,point.y);ctx.fillStyle='#080f11ac';ctx.beginPath();ctx.ellipse(5,18,72,33,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#372820';ctx.fillRect(-63,-19,126,44);ctx.fillStyle='#b88d52';ctx.fillRect(-62,-23,124,37);ctx.strokeStyle='#e7bb72';ctx.lineWidth=4;ctx.strokeRect(-62,-23,124,37);const colors=['#839289','#65c884','#579ef5','#b880ed','#ffbd55'];for(let i=0;i<10;i++){const a=i*Math.PI/5;ctx.fillStyle=colors[i%5];ctx.beginPath();ctx.moveTo(0,-5);ctx.arc(0,-5,23,a,a+Math.PI/5);ctx.fill();}ctx.fillStyle='#10171b';ctx.beginPath();ctx.arc(0,-5,6,0,Math.PI*2);ctx.fill();ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#ffe09c';ctx.fillText('ROULETTE',0,-40);ctx.font='11px monospace';ctx.fillText(world.wave<5?'LOCKED UNTIL WAVE 5':'PRESS '+binds.interact.replace('Key','')+' TO GAMBLE',0,42);ctx.restore();}
 function drawScene(){if(!ctx)return;const own=world?.players.find(q=>q.id===who());
@@ -1317,13 +1343,13 @@ ctx.translate(-Math.min(13,q.recoil||0),0);ctx.rotate(-(q.recoil||0)*.012);ctx.s
 ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor='#060e0c';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
 drawWeaponModel(weapon);
 ctx.restore();drawMuzzleFlash(q);ctx.fillStyle='#f1f1e5';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(name(q.id)+(q.cyberPsycho?' · CYBERPSYCHO':''),q.x,q.y-30);ctx.fillStyle='#d65855';ctx.fillRect(q.x-19,q.y-25,38*q.hp/100,4);}
-for(const b of world.shots){if(b.kind==='crossbow'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.strokeStyle='#d3c9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(0,0);ctx.stroke();ctx.strokeStyle='#a9c8b9';ctx.beginPath();ctx.moveTo(-4,-3);ctx.lineTo(0,0);ctx.lineTo(-4,3);ctx.moveTo(-18,-3);ctx.lineTo(-14,0);ctx.lineTo(-18,3);ctx.stroke();ctx.restore();continue;}const speed=Math.hypot(b.vx,b.vy)||1,ux=b.vx/speed,uy=b.vy/speed;ctx.save();ctx.lineCap='round';ctx.strokeStyle=b.kind==='shotgun'?'#f5bb77aa':'#ffe5a8b3';ctx.lineWidth=b.kind==='shotgun'?3:2.5;ctx.beginPath();ctx.moveTo(b.x-ux*26,b.y-uy*26);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff6d7';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(b.x-ux*12,b.y-uy*12);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle='#fff5c7';ctx.beginPath();ctx.arc(b.x,b.y,2.6,0,Math.PI*2);ctx.fill();ctx.restore();}drawEffects();drawCasinoRoof();if(world.sandevistan){ctx.save();ctx.globalAlpha=.8;ctx.lineWidth=5;ctx.strokeStyle=world.sandevistan.owner===who()?'#79efff':'#92a5d9';ctx.strokeRect(camera.x+8,camera.y+8,W-16,H-16);ctx.restore();}updateHUD(p);if(world.ended&&!gameOverShown){gameOverShown=true;shopOpen=false;if(shopPanel)shopPanel.style.display='none';verityOpen=false;if(verityPanel)verityPanel.style.display='none';inventoryOpen=false;if(inventoryPanel)inventoryPanel.style.display='none';localStorage.removeItem(saveKey());screen((world.won?'EXTRACTION COMPLETE · ':'GAME OVER · ')+'Wave '+world.wave+' · Score '+world.score);button('⌂ Return to Start Menu',returnToMenu);}}ctx.restore();drawAtmosphere(p);if(world)drawHealingFeedback();if(own?.hp>0||own?.hp===0)drawHitOverlay(performance.now());drawMissionHUD(p);if(performance.now()-radarClock>=100){radarClock=performance.now();drawMiniMap();}const house=own?.hp>0?nearDoor(own):null,near=own?.hp>0?nearbyChest(own):null,drop=(world?.drops||[]).find(d=>p&&Math.hypot(d.x-p.x,d.y-p.y)<65);
+for(const b of world.shots){if(b.kind==='crossbow'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.strokeStyle='#d3c9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(0,0);ctx.stroke();ctx.strokeStyle='#a9c8b9';ctx.beginPath();ctx.moveTo(-4,-3);ctx.lineTo(0,0);ctx.lineTo(-4,3);ctx.moveTo(-18,-3);ctx.lineTo(-14,0);ctx.lineTo(-18,3);ctx.stroke();ctx.restore();continue;}const speed=Math.hypot(b.vx,b.vy)||1,ux=b.vx/speed,uy=b.vy/speed;ctx.save();ctx.lineCap='round';ctx.strokeStyle=b.kind==='shotgun'?'#f5bb77aa':'#ffe5a8b3';ctx.lineWidth=b.kind==='shotgun'?3:2.5;ctx.beginPath();ctx.moveTo(b.x-ux*26,b.y-uy*26);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff6d7';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(b.x-ux*12,b.y-uy*12);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle='#fff5c7';ctx.beginPath();ctx.arc(b.x,b.y,2.6,0,Math.PI*2);ctx.fill();ctx.restore();}drawEffects();drawLockedVenueRoofs();if(world.sandevistan){ctx.save();ctx.globalAlpha=.8;ctx.lineWidth=5;ctx.strokeStyle=world.sandevistan.owner===who()?'#79efff':'#92a5d9';ctx.strokeRect(camera.x+8,camera.y+8,W-16,H-16);ctx.restore();}updateHUD(p);if(world.ended&&!gameOverShown){gameOverShown=true;shopOpen=false;if(shopPanel)shopPanel.style.display='none';verityOpen=false;if(verityPanel)verityPanel.style.display='none';inventoryOpen=false;if(inventoryPanel)inventoryPanel.style.display='none';localStorage.removeItem(saveKey());screen((world.won?'EXTRACTION COMPLETE · ':'GAME OVER · ')+'Wave '+world.wave+' · Score '+world.score);button('⌂ Return to Start Menu',returnToMenu);}}ctx.restore();drawAtmosphere(p);if(world)drawHealingFeedback();if(own?.hp>0||own?.hp===0)drawHitOverlay(performance.now());drawMissionHUD(p);if(performance.now()-radarClock>=100){radarClock=performance.now();drawMiniMap();}const house=own?.hp>0?nearDoor(own):null,near=own?.hp>0?nearbyChest(own):null,drop=(world?.drops||[]).find(d=>p&&Math.hypot(d.x-p.x,d.y-p.y)<65);
 if(session?.phase==='play'&&!world.ended){
 const hints=[];const down=world?.players.find(q=>own?.hp>0&&q.id!==own.id&&q.hp<=0&&Math.hypot(q.x-own.x,q.y-own.y)<64);if(down)hints.push({text:'REVIVE '+name(down.id)+' · Hold '+binds.interact.replace('Key','')+'  '+Math.round((own.reviveTarget===down.id?own.reviveHold||0:0)/3*100)+'%',progress:Math.min(1,(own.reviveTarget===down.id?own.reviveHold||0:0)/3),color:'#9ce7b3'});if(own?.hp<=0&&living.length)hints.push({text:'SPECTATING '+name(p.id)+' · Press Tab to switch player',color:'#efc48d'});
 if(near)hints.push({text:'CHEST · Hold '+binds.interact.replace('Key','')+' to open  '+Math.round((p?.chestTarget===near.id?p?.chestHold||0:0)/1.25*100)+'%',progress:Math.min(1,(p?.chestTarget===near.id?p?.chestHold||0:0)/1.25),color:'#e8c67a'});
 if(drop)hints.push({text:'LOOT · Press '+binds.interact.replace('Key','')+' to pick up '+((drop.quantity?drop.quantity+' × ':'')+(drop.resource==='ammo'?'Ammo':itemDefs[drop.item]?.name||'supplies')),color:'#9fe1ac'});
 if(own?.hp>0&&world?.verity&&Math.hypot(own.x-world.verity.x,own.y-world.verity.y)<=72){const v=world.verity;if(v.state==='sleeping')hints.push({text:'VERITY DELIVERY · Press '+binds.interact.replace('Key','')+' to open box & wake him',color:'#ffe087'});else if(v.state==='down')hints.push({text:'✚ REVIVE VERITY · Hold '+binds.interact.replace('Key','')+' · '+Math.round((v.reviveHold||0)/3*100)+'%',progress:Math.min(1,(v.reviveHold||0)/3),color:'#ffd368'});else hints.push({text:'☀ VERITY · G: Inventory / Heal · '+Math.round(v.hp)+' HP',color:'#ffe087'});}
-if(cyberwareNearby(own)&&!cyberOpen)hints.push({text:'BLACKSITE CYBERWARE · Press '+binds.interact.replace('Key','')+' to access implants',color:'#a7e4da'});if(shopNearby(own)&&!shopOpen)hints.push({text:'WEAPON SHOP · Press '+binds.interact.replace('Key','')+' to buy / sell · '+(own.credits||0)+' credits',color:'#9fe5b2'});if(rouletteNearby(own)&&!rouletteOpen)hints.push({text:'CASINO · Press '+binds.interact.replace('Key','')+' to use roulette',color:'#dbb6f5'});if(house&&warehouseLocked(house))hints.push({text:'BLACKSITE WAREHOUSE LOCKED · Opens at Wave 20',color:'#e7aa92'});else if(house&&casinoLocked(house))hints.push({text:'CASINO LOCKED · Opens at wave 5',color:'#eab1eb'});else if(house)hints.push({text:'DOOR · '+binds.door.replace('Key','')+' '+(house.doorOpen?'Close':'Open')+'   '+binds.board.replace('Key','')+' Board   '+binds.repair.replace('Key','')+' Repair  🪵'+(p?.boards||0),color:'#d3e3d2'});
+if(cyberwareNearby(own)&&!cyberOpen)hints.push({text:'BLACKSITE CYBERWARE · Press '+binds.interact.replace('Key','')+' to access implants',color:'#a7e4da'});if(shopNearby(own)&&!shopOpen)hints.push({text:'WEAPON SHOP · Press '+binds.interact.replace('Key','')+' to buy / sell · '+(own.credits||0)+' credits',color:'#9fe5b2'});if(rouletteNearby(own)&&!rouletteOpen)hints.push({text:'CASINO · Press '+binds.interact.replace('Key','')+' to use roulette',color:'#dbb6f5'});if(house&&warehouseLocked(house))hints.push({text:'UNLOCKS ON WAVE 20',color:'#e7aa92'});else if(house&&casinoLocked(house))hints.push({text:'UNLOCKS ON WAVE 5',color:'#eab1eb'});else if(house)hints.push({text:'DOOR · '+binds.door.replace('Key','')+' '+(house.doorOpen?'Close':'Open')+'   '+binds.board.replace('Key','')+' Board   '+binds.repair.replace('Key','')+' Repair  🪵'+(p?.boards||0),color:'#d3e3d2'});
 const baseY=H-180;
 hints.forEach((hint,i)=>{const y=baseY-i*49,w=420,x=(W-w)/2;ctx.fillStyle='#091b19ed';ctx.fillRect(x,y,w,43);ctx.strokeStyle=hint.color;ctx.lineWidth=1.5;ctx.strokeRect(x+.5,y+.5,w-1,42);ctx.fillStyle=hint.color;ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillText(hint.text,W/2,y+23);if(hint.progress!==undefined){ctx.fillStyle='#27332b';ctx.fillRect(x+12,y+32,w-24,5);ctx.fillStyle=hint.color;ctx.fillRect(x+12,y+32,(w-24)*hint.progress,5);}});
 }
