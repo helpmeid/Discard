@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.2.6';
+const DEAD_ZONE_VERSION='7.2.7';
 const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.34',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.34';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
@@ -263,7 +263,7 @@ function shopNearby(p){const h=venue('shop'),point=shopPoint();return !!p&&p.hp>
 const CYBERWARE=[
  {id:'gorilla',name:'Gorilla Arms',price:3800,description:'+50% melee damage'},
  {id:'mantis',name:'Mantis Blades',price:5200,description:'Permanent arm-mounted melee weapon · remove at Blacksite only'},
- {id:'sandevistan',name:'Sandevistan Reflex Drive',price:12500,description:'Q: rainbow afterimages + super-speed for 8 seconds · 25 second cooldown'},
+ {id:'sandevistan',name:'Sandevistan Reflex Drive',price:12500,description:'Q: rainbow afterimages + super-speed for 9 seconds · 25 second cooldown'},
  {id:'skeleton',name:'Reinforced Skeleton',price:6800,description:'25% less incoming damage'},
  {id:'optics',name:'Combat Optics',price:4600,description:'+18% ranged damage'},
  {id:'neural',name:'Neural Accelerator',price:7400,description:'Additional stamina recovery'}
@@ -1120,7 +1120,7 @@ function activateSandevistan(p){
  if(!p||p.hp<=0||p.cyberPsycho||!(p.cyberMods||[]).includes('sandevistan'))return false;
  if(world.sandevistan&&world.sandevistan.until>world.time)return false;
  if((p.sandyReadyAt||0)>world.time){world.notice='SANDEVISTAN RECHARGING · '+Math.ceil(p.sandyReadyAt-world.time)+'s';return false;}
- world.sandevistan={owner:p.id,until:world.time+8};p.sandyReadyAt=world.time+33;
+ world.sandevistan={owner:p.id,until:world.time+9};p.sandyReadyAt=world.time+34;
  world.notice='SANDEVISTAN ACTIVE · '+name(p.id)+' is moving through stopped time!';
  for(const color of ['#ff4a9b','#ffca3a','#5dffde','#75a7ff','#b76eff'])burst(p.x,p.y,color,7);return true;
 }
@@ -1141,7 +1141,7 @@ if(p.pendingMelee&&p.weapon!==p.pendingMelee.weapon)p.pendingMelee=null;
 if(p.pendingMelee){p.pendingMelee.remaining-=dt;if(p.pendingMelee.remaining<=0){const strike=p.pendingMelee;p.pendingMelee=null;resolveMelee(p,strike.weapon,strike.damage,strike.angle);}}
 if(a.swap===1||a.swap===2)swapWeapon(p,a.swap===1?'primary':'secondary');if(a.mint&&p.mints>0&&p.hp<100){p.mints--;healActor(p,22);w.notice=name(p.id)+' used Care Mints';}
 const chest=nearbyChest(p);if(down||!a.use||!chest||Math.hypot(p.x-chest.x,p.y-chest.y)>80){p.chestHold=0;p.chestTarget=null;p.chestComplete=false;}else if(p.chestTarget!==chest.id){p.chestTarget=chest.id;p.chestHold=0;p.chestComplete=false;}else if(!p.chestComplete){p.chestHold=Math.min(1.25,(p.chestHold||0)+dt);if(p.chestHold>=1.25){chest.opened=true;p.chestComplete=true;p.useLatch=true;const item=randomLoot(w.wave);const offsets=[[-25,-18],[25,-18],[-25,22],[25,22],[0,0]];let pos={x:chest.x,y:chest.y};for(const [ox,oy] of offsets){if(!solid(chest.x+ox,chest.y+oy,10)){pos={x:chest.x+ox,y:chest.y+oy};break;}}w.drops.push({id:++w.dropSerial,item,x:pos.x,y:pos.y});w.notice='Chest opened! Press E to pick up '+itemDefs[item].name;}}if(a.use&&!down&&!p.useLatch&&Math.hypot(p.x-BELL_X,p.y-BELL_Y)<75){if(w.time-(w.bellLast??-100)>=12){w.bellLast=w.time;makeNoise(BELL_X,BELL_Y,BELL_SHOCKWAVE_RADIUS,10);w.notice='THE CENTER BELL RANG! Zombies are heading to the sound!';}else w.notice='The bell needs a moment before it can ring again';p.useLatch=true;}
-if(a.use&&!down&&!p.useLatch&&(!verityNear||w.verity.state==='active')&&(!chest||w.drops.some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65))&&!(w.mode==='story'&&w.story.stage<2&&Math.hypot(p.x-missionSites[w.story.stage].x,p.y-missionSites[w.story.stage].y)<70)){action(p,{use:true});p.useLatch=true;}if(a.use&&!down&&verityNear){if(w.verity.state==='down'){verityInteract(p,dt);}else if(w.verity.state==='sleeping'&&!p.useLatch){verityInteract(p,dt);p.useLatch=true;}}if(!a.use){p.useLatch=false;if(w.verity?.reviver===p.id){w.verity.reviveHold=0;w.verity.reviver=null;}}if(a.door||a.board||a.repair||a.barrier)action(p,a);
+if(a.use&&!down&&(!p.useLatch||(w.drops||[]).some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65)&&w.time>=(p.nextPickupAt||0))&&(!verityNear||w.verity.state==='active')&&(!chest||w.drops.some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65))&&!(w.mode==='story'&&w.story.stage<2&&Math.hypot(p.x-missionSites[w.story.stage].x,p.y-missionSites[w.story.stage].y)<70)){action(p,{use:true});p.useLatch=true;p.nextPickupAt=w.time+.12;}if(a.use&&!down&&verityNear){if(w.verity.state==='down'){verityInteract(p,dt);}else if(w.verity.state==='sleeping'&&!p.useLatch){verityInteract(p,dt);p.useLatch=true;}}if(!a.use){p.useLatch=false;if(w.verity?.reviver===p.id){w.verity.reviveHold=0;w.verity.reviver=null;}}if(a.door||a.board||a.repair||a.barrier)action(p,a);
 const heldFire=Boolean(a.fire)||!!a._firePressed;const firePressed=!!a._firePressed||(heldFire&&!p.fireHeld);p.fireHeld=heldFire;
 if(heldFire&&itemDefs[p.weapon]?.type==='weapon'&&p.cool<=0){p.attackSerial=(p.attackSerial||0)+1;const weapon=itemDefs[p.weapon],vx=(Number(a.ax)||p.x+1)-p.x,vy=(Number(a.ay)||p.y)-p.y,angle=Math.atan2(vy,vx);p.face=angle;p.cool=weapon.cool*((p.cyberMods||[]).includes('mantis')&&weapon.range<100?.8:1);weaponParticles(p.weapon,p.x,p.y,angle);
 if(weapon.range<100){
@@ -1209,7 +1209,7 @@ separateZombieFromSurvivors(z);
 
 if(p&&p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<(z.boss?31+bossSize(z)*9:34)&&z.attack<=0&&(p.id==='verity'?w.verity.invuln:p.invuln)<=0){const victim=p.id==='verity'?w.verity:p;victim.hp=Math.max(0,victim.hp-Math.ceil(16*(z.attackPower||1)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-Math.min(.82,(itemDefs[victim.armor]?.defense||0)+((victim.cyberMods||[]).includes('skeleton')?.25:0)))));burst(victim.x,victim.y,'#d15a48',12);victim.invuln=.4;z.attack=.65;if(victim===w.verity&&victim.hp===0){victim.state='down';w.notice='Verity is down! Hold E nearby to revive him';}}
 }
-separateZombies(w.sandevistan?dt*.2:dt);for(const z of w.zombies)separateZombieFromSurvivors(z);for(const shot of w.shots){const dt=w.sandevistan&&shot.owner!==w.sandevistan.owner?stepDt*.2:stepDt;const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;shot.age=(shot.age||0)+dt/steps;if((shot.kind==='railgun'?(shot.x<3||shot.y<3||shot.x>MAPW-3||shot.y>MAPH-3):solid(shot.x,shot.y,3))){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}if(shot.kind==='flamethrower'){
+separateZombies(w.sandevistan?dt*.2:dt);for(const z of w.zombies)separateZombieFromSurvivors(z);for(const shot of w.shots){const dt=w.sandevistan?stepDt*.12:stepDt;const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;shot.age=(shot.age||0)+dt/steps;if((shot.kind==='railgun'?(shot.x<3||shot.y<3||shot.x>MAPW-3||shot.y>MAPH-3):solid(shot.x,shot.y,3))){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}if(shot.kind==='flamethrower'){
  const radius=Math.min(70,22+shot.age*145);shot.hitIds=shot.hitIds||[];
  for(const z of w.zombies){if(z.hp<=0||shot.hitIds.includes(z.netId)||Math.hypot(z.x-shot.x,z.y-shot.y)>radius||!clearShot(shot.x,shot.y,z.x,z.y))continue;
   shot.hitIds.push(z.netId);z.hp-=shot.damage;impact(z,shot,shot.damage);z.hit=.15;burst(z.x,z.y,'#ff8d35',3);
@@ -1239,7 +1239,7 @@ function showCyberware(){
  const close=add('button','CLOSE');close.onclick=()=>{cyberOpen=false;showCyberware();canvas?.focus();};
  close.style.cssText='padding:9px;background:#21515e;color:white;border:1px solid #70eeee;border-radius:7px';
  add('p','WAVE 20 WAREHOUSE · CREDITS: '+(p.credits||0)+' · INSTALLED: '+mods.length+'/6 · CYBERPSYCHOSIS AT 4 MODIFICATIONS');
- if(mods.includes('sandevistan'))add('p','Q = ACTIVATE SANDEVISTAN · 8 seconds active · 25 seconds cooldown · enemies and other survivors slowed to 12% speed; super-speed and rainbow afterimages');
+ if(mods.includes('sandevistan'))add('p','Q = ACTIVATE SANDEVISTAN · 9 seconds active · 25 seconds cooldown · enemies and other survivors slowed to 12% speed; super-speed and rainbow afterimages');
  const warning=add('p',p.cyberPsycho?'CYBERPSYCHOSIS ACTIVE · Your character is attacking teammates until stopped.':'WARNING: Your fourth implant causes cyberpsychosis. Death removes all installed cyberware.');
  warning.style.color=p.cyberPsycho?'#ff5a79':'#ffbe8b';
  for(const mod of CYBERWARE){
@@ -1615,7 +1615,7 @@ function draw(){
  if((session?.mode!=='guest'&&!hostWorker)||!world){drawScene();return;}
  const authority=world,now=performance.now();updateGuestVisuals(now);const age=Math.min(.1,Math.max(0,(now-(remoteSnapshots.samples.at(-1)?.at||now))/1000));
  const view=q=>{const v=guestVisuals.get(q.id!==undefined?'p:'+q.id:'z:'+q.netId),result=v?{...q,x:v.x,y:v.y,face:v.face??q.face,vx:v.vx??q.vx,vy:v.vy??q.vy}:q;return q.id===who()&&q.hp>0?{...result,...(attackPreview.swing>0?{swing:attackPreview.swing,swingTotal:attackPreview.swingTotal,swingDir:attackPreview.swingDir}:{}),...(attackPreview.flash>0?{flash:attackPreview.flash,flashX:attackPreview.flashX,flashY:attackPreview.flashY,flashAngle:attackPreview.flashAngle}:{})}:result;};
- world={...authority,players:authority.players.map(view),zombies:authority.zombies.map(view),shots:[...authority.shots.filter(b=>!previewShots.length||b.owner!==who()).map(b=>({...b,x:b.x+b.vx*age,y:b.y+b.vy*age})),...previewShots]};
+ world={...authority,players:authority.players.map(view),zombies:authority.zombies.map(view),shots:[...authority.shots.filter(b=>!previewShots.length||b.owner!==who()).map(b=>({...b,x:b.x+b.vx*age*(authority.sandevistan?.until>authority.time?.12:1),y:b.y+b.vy*age*(authority.sandevistan?.until>authority.time?.12:1)})),...previewShots]};
  try{drawScene();}finally{world=authority;}
 }
 function advanceGame(now){
