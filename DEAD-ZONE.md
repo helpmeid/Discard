@@ -191,3 +191,11 @@ metadata, shop buttons, paused-worker trading, boxed Verity, hold attacks for al
 48 weapons, delayed melee impact, large blood/shockwaves and stationary survivors
 pressed against inside/outside walls. The building/package rendering was
 visually inspected. Live production multiplayer gameplay remains unverified.
+
+## Concealed casino (6.7.1)
+
+Before wave 5 the casino has an opaque roof. The roulette table is not drawn,
+and the roof is painted after actors, loot, blood and effects to conceal the
+interior. The exterior sign and lock stay visible. At wave 5 the roof disappears
+and the interior/table become visible automatically with the existing unlock.
+Validation: syntax check and 12 focused casino/feature checks pass.
