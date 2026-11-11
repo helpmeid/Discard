@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='6.7.7';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.22',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.22';
+const DEAD_ZONE_VERSION='6.7.8';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.23',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.23';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -891,7 +891,7 @@ separateZombieFromSurvivors(z);
 if(p&&p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<(z.boss?31+bossSize(z)*9:34)&&z.attack<=0&&(p.id==='verity'?w.verity.invuln:p.invuln)<=0){const victim=p.id==='verity'?w.verity:p;victim.hp=Math.max(0,victim.hp-Math.ceil(16*(z.attackPower||1)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-(itemDefs[victim.armor]?.defense||0))));burst(victim.x,victim.y,'#d15a48',12);victim.invuln=.4;z.attack=.65;if(victim===w.verity&&victim.hp===0){victim.state='down';w.notice='Verity is down! Hold E nearby to revive him';}}
 }
 separateZombies(dt);for(const z of w.zombies)separateZombieFromSurvivors(z);for(const shot of w.shots){const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;if(solid(shot.x,shot.y,3)){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}for(const z of w.zombies)if(z.hp>0&&Math.hypot(z.x-shot.x,z.y-shot.y)<(z.boss?14+bossSize(z)*9:16)){burst(shot.x,shot.y,'#e6b7a0',7);z.hp-=shot.damage;impact(z,shot,shot.damage);z.hit=.12;shot.life=0;if(z.hp<=0){w.score+=z.boss?500:10;zombieLoot(z);if(z.boss){for(let reward=0;reward<3;reward++)w.drops.push({id:++w.dropSerial,item:randomLoot(Math.max(10,w.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});w.notice='☠ '+(BOSS_NAMES[z.kind]||'BOSS')+' DEFEATED · BONUS LOOT!';}const p=w.players.find(p=>p.id===shot.owner);if(p)p.kills++;}break;}}}
-w.shots=w.shots.filter(b=>b.life>0);w.zombies=w.zombies.filter(z=>z.hp>0);if(w.between<=0&&!w.remaining&&!w.zombies.length){w.between=45;for(const p of w.players)if(p.hp>0)healActor(p,15);}}
+w.shots=w.shots.filter(b=>b.life>0);w.zombies=w.zombies.filter(z=>z.hp>0);if(w.between<=0&&!w.remaining&&!w.zombies.length){w.between=20;for(const p of w.players)if(p.hp>0)healActor(p,15);}}
 function showShop(){
  if(!root)return;
  if(shopOpen&&!shopNearby(world?.players.find(p=>p.id===who())))shopOpen=false;
