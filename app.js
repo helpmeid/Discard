@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.11";
+const APP_VERSION = "4.8.12";
 const UPDATE_LOG = [
+  { version: "4.8.12", notes: ["Dead Zone: Inferno Flamethrower has a fuller, flickering three-jet spray with glowing flame tongues. Story Mode was removed from new matches; Endless is the default."] },
   { version: "4.8.11", notes: ["Dead Zone: flamethrower now ignites zombies for 4.5 seconds, with visible animated flames and continuing burn damage that can finish enemies off. Burning state syncs to teammates."] },
   { version: "4.8.10", notes: ["Dead Zone: Mantis Blades now replace melee attacks with a blade on each arm without locking guns or weapon switching. The Inferno Flamethrower sprays a continuous tapered flame stream instead of fireballs."] },
   { version: "4.8.9", notes: ["Dead Zone: Sandevistan now slows affected players’ melee swing animations, attack windups, and melee cooldowns even more, while its user swings at normal speed."] },
