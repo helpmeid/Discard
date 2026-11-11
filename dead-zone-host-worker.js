@@ -25,6 +25,8 @@ self.onmessage=({data})=>{
  else if(data.type==='verityChat')self.deadZoneWorker.verityChat(data.id,data.message);
  else if(data.type==='merge')self.deadZoneWorker.merge(data.id,data.request);
  else if(data.type==='evolve')self.deadZoneWorker.evolve(data.id,data.request);
+ else if(data.type==='upgrade')self.deadZoneWorker.upgrade(data.id,data.request);
+ else if(data.type==='cyber')self.deadZoneWorker.cyber(data.id,data.request);
  else if(data.type==='pause')self.deadZoneWorker.setPaused(data.paused);
  else if(data.type==='save')self.deadZoneHostSave(self.deadZoneWorker.getWorld());
 };
