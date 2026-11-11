@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.3.7";
+const APP_VERSION = "4.3.8";
 const UPDATE_LOG = [
+  { version: "4.3.8", notes: ["Dead Zone: reduced the preparation break between completed waves from 45 seconds to 20 seconds."] },
   { version: "4.3.7", notes: ["Dead Zone: visibly rendered parked cars, gunshots attract running zombies, and a nearby bell interaction prompt with expanding on-screen ringing waves."] },
   { version: "4.3.6", notes: ["Fixed the Dead Zone startup JavaScript syntax error introduced by Verity’s infinite-ammo display."] },
   { version: "4.3.5", notes: ["Dead Zone: Verity now has unlimited ammunition for ranged weapons without consuming player ammo."] },
