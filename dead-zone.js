@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.2.2';
+const DEAD_ZONE_VERSION='7.2.3';
 const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.34',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.34';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
@@ -263,7 +263,7 @@ function shopNearby(p){const h=venue('shop'),point=shopPoint();return !!p&&p.hp>
 const CYBERWARE=[
  {id:'gorilla',name:'Gorilla Arms',price:3800,description:'+50% melee damage'},
  {id:'mantis',name:'Mantis Blades',price:5200,description:'20% faster melee attacks'},
- {id:'sandevistan',name:'Sandevistan Reflex Drive',price:12500,description:'Q activates 5 seconds of time dilation · 40 second cooldown'},
+ {id:'sandevistan',name:'Sandevistan Reflex Drive',price:12500,description:'Q: rainbow afterimages + super-speed for 6 seconds · 35 second cooldown'},
  {id:'skeleton',name:'Reinforced Skeleton',price:6800,description:'25% less incoming damage'},
  {id:'optics',name:'Combat Optics',price:4600,description:'+18% ranged damage'},
  {id:'neural',name:'Neural Accelerator',price:7400,description:'Additional stamina recovery'}
@@ -1118,9 +1118,9 @@ function activateSandevistan(p){
  if(!p||p.hp<=0||p.cyberPsycho||!(p.cyberMods||[]).includes('sandevistan'))return false;
  if(world.sandevistan&&world.sandevistan.until>world.time)return false;
  if((p.sandyReadyAt||0)>world.time){world.notice='SANDEVISTAN RECHARGING · '+Math.ceil(p.sandyReadyAt-world.time)+'s';return false;}
- world.sandevistan={owner:p.id,until:world.time+5};p.sandyReadyAt=world.time+40;
+ world.sandevistan={owner:p.id,until:world.time+6};p.sandyReadyAt=world.time+41;
  world.notice='SANDEVISTAN ACTIVE · '+name(p.id)+' is moving through stopped time!';
- burst(p.x,p.y,'#91eeff',24);return true;
+ for(const color of ['#ff4a9b','#ffca3a','#5dffde','#75a7ff','#b76eff'])burst(p.x,p.y,color,7);return true;
 }
 function voteSkipRound(id){
  if(!world||world.ended||world.wave<1||world.between<=0||!world.players.some(p=>p.id===id))return false;
@@ -1133,7 +1133,7 @@ function tick(dt){if(!world||world.ended)return;const w=world;w.time=(w.time||0)
 const stepDt=dt;
 for(const p of w.players){if(w.mode==='creative'){p.ammo=999999;p.credits=99999999;}const a={...(p.id===who()&&!window.__DEAD_ZONE_WORKER__?localInput:hostInput(p.id,stepDt))};
  if(a.sandevistan)activateSandevistan(p);
- p.timeScale=w.sandevistan&&w.sandevistan.owner!==p.id?.2:1;
+ p.timeScale=w.sandevistan&&w.sandevistan.owner!==p.id?.12:1;p.sandyBoost=!!(w.sandevistan&&w.sandevistan.owner===p.id);
  const dt=stepDt*p.timeScale;if(p.cyberPsycho&&p.hp<=0)clearCyberware(p);cyberPsychosisTick(p,a,dt);if(p.id!==who()){const pending=inputs.get(p.id);if(pending)for(const k of ['mint','door','board','repair','barrier','swap'])pending[k]=false;}if(p.hp<=0){p.pendingMelee=null;p.reviveHold=0;p.reviveTarget=null;continue;}const down=w.players.find(q=>q.id!==p.id&&q.hp<=0&&Math.hypot(q.x-p.x,q.y-p.y)<64);const verityNear=w.verity&&Math.hypot(w.verity.x-p.x,w.verity.y-p.y)<=72;if(a.use&&down){if(p.reviveTarget!==down.id){p.reviveTarget=down.id;p.reviveHold=0;}p.reviveHold=(p.reviveHold||0)+dt;if(p.reviveHold>=3){healActor(down,45);down.invuln=2;down.stamina=60;p.reviveHold=0;p.reviveTarget=null;w.notice=name(p.id)+' revived '+name(down.id)+'!';burst(down.x,down.y,'#9ee5ad',20);}}else{p.reviveHold=0;p.reviveTarget=null;}advancePlayerMovement(p,a,stepDt);if((p.cyberMods||[]).includes('neural'))p.stamina=Math.min(100,(p.stamina||0)+dt*10);p.cool=Math.max(0,p.cool-dt);p.invuln=Math.max(0,p.invuln-dt);p.flash=Math.max(0,(p.flash||0)-dt);p.recoil=Math.max(0,(p.recoil||0)-dt*65);p.swing=Math.max(0,(p.swing||0)-dt);if(Number.isFinite(a.ax)&&Number.isFinite(a.ay))p.face=Math.atan2(a.ay-p.y,a.ax-p.x);
 if(p.pendingMelee&&p.weapon!==p.pendingMelee.weapon)p.pendingMelee=null;
 if(p.pendingMelee){p.pendingMelee.remaining-=dt;if(p.pendingMelee.remaining<=0){const strike=p.pendingMelee;p.pendingMelee=null;resolveMelee(p,strike.weapon,strike.damage,strike.angle);}}
@@ -1237,7 +1237,7 @@ function showCyberware(){
  const close=add('button','CLOSE');close.onclick=()=>{cyberOpen=false;showCyberware();canvas?.focus();};
  close.style.cssText='padding:9px;background:#21515e;color:white;border:1px solid #70eeee;border-radius:7px';
  add('p','WAVE 20 WAREHOUSE · CREDITS: '+(p.credits||0)+' · INSTALLED: '+mods.length+'/6 · CYBERPSYCHOSIS AT 4 MODIFICATIONS');
- if(mods.includes('sandevistan'))add('p','Q = ACTIVATE SANDEVISTAN · 5 seconds active · 40 seconds cooldown · enemies and other survivors slowed to 20% speed');
+ if(mods.includes('sandevistan'))add('p','Q = ACTIVATE SANDEVISTAN · 6 seconds active · 35 seconds cooldown · enemies and other survivors slowed to 12% speed; super-speed and rainbow afterimages');
  const warning=add('p',p.cyberPsycho?'CYBERPSYCHOSIS ACTIVE · Your character is attacking teammates until stopped.':'WARNING: Your fourth implant causes cyberpsychosis. Death removes all installed cyberware.');
  warning.style.color=p.cyberPsycho?'#ff5a79':'#ffbe8b';
  for(const mod of CYBERWARE){
@@ -1430,6 +1430,22 @@ function drawLockedVenueRoofs(){
  }
 }
 function drawRouletteTable(){const h=venue('casino');if(!h||casinoLocked(h))return;const point=roulettePoint();ctx.save();ctx.translate(point.x,point.y);ctx.fillStyle='#080f11ac';ctx.beginPath();ctx.ellipse(5,18,72,33,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#372820';ctx.fillRect(-63,-19,126,44);ctx.fillStyle='#b88d52';ctx.fillRect(-62,-23,124,37);ctx.strokeStyle='#e7bb72';ctx.lineWidth=4;ctx.strokeRect(-62,-23,124,37);const colors=['#839289','#65c884','#579ef5','#b880ed','#ffbd55'];for(let i=0;i<10;i++){const a=i*Math.PI/5+(roulettePending?performance.now()*.014:0);ctx.fillStyle=colors[i%5];ctx.beginPath();ctx.moveTo(0,-5);ctx.arc(0,-5,23,a,a+Math.PI/5);ctx.fill();}ctx.fillStyle='#10171b';ctx.beginPath();ctx.arc(0,-5,6,0,Math.PI*2);ctx.fill();ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#ffe09c';ctx.fillText('ROULETTE',0,-40);ctx.font='11px monospace';ctx.fillText(world.wave<5?'LOCKED UNTIL WAVE 5':'PRESS '+binds.interact.replace('Key','')+' TO GAMBLE',0,42);ctx.restore();}
+const sandyTrails=new Map();
+function drawSandyAfterimages(q){
+ const active=world?.sandevistan?.owner===q.id&&q.hp>0,now=performance.now();
+ if(!active){sandyTrails.delete(q.id);return;}
+ let trail=sandyTrails.get(q.id);if(!trail){trail=[];sandyTrails.set(q.id,trail);}
+ if(!trail.length||now-trail[trail.length-1].at>28)trail.push({x:q.x,y:q.y,face:q.face||0,at:now});
+ while(trail.length>22||trail.length&&now-trail[0].at>440)trail.shift();
+ const colors=['#ff4d97','#ff9e35','#fdf14e','#55ff9d','#54e8ff','#6e96ff','#c570ff'];
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ for(let i=0;i<trail.length;i+=2){const a=trail[i],age=(now-a.at)/440,opacity=Math.max(0,(1-age)*.34);if(opacity<=0)continue;
+  const color=colors[Math.floor(i/2)%colors.length];ctx.save();ctx.globalAlpha=opacity;ctx.translate(a.x,a.y);ctx.rotate(a.face);ctx.shadowColor=color;ctx.shadowBlur=18;ctx.fillStyle=color;
+  ctx.fillRect(-13,-12,25,24);ctx.beginPath();ctx.ellipse(4,0,10,9,0,0,Math.PI*2);ctx.fill();ctx.fillRect(-14,-17,9,7);ctx.fillRect(-14,9,9,7);ctx.restore();
+ }
+ ctx.restore();
+ ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=colors[Math.floor(now/75)%colors.length];ctx.globalAlpha=.6;ctx.lineWidth=2;ctx.shadowBlur=14;ctx.shadowColor=ctx.strokeStyle;ctx.beginPath();ctx.arc(q.x,q.y,23+Math.sin(now/100)*2,0,Math.PI*2);ctx.stroke();ctx.restore();
+}
 function drawScene(){if(!ctx)return;const own=world?.players.find(q=>q.id===who());
  if(session?.id!==lastDamageWorld||own?.id!==lastDamagePlayer){lastDamageWorld=session?.id;lastDamagePlayer=own?.id||'';lastDamageHp=own?.hp??null;hitOverlayAt=-Infinity;}
  else if(own&&lastDamageHp!==null&&own.hp<lastDamageHp&&session?.phase==='play'){hitOverlayAt=performance.now();hitOverlaySeed++;lastDamageHp=own.hp;}
@@ -1438,7 +1454,7 @@ if(world){drawDistrict();drawBlood();drawParkedCars();for(const h of world.house
 drawConcreteBarriers();drawBarrierPreview();drawRouletteTable();drawCenterBell();drawObjectives();for(const c of world.chests)if(!c.opened){ctx.fillStyle='#a67a3a';ctx.fillRect(c.x-11,c.y-9,22,18);ctx.strokeStyle='#f2d088';ctx.lineWidth=2;ctx.strokeRect(c.x-11,c.y-9,22,18);}
 for(const d of world.drops||[]){ctx.fillStyle=d.owner?'#252349d9':'#0a201ac9';ctx.fillRect(d.x-17,d.y-16,34,32);ctx.strokeStyle='#f0d174';ctx.lineWidth=3;ctx.strokeRect(d.x-17,d.y-16,34,32);ctx.fillStyle='#ffda74';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('✦',d.x,d.y+6);ctx.font='11px system-ui';ctx.fillText((d.quantity?d.quantity+' × ':'')+(d.resource==='ammo'?'Ammo':itemDefs[d.item]?.name||'Loot'),d.x,d.y-24);}for(const z of world.zombies){if(z.x<camera.x-65||z.x>camera.x+W+65||z.y<camera.y-65||z.y>camera.y+H+65)continue;drawSurvivor(z,true);if(z.boss){ctx.strokeStyle='#ff5d4d';ctx.lineWidth=3;ctx.beginPath();ctx.arc(z.x,z.y,18+bossSize(z)*14,0,Math.PI*2);ctx.stroke();ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillStyle='#ffe9bd';ctx.fillText('☠ '+(BOSS_NAMES[z.kind]||'TITAN'),z.x,z.y-32-bossSize(z)*13);}if(z.hit>0||z.boss){ctx.fillStyle='#cf7763';ctx.fillRect(z.x-(z.boss?48:17),z.y-(z.boss?43+bossSize(z)*12:29),(z.boss?96:34)*Math.max(0,z.hp)/(z.maxHp||z.hp),z.boss?7:3);}}
 if(world.verity){drawVerity(world.verity);if(world.verity.state==='down'){const v=world.verity;ctx.save();ctx.strokeStyle='#ffe05a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(v.x,v.y,29+Math.sin(performance.now()/250)*3,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffe05a';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText('✚ REVIVE VERITY',v.x,v.y-56);ctx.restore();}}
-for(const q of world.players){if(q.x<camera.x-75||q.x>camera.x+W+75||q.y<camera.y-75||q.y>camera.y+H+75)continue;if(q.hp<=0){ctx.fillStyle='#9e4a47';ctx.beginPath();ctx.arc(q.x,q.y,14,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f7d2d0';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('DOWN',q.x,q.y-20);continue;}ctx.fillStyle='#091816';ctx.beginPath();ctx.ellipse(q.x+4,q.y+8,16,10,0,0,Math.PI*2);ctx.fill();drawSurvivor(q,false);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.face||0);ctx.translate(9,10);ctx.lineCap='round';const weapon=q.weapon||'bat';if(itemDefs[weapon]?.range<100&&q.swing>0){const progress=1-q.swing/(q.swingTotal||.2);const weight=weaponSwingWeight(weapon),eased=swingEasing(progress,weight);const dir=q.swingDir||1;ctx.rotate(dir*(-1.4+eased*2.8));const alpha=Math.max(0,Math.sin(Math.PI*progress));ctx.strokeStyle='rgba(225,239,200,'+(.12+alpha*.48)+')';ctx.lineWidth=2+alpha*(6+weight*4);ctx.beginPath();ctx.arc(0,0,49,dir<0?-1.2:-.4,dir<0?.4:1.2);ctx.stroke();ctx.strokeStyle='rgba(255,243,188,'+(alpha*.36)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,57,-.5,.5);ctx.stroke();}const isGun=(itemDefs[weapon]?.range||0)>100;
+for(const q of world.players){if(q.x<camera.x-75||q.x>camera.x+W+75||q.y<camera.y-75||q.y>camera.y+H+75)continue;if(q.hp<=0){ctx.fillStyle='#9e4a47';ctx.beginPath();ctx.arc(q.x,q.y,14,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f7d2d0';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('DOWN',q.x,q.y-20);continue;}ctx.fillStyle='#091816';ctx.beginPath();ctx.ellipse(q.x+4,q.y+8,16,10,0,0,Math.PI*2);ctx.fill();drawSandyAfterimages(q);drawSurvivor(q,false);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.face||0);ctx.translate(9,10);ctx.lineCap='round';const weapon=q.weapon||'bat';if(itemDefs[weapon]?.range<100&&q.swing>0){const progress=1-q.swing/(q.swingTotal||.2);const weight=weaponSwingWeight(weapon),eased=swingEasing(progress,weight);const dir=q.swingDir||1;ctx.rotate(dir*(-1.4+eased*2.8));const alpha=Math.max(0,Math.sin(Math.PI*progress));ctx.strokeStyle='rgba(225,239,200,'+(.12+alpha*.48)+')';ctx.lineWidth=2+alpha*(6+weight*4);ctx.beginPath();ctx.arc(0,0,49,dir<0?-1.2:-.4,dir<0?.4:1.2);ctx.stroke();ctx.strokeStyle='rgba(255,243,188,'+(alpha*.36)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,57,-.5,.5);ctx.stroke();}const isGun=(itemDefs[weapon]?.range||0)>100;
 // Keep weapon artwork proportional to the survivor sprite without changing combat range.
 ctx.translate(-Math.min(13,q.recoil||0),0);ctx.rotate(-(q.recoil||0)*.012);ctx.scale(.58,.58);
 ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor='#060e0c';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
@@ -1511,7 +1527,7 @@ function advancePlayerMovement(p,a,dt){
  else Net.stepMovement(p,a,move,dt);
  if((p.energy||0)<energy)world.notice=name(p.id)+' automatically used an energy drink';
 }
-const motionFields=['timeScale','sandyReadyAt','cyberPsycho','x','y','vx','vy','hp','stamina','exhausted','energy','face','swing','swingTotal','swingDir','flash','flashX','flashY','flashAngle','recoil','invuln','reviveHold','reviveTarget','chestHold','chestTarget','chestComplete','attackSerial','healSerial','healTotal','healAt'];
+const motionFields=['sandyBoost','timeScale','sandyReadyAt','cyberPsycho','x','y','vx','vy','hp','stamina','exhausted','energy','face','swing','swingTotal','swingDir','flash','flashX','flashY','flashAngle','recoil','invuln','reviveHold','reviveTarget','chestHold','chestTarget','chestComplete','attackSerial','healSerial','healTotal','healAt'];
 const inventoryFields=['cyberMods','cyberPsycho','credits','shopSerial','rouletteSerial','rouletteResult','inventory','itemLevels','equippedIndices','weaponLevels','primary','secondary','activeSlot','weapon','armor','ammo','medkits','mints','boards','concrete','energy','kills','color'];
 function networkSnapshot(){
  const players=world.players.map(p=>{const q={id:p.id};for(const k of motionFields)if(p[k]!==undefined)q[k]=typeof p[k]==='number'?Math.round(p[k]*1000)/1000:p[k];return q;});
