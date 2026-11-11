@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.3.2';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.36',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
+const DEAD_ZONE_VERSION='7.3.3';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.37',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -1493,7 +1493,11 @@ function drawScene(){if(!ctx)return;const own=world?.players.find(q=>q.id===who(
  else if(own)lastDamageHp=own.hp;const living=world?.players.filter(q=>q.hp>0)||[];const p=own?.hp<=0&&living.length?living[spectatorIndex%living.length]:own||world?.players[0];camera.x=Math.max(0,Math.min(MAPW-W,(p?.x??MAPW/2)-W/2));camera.y=Math.max(0,Math.min(MAPH-H,(p?.y??MAPH/2)-H/2));ctx.fillStyle='#25342b';ctx.fillRect(0,0,W,H);ctx.save();ctx.translate(-camera.x,-camera.y);for(let x=Math.floor(camera.x/70)*70;x<camera.x+W+70;x+=70)for(let y=Math.floor(camera.y/70)*70;y<camera.y+H+70;y+=70){const n=Math.abs(Math.sin(x*12.9898+y*78.233));ctx.fillStyle=n>.55?'#3e4937':'#2d3d30';ctx.fillRect(x+n*18,y+n*24,3+n*5,4+n*5);}ctx.fillStyle='#414743';for(let x=90;x<MAPW;x+=500){ctx.fillRect(x-55,0,115,MAPH);ctx.fillStyle='#85837b';ctx.fillRect(x-57,0,3,MAPH);ctx.fillRect(x+58,0,3,MAPH);ctx.fillStyle='#414743';}ctx.fillStyle='#4a4a45';for(let y=65;y<MAPH;y+=430)ctx.fillRect(0,y-43,MAPW,93);ctx.setLineDash([24,22]);ctx.strokeStyle='#c6bfa1';ctx.lineWidth=2;for(let x=90;x<MAPW;x+=500){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,MAPH);ctx.stroke();}for(let y=65;y<MAPH;y+=430){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(MAPW,y);ctx.stroke();}ctx.setLineDash([]);
 if(world){drawDistrict();drawBlood();drawParkedCars();for(const h of world.houses){if(h.x>camera.x+W||h.x+h.w<camera.x||h.y>camera.y+H||h.y+h.h<camera.y)continue;visualHouse(h);}
 drawConcreteBarriers();drawBarrierPreview();drawRouletteTable();drawCenterBell();drawObjectives();for(const c of world.chests)if(!c.opened){ctx.fillStyle='#a67a3a';ctx.fillRect(c.x-11,c.y-9,22,18);ctx.strokeStyle='#f2d088';ctx.lineWidth=2;ctx.strokeRect(c.x-11,c.y-9,22,18);}
-for(const d of world.drops||[]){ctx.fillStyle=d.owner?'#252349d9':'#0a201ac9';ctx.fillRect(d.x-17,d.y-16,34,32);ctx.strokeStyle='#f0d174';ctx.lineWidth=3;ctx.strokeRect(d.x-17,d.y-16,34,32);ctx.fillStyle='#ffda74';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('✦',d.x,d.y+6);ctx.font='11px system-ui';ctx.fillText((d.quantity?d.quantity+' × ':'')+(d.resource==='ammo'?'Ammo':itemDefs[d.item]?.name||'Loot'),d.x,d.y-24);}for(const z of world.zombies){if(z.x<camera.x-65||z.x>camera.x+W+65||z.y<camera.y-65||z.y>camera.y+H+65)continue;drawSurvivor(z,true);if(z.burnTime>0){ctx.save();const t=world.time||0,bossScale=z.boss?bossSize(z):1;const flicker=Math.sin(t*25+(z.netId||0))*3;for(let i=0;i<4;i++){const x=z.x+(i-1.5)*7*bossScale,y=z.y-5*bossScale;const height=(17+i%2*10+flicker)*bossScale;ctx.globalAlpha=.68+Math.sin(t*17+i)*.12;ctx.fillStyle=i%2?'#ff6a20':'#ffb533';ctx.beginPath();ctx.moveTo(x-7*bossScale,y);ctx.quadraticCurveTo(x-10*bossScale,y-height*.55,x+Math.sin(t*21+i)*6*bossScale,y-height);ctx.quadraticCurveTo(x+8*bossScale,y-height*.45,x+7*bossScale,y);ctx.fill();}ctx.restore();}if(z.boss){ctx.strokeStyle='#ff5d4d';ctx.lineWidth=3;ctx.beginPath();ctx.arc(z.x,z.y,18+bossSize(z)*14,0,Math.PI*2);ctx.stroke();ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillStyle='#ffe9bd';ctx.fillText('☠ '+(BOSS_NAMES[z.kind]||'TITAN'),z.x,z.y-32-bossSize(z)*13);}if(z.hit>0||z.boss){ctx.fillStyle='#cf7763';ctx.fillRect(z.x-(z.boss?48:17),z.y-(z.boss?43+bossSize(z)*12:29),(z.boss?96:34)*Math.max(0,z.hp)/(z.maxHp||z.hp),z.boss?7:3);}}
+for(const d of world.drops||[]){ctx.fillStyle=d.owner?'#252349d9':'#0a201ac9';ctx.fillRect(d.x-17,d.y-16,34,32);ctx.strokeStyle='#f0d174';ctx.lineWidth=3;ctx.strokeRect(d.x-17,d.y-16,34,32);ctx.fillStyle='#ffda74';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('✦',d.x,d.y+6);ctx.font='11px system-ui';ctx.fillText((d.quantity?d.quantity+' × ':'')+(d.resource==='ammo'?'Ammo':itemDefs[d.item]?.name||'Loot'),d.x,d.y-24);}for(const z of world.zombies){if(z.x<camera.x-65||z.x>camera.x+W+65||z.y<camera.y-65||z.y>camera.y+H+65)continue;drawSurvivor(z,true);if(z.burnTime>0){ctx.save();const t=world.time||0,scale=z.boss?bossSize(z):1;
+ ctx.shadowColor='#ff6b16';ctx.shadowBlur=17*scale;
+ for(let i=0;i<7;i++){const phase=t*(3.4+i*.4)+i*.157,cycle=phase%1,x=z.x+Math.sin(i*3.6+t*5)*11*scale,y=z.y-6*scale-cycle*34*scale,rad=(6+4*Math.sin(phase*9+i))*scale*(1-cycle*.6);
+ ctx.globalAlpha=Math.max(.1,.85*(1-cycle));ctx.fillStyle=i%3===0?'#fff0a0':i%2?'#ff6c16':'#ffb42c';ctx.beginPath();ctx.ellipse(x,y,Math.max(2,rad),Math.max(3,rad*1.65),Math.sin(t*7+i)*.3,0,Math.PI*2);ctx.fill();}
+ ctx.shadowBlur=0;ctx.restore();}if(z.boss){ctx.strokeStyle='#ff5d4d';ctx.lineWidth=3;ctx.beginPath();ctx.arc(z.x,z.y,18+bossSize(z)*14,0,Math.PI*2);ctx.stroke();ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillStyle='#ffe9bd';ctx.fillText('☠ '+(BOSS_NAMES[z.kind]||'TITAN'),z.x,z.y-32-bossSize(z)*13);}if(z.hit>0||z.boss){ctx.fillStyle='#cf7763';ctx.fillRect(z.x-(z.boss?48:17),z.y-(z.boss?43+bossSize(z)*12:29),(z.boss?96:34)*Math.max(0,z.hp)/(z.maxHp||z.hp),z.boss?7:3);}}
 if(world.verity){drawVerity(world.verity);if(world.verity.state==='down'){const v=world.verity;ctx.save();ctx.strokeStyle='#ffe05a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(v.x,v.y,29+Math.sin(performance.now()/250)*3,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffe05a';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText('✚ REVIVE VERITY',v.x,v.y-56);ctx.restore();}}
 for(const q of world.players){if(q.x<camera.x-75||q.x>camera.x+W+75||q.y<camera.y-75||q.y>camera.y+H+75)continue;if(q.hp<=0){ctx.fillStyle='#9e4a47';ctx.beginPath();ctx.arc(q.x,q.y,14,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f7d2d0';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('DOWN',q.x,q.y-20);continue;}ctx.fillStyle='#091816';ctx.beginPath();ctx.ellipse(q.x+4,q.y+8,16,10,0,0,Math.PI*2);ctx.fill();drawSandyAfterimages(q);drawSurvivor(q,false);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.face||0);ctx.translate(9,10);ctx.lineCap='round';const weapon=effectiveWeapon(q);if(itemDefs[weapon]?.range<100&&q.swing>0){const progress=1-q.swing/(q.swingTotal||.2);const weight=weaponSwingWeight(weapon),eased=swingEasing(progress,weight);const dir=q.swingDir||1;ctx.rotate(dir*(-1.4+eased*2.8));const alpha=Math.max(0,Math.sin(Math.PI*progress));ctx.strokeStyle='rgba(225,239,200,'+(.12+alpha*.48)+')';ctx.lineWidth=2+alpha*(6+weight*4);ctx.beginPath();ctx.arc(0,0,49,dir<0?-1.2:-.4,dir<0?.4:1.2);ctx.stroke();ctx.strokeStyle='rgba(255,243,188,'+(alpha*.36)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,57,-.5,.5);ctx.stroke();}const isGun=(itemDefs[weapon]?.range||0)>100;
 // Keep weapon artwork proportional to the survivor sprite without changing combat range.
@@ -1502,15 +1506,39 @@ ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor='#060e0c';ctx.shadowBlu
 drawWeaponModel(weapon);
 ctx.restore();if(weapon!=='flamethrower')drawMuzzleFlash(q);ctx.fillStyle='#f1f1e5';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(name(q.id)+(q.cyberPsycho?' · CYBERPSYCHO':''),q.x,q.y-30);ctx.fillStyle='#d65855';ctx.fillRect(q.x-19,q.y-25,38*q.hp/100,4);}
 // A sustained flame stays attached to the nozzle, with no disappearing projectile gaps.
-for(const q of world.players){if((q.flameUntil||0)<(world.time||0)||q.hp<=0)continue;
- const a=q.flameAngle??q.face??0,m=weaponMuzzle(q,'flamethrower',a),length=260,tm=world.time||0;
- ctx.save();ctx.translate(m.x,m.y);ctx.rotate(a);ctx.lineCap='round';
- const gradient=ctx.createLinearGradient(0,0,length,0);
- gradient.addColorStop(0,'#fffde5');gradient.addColorStop(.12,'#fff5a5');gradient.addColorStop(.36,'#ffb333');gradient.addColorStop(.69,'#f95718');gradient.addColorStop(.95,'#c52c0a');gradient.addColorStop(1,'#9e240000');
- // Layered tapered flame envelope, with turbulent flickering edges.
- for(let layer=0;layer<4;layer++){const factor=1-layer*.17,width=22+layer*4;ctx.globalAlpha=[.22,.37,.64,.87][layer];ctx.shadowColor='#ff5213';ctx.shadowBlur=layer===0?27:8;ctx.fillStyle=layer===3?'#ffd15a':gradient;ctx.beginPath();ctx.moveTo(-5,0);for(let step=1;step<=18;step++){const t=step/18,x=length*t*factor,w=width*(.3+1.9*t)*(1-t*.65),wiggle=Math.sin(tm*39+step*1.71+layer)*w*.23;ctx.lineTo(x,-w+wiggle);}for(let step=18;step>=0;step--){const t=step/18,x=length*t*factor,w=width*(.3+1.9*t)*(1-t*.65),wiggle=Math.cos(tm*43+step*1.41+layer)*w*.23;ctx.lineTo(x,w+wiggle);}ctx.closePath();ctx.fill();}
- ctx.shadowBlur=0;
- for(let k=0;k<15;k++){const t=((k*.076+tm*(.55+k*.013))%1),x=length*t,y=Math.sin(tm*29+k*2.9)*(10+37*t);ctx.globalAlpha=.85*(1-t);ctx.fillStyle=k%3?'#ff7d1e':'#ffe28a';ctx.beginPath();ctx.ellipse(x,y,Math.max(2,12*(1-t)),Math.max(1,6*(1-t)),Math.sin(tm*5+k),0,Math.PI*2);ctx.fill();}
+// An animated spray of interlocking flame tongues, not a static triangular shape.
+// Visuals are deterministic from simulation time so host and guests see the same fire.
+for(const q of world.players){
+ if(q.hp<=0||(q.flameUntil||0)<(world.time||0))continue;
+ const a=q.flameAngle??q.face??0,m=weaponMuzzle(q,'flamethrower',a),tm=(world.time||0),reach=270;
+ ctx.save();ctx.translate(m.x,m.y);ctx.rotate(a);
+ const flicker=(n)=>Math.sin(n*12.9898)*43758.5453%1;
+ // A narrow white-hot injector connects the moving flames to the barrel.
+ const core=ctx.createLinearGradient(0,0,reach,0);
+ core.addColorStop(0,'#fffdf0');core.addColorStop(.13,'#fff5a3');core.addColorStop(.38,'#ffb23f');core.addColorStop(.72,'#fb571b');core.addColorStop(1,'#ba270500');
+ ctx.save();ctx.globalAlpha=.34;ctx.shadowBlur=24;ctx.shadowColor='#ff500a';
+ ctx.strokeStyle='#ff6c19';ctx.lineWidth=22;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(80,0);ctx.stroke();ctx.restore();
+ // Rolling fire packets overlap at the muzzle and break into irregular, windblown tongues.
+ for(let layer=0;layer<3;layer++){
+  for(let i=0;i<32;i++){
+   const t=((i/32+tm*(1.65+layer*.19)+layer*.17)%1);
+   const x=reach*t,seed=i*19.7+layer*37.1+Math.floor(tm*1.3),jitter=Math.sin(seed*2.1+tm*23);
+   const radial=(4+37*t)*(layer===0?.2:layer===1?.65:1.05);
+   const y=(Math.sin(i*2.73+tm*27+layer*1.9)*.58+Math.cos(i*.89-tm*12)*.38)*radial;
+   const radius=(13+15*t)*(1-.45*t)*(layer===0?.7:layer===1?1:1.25);
+   const taper=Math.max(0,1-Math.pow(t,5));
+   ctx.globalAlpha=(layer===0?.85:layer===1?.66:.47)*taper;
+   ctx.fillStyle=layer===0?'#fff1a3':layer===1?(i%3?'#ffab31':'#ffdb53'):(i%3?'#f54a12':'#ff761c');
+   ctx.beginPath();
+   ctx.ellipse(x,y,radius*(1.6+.25*jitter),radius*(.52+.12*Math.sin(tm*19+i)),Math.sin(i*3+tm*6)*.14,0,Math.PI*2);
+   ctx.fill();
+  }
+ }
+ // Translucent ribbon supplies the attached core without concealing turbulent edges.
+ ctx.globalAlpha=.78;ctx.strokeStyle=core;ctx.lineWidth=9;ctx.lineCap='round';ctx.beginPath();
+ ctx.moveTo(0,0);for(let n=1;n<=12;n++){const t=n/12;ctx.lineTo(reach*.82*t,Math.sin(tm*34+t*17)*t*9);}ctx.stroke();
+ // Sporadic sparks detach toward the end, rather than straight projectiles.
+ for(let i=0;i<14;i++){const t=(tm*(1.1+i*.019)+i*.119)%1,x=reach*t,y=Math.sin(i*3.8+tm*13)*(8+62*t);ctx.globalAlpha=.8*(1-t);ctx.fillStyle=i%3?'#ffab39':'#ffeab2';ctx.beginPath();ctx.arc(x,y,1.5+3*(1-t),0,Math.PI*2);ctx.fill();}
  ctx.restore();
 }
 for(const b of world.shots){if(b.kind==='crossbow'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.strokeStyle='#d3c9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(0,0);ctx.stroke();ctx.strokeStyle='#a9c8b9';ctx.beginPath();ctx.moveTo(-4,-3);ctx.lineTo(0,0);ctx.lineTo(-4,3);ctx.moveTo(-18,-3);ctx.lineTo(-14,0);ctx.lineTo(-18,3);ctx.stroke();ctx.restore();continue;}const speed=Math.hypot(b.vx,b.vy)||1,ux=b.vx/speed,uy=b.vy/speed;ctx.save();ctx.lineCap='round';ctx.strokeStyle=b.kind==='shotgun'?'#f5bb77aa':'#ffe5a8b3';ctx.lineWidth=b.kind==='shotgun'?3:2.5;ctx.beginPath();ctx.moveTo(b.x-ux*26,b.y-uy*26);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff6d7';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(b.x-ux*12,b.y-uy*12);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle='#fff5c7';ctx.beginPath();ctx.arc(b.x,b.y,2.6,0,Math.PI*2);ctx.fill();ctx.restore();}drawEffects();drawLockedVenueRoofs();if(world.sandevistan){ctx.save();ctx.globalAlpha=.8;ctx.lineWidth=5;ctx.strokeStyle=world.sandevistan.owner===who()?'#79efff':'#92a5d9';ctx.strokeRect(camera.x+8,camera.y+8,W-16,H-16);ctx.restore();}updateHUD(p);if(world.ended&&!gameOverShown){gameOverShown=true;shopOpen=false;if(shopPanel)shopPanel.style.display='none';verityOpen=false;if(verityPanel)verityPanel.style.display='none';inventoryOpen=false;if(inventoryPanel)inventoryPanel.style.display='none';localStorage.removeItem(saveKey());screen((world.endReason==='cyberpsychosis'?'CYBERPSYCHOSIS · NO ONE LEFT TO STOP YOU · ':world.won?'EXTRACTION COMPLETE · ':'GAME OVER · ')+'Wave '+world.wave+' · Score '+world.score);button('⌂ Return to Start Menu',returnToMenu);}}ctx.restore();
