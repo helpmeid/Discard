@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.3";
+const APP_VERSION = "4.8.4";
 const UPDATE_LOG = [
+  { version: "4.8.4", notes: ["Dead Zone: Sandevistan green cinematic world tint now appears for every player in the session, including slowed teammates, while preserving rainbow afterimages."] },
   { version: "4.8.3", notes: ["Dead Zone: Sandevistan now bathes the entire gameplay world in a green cinematic tint, with an emerald vignette and subtle glitch scanlines, while retaining rainbow afterimages."] },
   { version: "4.8.2", notes: ["Dead Zone: the center bell now sends visible expanding shockwave rings all the way to the corners of the map, with sound reaching the entire playable area."] },
   { version: "4.8.2", notes: ["Dead Zone: anime-style Sandevistan now grants major speed and agility, slows the world to 12%, lasts six seconds, has rainbow spectral afterimages, and features a more dramatic activation."] },
