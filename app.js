@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.8";
+const APP_VERSION = "4.8.9";
 const UPDATE_LOG = [
+  { version: "4.8.9", notes: ["Dead Zone: Sandevistan now slows affected players’ melee swing animations, attack windups, and melee cooldowns even more, while its user swings at normal speed."] },
   { version: "4.8.8", notes: ["Dead Zone: player deaths now immediately commit an authoritative host save, including from the simulation worker. A full squad wipe saves a finished-run tombstone, preventing refresh from loading the previous alive checkpoint."] },
   { version: "4.8.7", notes: ["Dead Zone: solo cyberpsychosis immediately ends the run with a special game-over message; Sandevistan no longer draws a rainbow ring around the player while keeping rainbow motion afterimages."] },
   { version: "4.8.6", notes: ["Dead Zone: holding E rapidly picks up nearby loot every 0.12 seconds without interrupting revive or other interactions. Sandevistan lasts 9 seconds, keeps the 25-second post-effect cooldown, and slows all player bullets to 12% while time dilation is active."] },
