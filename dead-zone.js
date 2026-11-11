@@ -1283,21 +1283,22 @@ function showShop(){
  }
  shopPanel.scrollTop=scroll;
 }
-let rouletteStamp='';
+let rouletteStamp='',rouletteAnimatingUntil=0;
 function showRoulette(){
  if(!root)return;
- if(!roulettePanel){roulettePanel=document.createElement('section');roulettePanel.style.cssText='position:absolute;z-index:27;inset:10% 16%;max-height:80%;overflow:auto;padding:24px;background:linear-gradient(150deg,#142723,#251a24);border:2px solid #dfb66c;border-radius:17px;box-shadow:0 20px 90px #000e;color:#f9efd7';root.append(roulettePanel);}
+ if(!roulettePanel){roulettePanel=document.createElement('section');roulettePanel.style.cssText='position:absolute;z-index:27;inset:10% 16%;max-height:80%;overflow:auto;padding:24px;background:linear-gradient(150deg,#142723,#251a24);border:2px solid #dfb66c;border-radius:17px;box-shadow:0 20px 90px #000e;color:#f9efd7';root.append(roulettePanel);const css=document.createElement('style');css.textContent='@keyframes dz-real-wheel-spin{0%{transform:rotate(0deg)}75%{transform:rotate(1480deg)}100%{transform:rotate(1710deg)}}';roulettePanel.append(css);}
  roulettePanel.style.display=rouletteOpen?'block':'none';if(!rouletteOpen){rouletteStamp='';roulettePending=false;return;}
  const p=world?.players.find(q=>q.id===who());
  if(!p||p.hp<=0||world.wave<5||!rouletteNearby(p)){rouletteOpen=false;roulettePanel.style.display='none';rouletteStamp='';roulettePending=false;return;}
  normalizeCopies(p);
- if((p.rouletteSerial||0)>rouletteLastSerial){rouletteLastSerial=p.rouletteSerial;roulettePending=false;rouletteSelectedSlot=-1;rouletteSelectedChoice='';}
+ if((p.rouletteSerial||0)>rouletteLastSerial){rouletteLastSerial=p.rouletteSerial;if(performance.now()>=rouletteAnimatingUntil)roulettePending=false;rouletteSelectedSlot=-1;rouletteSelectedChoice='';}
  const gear=p.inventory.map((id,i)=>({id,i})).filter(q=>weaponTier(q.id)>=0&&weaponTier(q.id)<5&&!(weaponTier(q.id)===4&&world.mythicCreated));
  if(!gear.some(g=>g.i===rouletteSelectedSlot)){rouletteSelectedSlot=gear[0]?.i??-1;rouletteSelectedChoice='';}
  const picked=gear.find(g=>g.i===rouletteSelectedSlot),choices=picked?nextWeapons(picked.id):[];
  if(!choices.includes(rouletteSelectedChoice))rouletteSelectedChoice=choices[0]||'';
  const result=p.rouletteResult||null;
- const stamp=JSON.stringify([p.inventory,p.itemLevels,p.rouletteSerial,rouletteSelectedSlot,rouletteSelectedChoice,roulettePending,p.hp,world.wave,world.mythicCreated]);
+ const spinning=performance.now()<rouletteAnimatingUntil;
+ const stamp=JSON.stringify([p.inventory,p.itemLevels,p.rouletteSerial,rouletteSelectedSlot,rouletteSelectedChoice,roulettePending,spinning,p.hp,world.wave,world.mythicCreated]);
  if(stamp===rouletteStamp)return;rouletteStamp=stamp;
  const scroll=roulettePanel.scrollTop;roulettePanel.replaceChildren();
  const make=(tag,text,parent=roulettePanel)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;parent.append(el);return el;};
@@ -1306,22 +1307,26 @@ function showRoulette(){
  const close=make('button','✕ CLOSE',heading);close.onclick=()=>{rouletteOpen=false;showRoulette();canvas?.focus();};close.style.cssText='background:#3a3036;color:#fff;border:1px solid #7a6565;border-radius:8px;padding:9px 13px;cursor:pointer';
  const intro=make('p','Select a weapon and the next rarity reward. WIN: upgrade to the chosen weapon at level 1. LOSE: the original weapon is permanently destroyed.');intro.style.cssText='font-size:13px;color:#e3cbb2;line-height:1.5';
  const rates=make('div','COMMON 50%  ·  UNCOMMON 25%  ·  RARE 15%  ·  EPIC 5%  ·  LEGENDARY 0.5%');rates.style.cssText='padding:12px;background:#322b24;border:1px solid #74644a;border-radius:10px;font-weight:800;font-size:12px;color:#ffd98f';
- const wheel=make('div',roulettePending?'🎰 ROLLING…':result&&rouletteLastSerial===result.serial?(result.success?'★ JACKPOT ★':'✕ SHATTERED ✕'):'🎰');wheel.style.cssText='font-size:33px;margin:12px auto 2px;text-align:center;color:'+(result?.success?'#9fefb1':'#ffc47f');
- if(roulettePending){wheel.style.animation='dz-roulette-spin .5s linear infinite';}
- if(result&&rouletteLastSerial===result.serial&&!roulettePending){const output=make('p',result.success?'SUCCESS! '+(itemDefs[result.from]?.name||result.from)+' became '+(itemDefs[result.to]?.name||result.to):'FAILED! '+(itemDefs[result.from]?.name||result.from)+' broke and is gone.');output.style.cssText='text-align:center;font-size:14px;font-weight:800;color:'+(result.success?'#9eedb4':'#ff9993');}
+ const wheelWrap=make('div');wheelWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:9px;margin:15px auto';
+ const wheel=make('div',undefined,wheelWrap);wheel.style.cssText='width:150px;height:150px;border-radius:50%;border:9px solid #f3d8a6;box-shadow:0 0 20px #ffc17a50,0 8px 30px #0009;background:conic-gradient(#7dd9a3 0 20%,#688af4 20% 40%,#bb77f0 40% 60%,#f4b459 60% 80%,#8b9a96 80% 100%);position:relative;display:grid;place-items:center';
+ wheel.style.animation=spinning?'dz-real-wheel-spin 2.25s cubic-bezier(.11,.7,.24,1) forwards':'none';
+ const center=make('span','★',wheel);center.style.cssText='display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#312d31;color:#fff7d7;font-size:25px;border:3px solid #fff2c2';
+ const pointer=make('div','▼',wheelWrap);pointer.style.cssText='font-size:24px;color:#ffdb76;margin-top:-173px;position:relative;z-index:2;pointer-events:none';
+ const status=make('p',spinning?'🎰 SPINNING THE ROULETTE WHEEL…':result&&rouletteLastSerial===result.serial?(result.success?'★ JACKPOT ★':'✕ SHATTERED ✕'):'READY TO SPIN',wheelWrap);status.style.cssText='font-size:17px;font-weight:bold;margin-top:143px;color:'+(result?.success?'#9fefb1':'#ffc47f');
+ if(result&&rouletteLastSerial===result.serial&&!roulettePending&&!spinning){const output=make('p',result.success?'SUCCESS! '+(itemDefs[result.from]?.name||result.from)+' became '+(itemDefs[result.to]?.name||result.to):'FAILED! '+(itemDefs[result.from]?.name||result.from)+' broke and is gone.');output.style.cssText='text-align:center;font-size:14px;font-weight:800;color:'+(result.success?'#9eedb4':'#ff9993');}
  make('h3','CHOOSE WEAPON').style.cssText='color:#ffdeaa;margin:15px 0 8px';
  const weapons=make('div');weapons.style.cssText='display:flex;gap:7px;flex-wrap:wrap';
- for(const {id,i} of gear){const b=make('button',(i===rouletteSelectedSlot?'✓ ':'')+(itemDefs[id]?.name||id)+' · LV '+levelOf(p,i),weapons);b.disabled=roulettePending;b.style.cssText='padding:9px;background:'+(i===rouletteSelectedSlot?'#75603e':'#273b37')+';color:#fff;border:1px solid #ab9c74;border-radius:8px;cursor:pointer';b.onclick=()=>{rouletteSelectedSlot=i;rouletteSelectedChoice='';rouletteStamp='';showRoulette();};}
+ for(const {id,i} of gear){const b=make('button',(i===rouletteSelectedSlot?'✓ ':'')+(itemDefs[id]?.name||id)+' · LV '+levelOf(p,i),weapons);b.disabled=roulettePending||spinning;b.style.cssText='padding:9px;background:'+(i===rouletteSelectedSlot?'#75603e':'#273b37')+';color:#fff;border:1px solid #ab9c74;border-radius:8px;cursor:pointer';b.onclick=()=>{rouletteSelectedSlot=i;rouletteSelectedChoice='';rouletteStamp='';showRoulette();};}
  if(!gear.length)make('p','No eligible weapons. The Mythic can only be created once per match.');
  if(picked){
   make('h3','CHOOSE '+WEAPON_TIER_NAMES[weaponTier(picked.id)+1]+' REWARD').style.cssText='color:#ffdeaa;margin:15px 0 8px';
   const options=make('div');options.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
-  for(const id of choices){const b=make('button',(id===rouletteSelectedChoice?'✓ ':'')+itemDefs[id].name,options);b.disabled=roulettePending;b.style.cssText='padding:8px 11px;color:white;border:1px solid '+WEAPON_TIER_COLORS[weaponTier(id)]+';background:'+(id===rouletteSelectedChoice?'#513c5c':'#242d32')+';border-radius:8px;cursor:pointer';b.onclick=()=>{rouletteSelectedChoice=id;rouletteStamp='';showRoulette();};}
+  for(const id of choices){const b=make('button',(id===rouletteSelectedChoice?'✓ ':'')+itemDefs[id].name,options);b.disabled=roulettePending||spinning;b.style.cssText='padding:8px 11px;color:white;border:1px solid '+WEAPON_TIER_COLORS[weaponTier(id)]+';background:'+(id===rouletteSelectedChoice?'#513c5c':'#242d32')+';border-radius:8px;cursor:pointer';b.onclick=()=>{rouletteSelectedChoice=id;rouletteStamp='';showRoulette();};}
   const odds=ROULETTE_ODDS[weaponTier(picked.id)];
   const gamble=make('button',roulettePending?'🎰 ROLLING…':'ROLL FOR '+WEAPON_TIER_NAMES[weaponTier(picked.id)+1]+' · '+Math.round(odds*100)+'% CHANCE');
-  gamble.disabled=roulettePending||!rouletteSelectedChoice;
+  gamble.disabled=roulettePending||spinning||!rouletteSelectedChoice;
   gamble.style.cssText='margin-top:18px;padding:14px;width:100%;background:#af8245;border:2px solid #ffdaa2;border-radius:12px;color:#14120d;font-weight:900;cursor:pointer;opacity:'+(gamble.disabled?'.6':'1');
-  gamble.onclick=()=>{if(roulettePending||!rouletteSelectedChoice)return;roulettePending=true;rouletteLastSerial=p.rouletteSerial||0;rouletteStamp='';const selectedSlot=rouletteSelectedSlot,selectedChoice=rouletteSelectedChoice;showRoulette();weaponProgress('evolve',selectedSlot,selectedChoice);};
+  gamble.onclick=()=>{if(roulettePending||spinning||!rouletteSelectedChoice)return;roulettePending=true;rouletteAnimatingUntil=performance.now()+2250;rouletteLastSerial=p.rouletteSerial||0;rouletteStamp='';const selectedSlot=rouletteSelectedSlot,selectedChoice=rouletteSelectedChoice;showRoulette();weaponProgress('evolve',selectedSlot,selectedChoice);setTimeout(()=>{rouletteAnimatingUntil=0;roulettePending=false;rouletteStamp='';if(rouletteOpen)showRoulette();},2300);};
   const warn=make('p','⚠ A failed roll destroys the selected weapon, even if it is equipped or your only weapon.');warn.style.cssText='font-size:12px;color:#f7a6a0';
  }
  roulettePanel.scrollTop=scroll;
