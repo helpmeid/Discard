@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.7";
+const APP_VERSION = "4.8.8";
 const UPDATE_LOG = [
+  { version: "4.8.8", notes: ["Dead Zone: player deaths now immediately commit an authoritative host save, including from the simulation worker. A full squad wipe saves a finished-run tombstone, preventing refresh from loading the previous alive checkpoint."] },
   { version: "4.8.7", notes: ["Dead Zone: solo cyberpsychosis immediately ends the run with a special game-over message; Sandevistan no longer draws a rainbow ring around the player while keeping rainbow motion afterimages."] },
   { version: "4.8.6", notes: ["Dead Zone: holding E rapidly picks up nearby loot every 0.12 seconds without interrupting revive or other interactions. Sandevistan lasts 9 seconds, keeps the 25-second post-effect cooldown, and slows all player bullets to 12% while time dilation is active."] },
   { version: "4.8.5", notes: ["Dead Zone: Sandevistan now lasts eight seconds with a 25-second cooldown after the effect ends. Mantis Blades become a locked integrated melee weapon with twin blade art, and players can uninstall any augment at the wave-20 Blacksite warehouse."] },
