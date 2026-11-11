@@ -3,12 +3,13 @@
 'use strict';
 const STEP=1/60,MAX_PENDING=120;
 const finite=(n,min,max)=>Math.max(min,Math.min(max,Number.isFinite(n)?n:0));
-function cleanInput(a={}){return{x:finite(a.x,-1,1),y:finite(a.y,-1,1),ax:finite(a.ax,0,3600),ay:finite(a.ay,0,2600),sprint:!!a.sprint,fire:!!a.fire,use:!!a.use,mint:!!a.mint,door:!!a.door,board:!!a.board,repair:!!a.repair,barrier:!!a.barrier,swap:a.swap===1||a.swap===2?a.swap:0};}
-function packCommand(c){const a=c.input;return[c.seq,a.x,a.y,(a.sprint?1:0)|(a.fire?2:0)|(a.use?4:0)|(a.mint?8:0)|(a.door?16:0)|(a.board?32:0)|(a.repair?64:0)|(a.barrier?128:0),Math.round(a.ax),Math.round(a.ay),a.swap];}
-function unpackCommand(c){if(!Array.isArray(c)||c.length!==7||!c.every(Number.isFinite)||!Number.isSafeInteger(c[0])||c[0]<1)return null;return{seq:c[0],input:cleanInput({x:c[1],y:c[2],sprint:c[3]&1,fire:c[3]&2,use:c[3]&4,mint:c[3]&8,door:c[3]&16,board:c[3]&32,repair:c[3]&64,barrier:c[3]&128,ax:c[4],ay:c[5],swap:c[6]})};}
+function cleanInput(a={}){return{x:finite(a.x,-1,1),y:finite(a.y,-1,1),ax:finite(a.ax,0,3600),ay:finite(a.ay,0,2600),sprint:!!a.sprint,fire:!!a.fire,use:!!a.use,mint:!!a.mint,door:!!a.door,board:!!a.board,repair:!!a.repair,barrier:!!a.barrier,sandevistan:!!a.sandevistan,swap:a.swap===1||a.swap===2?a.swap:0};}
+function packCommand(c){const a=c.input;return[c.seq,a.x,a.y,(a.sprint?1:0)|(a.fire?2:0)|(a.use?4:0)|(a.mint?8:0)|(a.door?16:0)|(a.board?32:0)|(a.repair?64:0)|(a.barrier?128:0)|(a.sandevistan?256:0),Math.round(a.ax),Math.round(a.ay),a.swap];}
+function unpackCommand(c){if(!Array.isArray(c)||c.length!==7||!c.every(Number.isFinite)||!Number.isSafeInteger(c[0])||c[0]<1)return null;return{seq:c[0],input:cleanInput({x:c[1],y:c[2],sprint:c[3]&1,fire:c[3]&2,use:c[3]&4,mint:c[3]&8,door:c[3]&16,board:c[3]&32,repair:c[3]&64,barrier:c[3]&128,sandevistan:c[3]&256,ax:c[4],ay:c[5],swap:c[6]})};}
 // The exact same integrator runs once per acknowledged command on both machines.
 function stepMovement(p,a,move,dt=STEP){
  if(p.hp<=0)return;
+ dt*=Math.max(.1,Math.min(1,p.timeScale??1));
  if((p.stamina??100)<=1)p.exhausted=true;if(p.stamina>=25)p.exhausted=false;
  if((p.energy||0)>0&&(p.stamina??100)<30){p.energy--;p.stamina=Math.min(100,p.stamina+75);p.exhausted=false;}
  const dx=finite(a.x,-1,1),dy=finite(a.y,-1,1),len=Math.max(1,Math.hypot(dx,dy));
@@ -22,7 +23,7 @@ class HostInputs{
  constructor(){this.ack=0;this.queue=new Map();this.last=cleanInput();this.credit=0;this.lastPacket=-Infinity;}
  receive(batch,now){if(!Array.isArray(batch)||batch.length>MAX_PENDING)return false;let valid=false;for(const packed of batch){const c=unpackCommand(packed);if(c&&c.seq>this.ack&&c.seq<=this.ack+MAX_PENDING){this.queue.set(c.seq,c);valid=true;}}if(valid)this.lastPacket=now;return valid;}
  consume(dt,now){
-  this.credit=Math.min(6,this.credit+dt/STEP);const steps=[];let firePressed=false;const edges={mint:false,door:false,board:false,repair:false,barrier:false,swap:0};
+  this.credit=Math.min(6,this.credit+dt/STEP);const steps=[];let firePressed=false;const edges={mint:false,door:false,board:false,repair:false,barrier:false,sandevistan:false,swap:0};
   while(steps.length<2&&this.credit>=1-1e-6){const c=this.queue.get(this.ack+1);if(!c)break;this.queue.delete(c.seq);firePressed||=c.input.fire&&!this.last.fire;this.last=c.input;this.ack=c.seq;steps.push(c);this.credit-=1;for(const k of Object.keys(edges))edges[k]=c.input[k]||edges[k];}
   const held=now-this.lastPacket>600?cleanInput():this.last;
   return{...held,...edges,_network:true,_steps:steps,_firePressed:firePressed};
