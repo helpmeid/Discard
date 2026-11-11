@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.12',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.12';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.13',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.13';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -498,9 +498,10 @@ function barrierCollision(x,y,r=12,ignoreId=null){
  }
  return null;
 }
-function barrierPlacement(p,face=p.face||0){
- const angle=Math.abs(Math.cos(face))>.707?Math.PI/2:0;
- const x=Math.round((p.x+Math.cos(face)*88)/14)*14,y=Math.round((p.y+Math.sin(face)*88)/14)*14;
+function barrierPlacement(p,target){
+ if(!Number.isFinite(target?.x)||!Number.isFinite(target?.y))return{x:p.x,y:p.y,angle:0,valid:false,reason:'Aim at a placement spot'};
+ const face=Math.atan2(target.y-p.y,target.x-p.x),angle=Math.abs(Math.cos(face))>.707?Math.PI/2:0;
+ const x=Math.round(target.x),y=Math.round(target.y);
  let reason='';
  if((p.concrete||0)<1)reason='No concrete barriers left';
  else if((world.barriers||[]).length>=90)reason='Maximum 90 concrete barriers reached';
@@ -512,8 +513,8 @@ function barrierPlacement(p,face=p.face||0){
  }
  return{x,y,angle,valid:!reason,reason};
 }
-function placeConcreteBarrier(p){
- const placement=barrierPlacement(p);if(!placement.valid){world.notice=placement.reason;return false;}
+function placeConcreteBarrier(p,target){
+ const placement=barrierPlacement(p,target);if(!placement.valid){world.notice=placement.reason;return false;}
  const {x,y,angle}=placement;p.concrete--;world.barrierSerial=(world.barrierSerial||0)+1;
  (world.barriers||(world.barriers=[])).push({id:world.barrierSerial,x,y,angle,hp:1800,maxHp:1800});
  world.barrierRevision=(world.barrierRevision||0)+1;
@@ -522,7 +523,7 @@ function placeConcreteBarrier(p){
 function drawBarrierPreview(){
  if(!pressed('barrier')||pauseOpen||inventoryOpen||verityOpen||rouletteOpen||session?.phase!=='play'||world.ended)return;
  const p=world.players.find(q=>q.id===who());if(!p||p.hp<=0)return;
- const face=Math.atan2(mouse.y+camera.y-p.y,mouse.x+camera.x-p.x),placement=barrierPlacement(p,face);
+ const placement=barrierPlacement(p,{x:mouse.x+camera.x,y:mouse.y+camera.y});
  ctx.save();ctx.translate(placement.x,placement.y);ctx.rotate(placement.angle);
  ctx.fillStyle=placement.valid?'#57e39755':'#ed596355';ctx.strokeStyle=placement.valid?'#8affb6':'#ff7a81';
  ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.fillRect(-42,-14,84,28);ctx.strokeRect(-42,-14,84,28);ctx.setLineDash([]);
@@ -556,7 +557,7 @@ const LOOT_UNLOCK={smg:3,sledge:4,rifle:5,katana:5,doublebarrel:5,heavy:5,milita
 function randomLoot(wave=1,options){if(wave>=15&&!world?.mythicCreated&&Math.random()<.0005){world.mythicCreated=true;world.notice='✦ A MYTHIC WEAPON HAS APPEARED THIS MATCH!';return 'eclipse';}const available=(options||lootPool).filter(id=>(LOOT_UNLOCK[id]||1)<=wave);const pool=available.filter(id=>id!=='eclipse');if(!pool.length)return 'boards';const weight=id=>(LOOT_WEIGHTS[id]||1)*(itemDefs[id]?.type==='weapon'?3.5:1);let total=0;for(const id of pool)total+=weight(id);let roll=Math.random()*total;for(const id of pool){roll-=weight(id);if(roll<0)return id;}return pool[pool.length-1];}
 function spawnDrop(){const living=world.players.filter(p=>p.hp>0);if(!living.length)return;const p=living[Math.floor(Math.random()*living.length)],pool=lootPool;const id=randomLoot(world.wave,pool);for(let i=0;i<20;i++){const angle=Math.random()*Math.PI*2,dist=105+Math.random()*170,x=Math.max(20,Math.min(MAPW-20,p.x+Math.cos(angle)*dist)),y=Math.max(20,Math.min(MAPH-20,p.y+Math.sin(angle)*dist));if(!solid(x,y,23)){world.drops.push({id:++world.dropSerial,item:id,x,y});world.notice='A supply drop landed nearby!';return;}}}
 function zombieLoot(z){if(Math.random()>.36)return;const pool=['mints','boards','medkit','bandage','ammoBox','energy','crowbar','pipe','machete','hammer','axe','pistol','revolver','smg','shotgun','rifle','chainsaw','vest','tactical','sunbreaker','reaper','voidblade','railgun','hellfire','thunderbolt'];const id=randomLoot(world.wave,pool);world.drops.push({id:++world.dropSerial,item:id,x:z.x,y:z.y});}
-function action(p,a){if(p.hp<=0)return;if(a.barrier){placeConcreteBarrier(p);return;}if(a.repair){repairDoor(p);return;}if(a.board){toggleDoor(p,true);return;}if(a.door){toggleDoor(p);return;}if(!a.use)return;let drop=null,dropDist=65;for(const d of world.drops||[]){const k=Math.hypot(d.x-p.x,d.y-p.y);if(k<dropDist){drop=d;dropDist=k;}}if(drop){if(drop.kind&&!pickupPlayerDrop(p,drop))return;world.drops=world.drops.filter(d=>d.id!==drop.id);if(!drop.kind)grantLoot(p,drop.item);return;}const nearest=nearbyChest(p);if(nearest){p.chestHold=Math.min(1.25,(p.chestHold||0)+.05);return;}if(p.medkits&&p.hp<100){p.medkits--;healActor(p,55);world.notice=name(p.id)+' used a medkit';}}
+function action(p,a){if(p.hp<=0)return;if(a.barrier){const aim=a._steps?.find(c=>c.input.barrier)?.input||a;placeConcreteBarrier(p,{x:aim.ax,y:aim.ay});return;}if(a.repair){repairDoor(p);return;}if(a.board){toggleDoor(p,true);return;}if(a.door){toggleDoor(p);return;}if(!a.use)return;let drop=null,dropDist=65;for(const d of world.drops||[]){const k=Math.hypot(d.x-p.x,d.y-p.y);if(k<dropDist){drop=d;dropDist=k;}}if(drop){if(drop.kind&&!pickupPlayerDrop(p,drop))return;world.drops=world.drops.filter(d=>d.id!==drop.id);if(!drop.kind)grantLoot(p,drop.item);return;}const nearest=nearbyChest(p);if(nearest){p.chestHold=Math.min(1.25,(p.chestHold||0)+.05);return;}if(p.medkits&&p.hp<100){p.medkits--;healActor(p,55);world.notice=name(p.id)+' used a medkit';}}
 
 const DROP_TYPES={concrete:'concrete',ammo:'ammoBox',medkits:'medkit',mints:'mints',boards:'boards',energy:'energy'};
 function dropInventoryItem(p,req){

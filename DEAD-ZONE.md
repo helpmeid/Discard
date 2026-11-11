@@ -104,3 +104,13 @@ contact distance (28 units) rather than requiring overlap with the existing
 Verity, door changes, exact grid/collision agreement and a crowded horde. A native
 65-zombie benchmark simulated 12 seconds in approximately 0.75 seconds on the
 development machine. These are automated simulations, not live multiplayer QA.
+
+## Cursor placement (6.5.6)
+
+Barrier previews and confirmed placement now use the mouse's world coordinates,
+rounded to the nearest pixel, instead of a fixed offset ahead of the survivor.
+The host validates the same footprint and line of sight. For queued multiplayer
+inputs, the placement uses the aim coordinates from the actual click command,
+even if the cursor moves before the next command is consumed. Hold V, aim and
+left-click to place; release V to cancel. Barriers retain 1800 HP and remain
+breakable. Validation: syntax check and 25 relevant regression checks pass.
