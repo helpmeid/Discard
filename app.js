@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.3.4";
+const APP_VERSION = "4.3.5";
 const UPDATE_LOG = [
+  { version: "4.3.5", notes: ["Dead Zone: Verity now has unlimited ammunition for ranged weapons without consuming player ammo."] },
   { version: "4.3.4", notes: ["Dead Zone: blood stains render underneath scenery, zombies roam until they see or hear survivors, gunshots attract infected, and a central bell can lure a horde."] },
   { version: "4.3.3", notes: ["Dead Zone: slightly reduced weapon loot odds and increased medkit, Care Mints, and bandage chances so more healing supplies appear."] },
   { version: "4.3.2", notes: ["Dead Zone: increased the downtime between completed zombie waves from 9 to 45 seconds so players can heal, loot, upgrade and prepare."] },
