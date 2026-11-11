@@ -213,7 +213,7 @@ function houseWall(h,x,y,r=12){
 function makeMap(){
  const houses=[],chests=[];
  const clinic={x:2640,y:1810,w:415,h:380,rawW:415,rawH:380,turn:0,type:5,venue:'clinic',
-  doorX:2847.5,doorY:2190,doorOpen:true,doorHp:100,doorMaxHp:100,boards:0};
+  doorX:2847.5,doorY:2190,doorOpen:false,doorHp:100,doorMaxHp:100,boards:0};
  for(let y=180;y<MAPH-190;y+=430)for(let x=180;x<MAPW-190;x+=500){
   if(Math.hypot(x-MAPW/2,y-MAPH/2)<375||Math.random()<.16)continue;
   const n=houses.length,turn=Math.floor(Math.random()*4),type=Math.floor(Math.random()*5);
@@ -238,7 +238,7 @@ function venue(kind,w=world){return w?.houses?.find(h=>h.venue===kind)||null;}
 function ensureVenues(w){
  if(!w?.houses?.length)return;
  if(!w.houses.some(h=>h.venue==='clinic')){
-  const clinic={x:2640,y:1810,w:415,h:380,rawW:415,rawH:380,turn:0,type:5,venue:'clinic',doorX:2847.5,doorY:2190,doorOpen:true,doorHp:100,doorMaxHp:100,boards:0};
+  const clinic={x:2640,y:1810,w:415,h:380,rawW:415,rawH:380,turn:0,type:5,venue:'clinic',doorX:2847.5,doorY:2190,doorOpen:false,doorHp:100,doorMaxHp:100,boards:0};
   w.houses=w.houses.filter(h=>h.x>=clinic.x+clinic.w+40||h.x+h.w<=clinic.x-40||h.y>=clinic.y+clinic.h+40||h.y+h.h<=clinic.y-40);
   w.houses.push(clinic);
  }
@@ -249,25 +249,28 @@ function ensureVenues(w){
  }
  w.chests=(w.chests||[]).filter(c=>!w.houses.some(h=>h.venue&&c.x>h.x&&c.x<h.x+h.w&&c.y>h.y&&c.y<h.y+h.h));
  if(w.casinoUnlocked===undefined)w.casinoUnlocked=(w.wave||0)>=5;
+ if(w.warehouseUnlocked===undefined)w.warehouseUnlocked=(w.wave||0)>=20;
+ const clinic=w.houses.find(h=>h.venue==='clinic');if(clinic){clinic.doorOpen=!!w.warehouseUnlocked;clinic.doorHp=clinic.doorHp<=0?100:clinic.doorHp;clinic.boards=0;}
 }
 function casinoLocked(h){return h?.venue==='casino'&&(world?.wave||0)<5;}
-function doorPassable(h){return !casinoLocked(h)&&(h.doorOpen||h.doorHp<=0);}
+function warehouseLocked(h){return h?.venue==='clinic'&&(world?.wave||0)<20;}
+function doorPassable(h){return !casinoLocked(h)&&!warehouseLocked(h)&&(h.doorOpen||h.doorHp<=0);}
 function roulettePoint(){const h=venue('casino');return h?{x:h.x+h.w/2,y:h.y+h.h/2}:{x:ROULETTE_X,y:ROULETTE_Y};}
-function shopPoint(){const h=venue('shop');return h?{x:h.x+h.w/2,y:h.y+65}:null;}
+function shopPoint(){const h=venue('shop');return h?{x:h.x+h.w/2,y:h.y+h.h/2}:null;}
 function shopNearby(p){const h=venue('shop'),point=shopPoint();return !!p&&p.hp>0&&!!point&&houseAt(p.x,p.y)===h&&Math.hypot(p.x-point.x,p.y-point.y)<110;}
 const CYBERWARE=[
- {id:'gorilla',name:'Gorilla Arms',price:125,description:'+50% melee damage'},
- {id:'mantis',name:'Mantis Blades',price:180,description:'20% faster melee attacks'},
- {id:'sandevistan',name:'Sandevistan Reflex Drive',price:230,description:'Faster sprint recovery'},
- {id:'skeleton',name:'Reinforced Skeleton',price:160,description:'25% less incoming damage'},
- {id:'optics',name:'Combat Optics',price:145,description:'+18% ranged damage'},
- {id:'neural',name:'Neural Accelerator',price:210,description:'Additional stamina recovery'}
+ {id:'gorilla',name:'Gorilla Arms',price:3800,description:'+50% melee damage'},
+ {id:'mantis',name:'Mantis Blades',price:5200,description:'20% faster melee attacks'},
+ {id:'sandevistan',name:'Sandevistan Reflex Drive',price:12500,description:'Q activates 5 seconds of time dilation · 40 second cooldown'},
+ {id:'skeleton',name:'Reinforced Skeleton',price:6800,description:'25% less incoming damage'},
+ {id:'optics',name:'Combat Optics',price:4600,description:'+18% ranged damage'},
+ {id:'neural',name:'Neural Accelerator',price:7400,description:'Additional stamina recovery'}
 ];
 function cyberClinicPoint(){const h=venue('clinic');return h?{x:h.x+h.w/2,y:h.y+h.h/2}:null;}
-function cyberwareNearby(p){const point=cyberClinicPoint();return !!p&&p.hp>0&&!!point&&houseAt(p.x,p.y)===venue('clinic')&&Math.hypot(p.x-point.x,p.y-point.y)<150;}
+function cyberwareNearby(p){const point=cyberClinicPoint();return !!p&&p.hp>0&&world?.wave>=20&&!!point&&houseAt(p.x,p.y)===venue('clinic')&&Math.hypot(p.x-point.x,p.y-point.y)<150;}
 function clearCyberware(p){p.cyberMods=[];p.cyberPsycho=false;p.psychoCooldown=0;world.notice=name(p.id)+' was stopped · all cyberware removed';}
 function buyCyberware(p,request){
- if(!p||!cyberwareNearby(p)||p.cyberPsycho||typeof request?.mod!=='string')return false;
+ if(!p||!cyberwareNearby(p)||p.cyberPsycho||typeof request?.mod!=='string'||world.wave<20)return false;
  const mod=CYBERWARE.find(m=>m.id===request.mod);if(!mod)return false;
  p.cyberMods=Array.isArray(p.cyberMods)?p.cyberMods:[];
  if(p.cyberMods.includes(mod.id)||p.cyberMods.length>=CYBERWARE.length)return false;
@@ -294,6 +297,7 @@ function cyberPsychosisTick(p,a,dt){
 }
 function updateCasino(){
  const h=venue('casino');if(h&&world.wave>=5&&!world.casinoUnlocked){world.casinoUnlocked=true;h.doorOpen=true;h.doorHp=h.doorMaxHp||100;h.boards=0;world.notice='CASINO OPEN · The wave 5 lock has released!';}
+ const warehouse=venue('clinic');if(warehouse&&world.wave>=20&&!world.warehouseUnlocked){world.warehouseUnlocked=true;warehouse.doorOpen=true;warehouse.doorHp=100;warehouse.boards=0;world.notice='BLACKSITE CYBERWARE WAREHOUSE UNLOCKED · WAVE 20!';}
 }
 const SELL_BASE=[12,30,75,180,450,1400];
 function weaponSaleValue(id,level=1){const t=weaponTier(id);return t<0?0:Math.round(SELL_BASE[t]*(1+.3*(Math.max(1,Math.min(5,level))-1)));}
@@ -746,23 +750,36 @@ function drawVerityEquipment(v){
  ctx.rotate(-bodyTurn+(v.face||0));ctx.translate(17,5);ctx.translate(-Math.min(13,v.recoil||0),0);ctx.scale(.58,.58);drawWeaponModel(v.weapon);ctx.restore();
 }
 function drawCyberClinic(h){
- ctx.save();ctx.fillStyle='#061a29';ctx.fillRect(h.x,h.y,h.w,h.h);
- ctx.fillStyle='#102b3c';ctx.fillRect(h.x+11,h.y+11,h.w-22,h.h-22);
- ctx.strokeStyle='#46e7ef';ctx.lineWidth=5;ctx.strokeRect(h.x+12,h.y+12,h.w-24,h.h-24);
- for(let station=0;station<4;station++){
-  const x=h.x+45+(station%2)*225,y=h.y+57+Math.floor(station/2)*146;
-  ctx.fillStyle='#1d4d5b';ctx.fillRect(x,y,125,77);
-  ctx.strokeStyle='#55f9dd';ctx.lineWidth=3;ctx.strokeRect(x,y,125,77);
-  ctx.fillStyle='#1e1d33';ctx.fillRect(x+18,y+18,90,36);
-  ctx.fillStyle='#8e6bff';ctx.fillRect(x+27,y+26,72,19);
+ const locked=warehouseLocked(h),x=h.x,y=h.y,w=h.w,ht=h.h;
+ ctx.save();
+ // Four-building-sized derelict warehouse with concrete, industrial steel and dim work lights.
+ ctx.fillStyle='#080b0e';ctx.fillRect(x-7,y-7,w+14,ht+14);
+ ctx.fillStyle='#14191d';ctx.fillRect(x,y,w,ht);
+ ctx.fillStyle='#1f242a';ctx.fillRect(x+12,y+12,w-24,ht-24);
+ for(let ix=0;ix<w;ix+=50){ctx.fillStyle=ix%100?'#22282a':'#181e21';ctx.fillRect(x+ix,y+8,4,ht-16);}
+ for(let iy=0;iy<ht;iy+=52){ctx.strokeStyle='#39413f55';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+12,y+iy);ctx.lineTo(x+w-12,y+iy);ctx.stroke();}
+ // Workstations along both sides, deliberately leaving a broad walkable central aisle.
+ for(const ix of [25,w-151])for(let row=0;row<3;row++){
+  const sx=x+ix,sy=y+32+row*98;
+  ctx.fillStyle='#080d12';ctx.fillRect(sx+3,sy+5,126,65);
+  ctx.fillStyle='#363b41';ctx.fillRect(sx,sy,122,60);
+  ctx.fillStyle='#0d151d';ctx.fillRect(sx+12,sy+10,97,35);
+  ctx.strokeStyle=locked?'#773d41':'#65aaa9';ctx.lineWidth=2;ctx.strokeRect(sx+12,sy+10,97,35);
+  ctx.fillStyle=locked?'#b75a54':'#72c6aa';ctx.fillRect(sx+19,sy+17,38,4);
+  ctx.fillStyle='#6e6555';ctx.fillRect(sx+16,sy+49,80,5);
  }
- ctx.strokeStyle='#d2b7fc';ctx.lineWidth=11;ctx.beginPath();
- ctx.moveTo(h.x,h.doorY);ctx.lineTo(h.x,h.y);ctx.lineTo(h.x+h.w,h.y);
- ctx.lineTo(h.x+h.w,h.doorY);ctx.lineTo(h.doorX+34,h.doorY);
- ctx.moveTo(h.doorX-34,h.doorY);ctx.lineTo(h.x,h.doorY);ctx.stroke();
- ctx.fillStyle='#b9fffc';ctx.font='bold 17px monospace';ctx.textAlign='center';
- ctx.fillText('NEON RIPPERDOC · CYBERWARE',h.x+h.w/2,h.y-15);
- ctx.fillText('CYBERWARE TERMINAL [E]',h.x+h.w/2,h.y+h.h/2+14);
+ ctx.strokeStyle='#57575b';ctx.lineWidth=17;ctx.beginPath();
+ ctx.moveTo(x,y+ht);ctx.lineTo(x,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+ht);ctx.lineTo(h.doorX+34,y+ht);
+ ctx.moveTo(h.doorX-34,y+ht);ctx.lineTo(x,y+ht);ctx.stroke();
+ ctx.strokeStyle='#c5a05f';ctx.lineWidth=4;ctx.setLineDash([12,8]);ctx.strokeRect(x+14,y+14,w-28,ht-28);ctx.setLineDash([]);
+ if(locked){
+  ctx.fillStyle='#222831';ctx.fillRect(h.doorX-37,h.doorY-13,74,22);
+  ctx.fillStyle='#e65e50';ctx.fillRect(h.doorX-26,h.doorY-9,52,9);
+ }else{ctx.fillStyle='#7adfc7';ctx.fillRect(h.doorX-36,h.doorY-8,9,28);}
+ ctx.textAlign='center';ctx.font='bold 17px monospace';ctx.fillStyle='#d9c49d';
+ ctx.fillText('BLACKSITE · CYBERWARE DEPOT',x+w/2,y-19);
+ ctx.font='bold 15px monospace';ctx.fillStyle=locked?'#ff7e76':'#86e6c8';
+ ctx.fillText(locked?'LOCKED · OPENS AT WAVE 20':'[E] INSTALL MILITARY CYBERWARE',x+w/2,y+ht/2);
  ctx.restore();
 }
 function drawVenueHouse(h){
@@ -885,8 +902,8 @@ function drawConcreteBarriers(){
  }
 }
 
-function repairDoor(p){const h=nearDoor(p);if(!h){world.notice='Get closer to a door to repair it';return;}if(h.doorHp<=0){if((p.boards||0)<2){world.notice='You need 2 wooden boards to rebuild this door';return;}p.boards-=2;h.doorMaxHp=100+(h.boards||0)*55;h.doorHp=Math.min(65,h.doorMaxHp);h.doorOpen=false;world.notice=name(p.id)+' rebuilt a destroyed door (65 HP)';return;}if(h.doorHp>=h.doorMaxHp){world.notice='Door is already fully repaired';return;}if(!p.boards){world.notice='You need a wooden board to repair the door';return;}p.boards--;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+65);world.notice=name(p.id)+' repaired a door (+65 HP)';}
-function toggleDoor(p,board=false){const h=nearDoor(p);if(!h)return false;if(casinoLocked(h)){world.notice='Casino locked until wave 5';return false;}if(board){if(h.doorHp<=0){world.notice='This door is destroyed';return false;}if(h.boards>=4){world.notice='Door fully reinforced (4/4)';return false;}if(!(p.boards>0)){world.notice='You need wooden boards! Loot them from chests.';return false;}p.boards--;h.boards=Math.min(4,(h.boards||0)+1);h.doorMaxHp=100+h.boards*55;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+55);h.doorOpen=false;world.notice=name(p.id)+' boarded a door ('+h.boards+'/4)';}else{if(h.doorHp<=0){world.notice='This door is broken';return true;}h.doorOpen=!h.doorOpen;world.notice=name(p.id)+(h.doorOpen?' opened':' closed')+' a door';}return true;}
+function repairDoor(p){const h=nearDoor(p);if(!h){world.notice='Get closer to a door to repair it';return;}if(warehouseLocked(h))return;if(h.doorHp<=0){if((p.boards||0)<2){world.notice='You need 2 wooden boards to rebuild this door';return;}p.boards-=2;h.doorMaxHp=100+(h.boards||0)*55;h.doorHp=Math.min(65,h.doorMaxHp);h.doorOpen=false;world.notice=name(p.id)+' rebuilt a destroyed door (65 HP)';return;}if(h.doorHp>=h.doorMaxHp){world.notice='Door is already fully repaired';return;}if(!p.boards){world.notice='You need a wooden board to repair the door';return;}p.boards--;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+65);world.notice=name(p.id)+' repaired a door (+65 HP)';}
+function toggleDoor(p,board=false){const h=nearDoor(p);if(!h)return false;if(casinoLocked(h)||warehouseLocked(h)){world.notice=warehouseLocked(h)?'BLACKSITE WAREHOUSE LOCKED UNTIL WAVE 20':'Casino locked until wave 5';return false;}if(board){if(h.doorHp<=0){world.notice='This door is destroyed';return false;}if(h.boards>=4){world.notice='Door fully reinforced (4/4)';return false;}if(!(p.boards>0)){world.notice='You need wooden boards! Loot them from chests.';return false;}p.boards--;h.boards=Math.min(4,(h.boards||0)+1);h.doorMaxHp=100+h.boards*55;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+55);h.doorOpen=false;world.notice=name(p.id)+' boarded a door ('+h.boards+'/4)';}else{if(h.doorHp<=0){world.notice='This door is broken';return true;}h.doorOpen=!h.doorOpen;world.notice=name(p.id)+(h.doorOpen?' opened':' closed')+' a door';}return true;}
 function move(entity,dx,dy,r=12){const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/Math.max(4,r*.75)));for(let i=0;i<steps;i++){if(!solid(entity.x+dx/steps,entity.y,r))entity.x+=dx/steps;else if(entity.vx)entity.vx=0;if(!solid(entity.x,entity.y+dy/steps,r))entity.y+=dy/steps;else if(entity.vy)entity.vy=0;}}
 function healActor(p,amount){const restored=Math.max(0,Math.min(amount,100-p.hp));if(!restored)return 0;p.hp+=restored;p.healSerial=(p.healSerial||0)+1;p.healTotal=(p.healTotal||0)+restored;p.healAt=world.time||0;return restored;}
 function grantLoot(p,id){if(itemDefs[id]?.type==='weapon'&&itemDefs[id].range>100)p.ammo+=24;if(id==='ammoBox'){p.ammo+=48;return;}if(id==='bandage'){healActor(p,28);return;}if(id==='energy'){p.energy=(p.energy||0)+1;world.notice=name(p.id)+' picked up an energy drink';return;}if(id==='concrete')p.concrete=(p.concrete||0)+2;else if(id==='medkit')p.medkits++;else if(id==='mints')p.mints=(p.mints||0)+2;else if(id==='boards')p.boards=(p.boards||0)+2;else {normalizeCopies(p);p.inventory.push(id);p.itemLevels.push(itemDefs[id]?.type==='weapon'?1:0);if(itemDefs[id]?.type==='armor'&&!p.armor)p.armor=id;if(itemDefs[id]?.type==='weapon')autoMergeCopies(p,id);}world.notice=name(p.id)+' collected '+(itemDefs[id]?.name||id)+'!';}
@@ -1077,17 +1094,17 @@ function requestCyberware(id){
 }
 function showCyberware(){
  if(!root)return;
- if(!cyberPanel){cyberPanel=document.createElement('section');cyberPanel.style.cssText='position:absolute;z-index:32;inset:8% 12%;overflow:auto;padding:22px;background:#091b29f5;border:2px solid #51e9e5;border-radius:14px;box-shadow:0 20px 90px #000c;color:#e5ffff';root.append(cyberPanel);}
+ if(!cyberPanel){cyberPanel=document.createElement('section');cyberPanel.style.cssText='position:absolute;z-index:32;inset:8% 12%;overflow:auto;padding:22px;background:#0d1116f5;border:2px solid #756b64;border-radius:14px;box-shadow:0 20px 90px #000c;color:#e5ffff';root.append(cyberPanel);}
  cyberPanel.style.display=cyberOpen?'block':'none';if(!cyberOpen)return;
  const p=world?.players.find(q=>q.id===who());
  if(!p||!cyberwareNearby(p)){cyberOpen=false;cyberPanel.style.display='none';return;}
  const mods=p.cyberMods||[],stamp=JSON.stringify([mods,p.cyberPsycho,p.credits]);
  if(stamp===cyberStamp)return;cyberStamp=stamp;cyberPanel.replaceChildren();
  const add=(tag,label,parent=cyberPanel)=>{const el=document.createElement(tag);if(label!==undefined)el.textContent=label;parent.append(el);return el;};
- const heading=add('h2','NEON RIPPERDOC · CYBERWARE CLINIC');heading.style.color='#80ffee';
+ const heading=add('h2','BLACKSITE · MILITARY CYBERWARE');heading.style.color='#80ffee';
  const close=add('button','CLOSE');close.onclick=()=>{cyberOpen=false;showCyberware();canvas?.focus();};
  close.style.cssText='padding:9px;background:#21515e;color:white;border:1px solid #70eeee;border-radius:7px';
- add('p','CREDITS: '+(p.credits||0)+' · INSTALLED: '+mods.length+'/6 · CYBERPSYCHOSIS AT 4 MODIFICATIONS');
+ add('p','WAVE 20 WAREHOUSE · CREDITS: '+(p.credits||0)+' · INSTALLED: '+mods.length+'/6 · CYBERPSYCHOSIS AT 4 MODIFICATIONS');
  const warning=add('p',p.cyberPsycho?'CYBERPSYCHOSIS ACTIVE · Your character is attacking teammates until stopped.':'WARNING: Your fourth implant causes cyberpsychosis. Death removes all installed cyberware.');
  warning.style.color=p.cyberPsycho?'#ff5a79':'#ffbe8b';
  for(const mod of CYBERWARE){
@@ -1235,9 +1252,10 @@ function drawHitOverlay(now){
  ctx.restore();
 }
 function drawCasinoRoof(){
- const h=venue('casino');if(!h||!casinoLocked(h))return;
- // Draw after world actors, loot and particles so nothing inside leaks through.
- ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+ const original=venue('casino');if(!original||!casinoLocked(original))return;
+ // Cover the true rotated footprint of the locked casino.
+ const frame=houseFrame(original),h=original.turn?{...original,x:-frame.w/2,y:-frame.h/2,w:frame.w,h:frame.h,doorX:0,doorY:frame.h/2}:original;
+ ctx.save();if(original.turn){ctx.translate(frame.cx,frame.cy);ctx.rotate(frame.angle);}ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
  ctx.fillStyle='#292332';ctx.fillRect(h.x-6,h.y-6,h.w+12,h.h+12);
  ctx.strokeStyle='#48364f';ctx.lineWidth=2;
  for(let y=h.y+22;y<h.doorY-9;y+=24){ctx.beginPath();ctx.moveTo(h.x+10,y);ctx.lineTo(h.x+h.w-10,y);ctx.stroke();}
