@@ -114,3 +114,32 @@ inputs, the placement uses the aim coordinates from the actual click command,
 even if the cursor moves before the next command is consumed. Hold V, aim and
 left-click to place; release V to cancel. Barriers retain 1800 HP and remain
 breakable. Validation: syntax check and 25 relevant regression checks pass.
+
+## Equal weapon tiers (6.6.0)
+
+There are now 48 weapons: eight per tier. All original weapon IDs and rarities
+are retained; 25 new weapons fill out the smaller tiers. New weapons support
+loot, equipment, merging, roulette, shared survivor/Verity models, attack timing,
+recoil and weapon particles where applicable. Rarity weight budgets keep the
+expanded lower tiers from diluting higher-tier loot solely through item count.
+All eight mythics share the existing maximum of one generated mythic per match;
+rare mythic drops and legendary roulette upgrades can choose any of the eight.
+
+The machete has a straighter steel spine, a defined bright cutting edge, clipped
+chopping tip and riveted curved handle. New shotguns use three pellets for both
+survivors and Verity. The crossbow renders bolts without powder flashes/casings.
+
+| Tier | Count | Weapons |
+| --- | --- | --- |
+| Common | 8 | Rusty Spiked Bat, Steel Pipe, Hammer, Pipe Wrench, Hatchet, Survival Knife, Trench Shovel, Wooden Club |
+| Uncommon | 8 | Crowbar, Fire Axe, Old Pistol, Combat Knife, Scrap Spear, Nail Bat, Hunting Rifle, Sawed-Off Shotgun |
+| Rare | 8 | Machete, Shotgun, SMG, Revolver, Kukri, War Hammer, Carbine, Crossbow |
+| Epic | 8 | Katana, Assault Rifle, Sledgehammer, Double Barrel Shotgun, Battle Axe, Halberd, Bullpup Rifle, Auto Shotgun |
+| Legendary | 8 | Chainsaw, Marksman Rifle, Sunbreaker Greatsword, Reaper Scythe, Voidblade, Railgun, Hellfire Shotgun, Thunderbolt LMG |
+| Mythic | 8 | Eclipse Annihilator, Sunforge Maul, Oblivion Scythe, Starfall Cleaver, Tempest Rail Rifle, Hydra Scattergun, Nebula Repeater, Sovereign Spear |
+
+Validation: syntax check and 32 relevant regression checks pass, including seven
+weapon checks for tier counts, old rarity preservation, loot reachability,
+mythic caps, roulette, every ranged weapon, all 48 distinct drawing traces, and
+Verity's new weapons. Model contact sheets were visually inspected. Live
+multiplayer gameplay has not been verified for this release.
