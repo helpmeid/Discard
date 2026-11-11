@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='6.7.8';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.23',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.23';
+const DEAD_ZONE_VERSION='6.7.9';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.24',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.24';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -193,8 +193,11 @@ const BELL_X=MAPW/2,BELL_Y=MAPH/2;
 function makeNoise(x,y,radius=650,duration=4){if(!world)return;world.noise={x,y,radius,until:world.time+duration,serial:(world.noise?.serial||0)+1};}
 function zombieSpawn(boss=false){world.zombieSerial=world.zombieSerial||0;const living=world.players.filter(p=>p.hp>0);const target=living[Math.floor(Math.random()*living.length)]||world.players[0];let x=target.x+600,y=target.y;for(let attempt=0;attempt<28;attempt++){const angle=Math.random()*Math.PI*2,dist=520+Math.random()*180;const nx=Math.max(15,Math.min(MAPW-15,target.x+Math.cos(angle)*dist)),ny=Math.max(15,Math.min(MAPH-15,target.y+Math.sin(angle)*dist));if(!solid(nx,ny,14)&&!casinoLocked(houseAt(nx,ny))){x=nx;y=ny;break;}}const bossKinds=['boss','colossus','plague','dreadnought','apocalypse'];const kind=boss?bossKinds[Math.min(bossKinds.length-1,Math.floor(world.wave/10)-1)]:chooseZombieType(world.wave),cfg=ZOMBIE_TYPES[kind];const hp=Math.round(cfg.hp*(38+world.wave*12)*(DIFFICULTIES[world.difficulty||'normal']||DIFFICULTIES.normal).hp);return{netId:++world.zombieSerial,kind,maxHp:hp,hp,x,y,speed:cfg.speed*(90+Math.min(110,world.wave*6))*(DIFFICULTIES[world.difficulty||'normal']||DIFFICULTIES.normal).speed,attack:0,wanderX:x,wanderY:y,wanderUntil:0,alertUntil:0,boss,attackPower:boss?(1.4+Math.min(1.8,world.wave/30)):1};}
 
-const VERITY_X=MAPW/2,VERITY_Y=MAPH/2;
-function makeVerity(){return{x:VERITY_X,y:VERITY_Y,hp:100,maxHp:100,state:'sleeping',weapon:null,weaponLevel:1,armor:null,ammo:0,face:0,cool:0,roll:0,rollCooldown:0,invuln:0,healCooldown:0,reviveHold:0,following:null,stuck:0,step:0,chatCooldown:0,chatTimer:7,chatMemory:{}};}
+const VERITY_X=BELL_X-145,VERITY_Y=BELL_Y+95;
+function makeVerity(){
+ const spots=[[VERITY_X,VERITY_Y],[BELL_X+145,BELL_Y+95],[BELL_X-145,BELL_Y-95],[BELL_X+145,BELL_Y-95]];
+ const spawn=spots.find(([x,y])=>!solid(x,y,24)&&!houseAt(x,y))||spots[0];
+ return{x:spawn[0],y:spawn[1],hp:100,maxHp:100,state:'sleeping',weapon:null,weaponLevel:1,armor:null,ammo:0,face:0,cool:0,roll:0,rollCooldown:0,invuln:0,healCooldown:0,reviveHold:0,following:null,stuck:0,step:0,chatCooldown:0,chatTimer:7,chatMemory:{}};}
 function verityInteract(p,dt){
  const v=world.verity;if(!v||p.hp<=0||Math.hypot(v.x-p.x,v.y-p.y)>72)return false;
  if(v.state==='sleeping'){v.deliveryBox={x:v.x,y:v.y,opened:true};v.state='active';v.following=p.id;world.notice='☀ VERITY AWAKENED! Press G nearby to open his inventory.';burst(v.x,v.y,'#ffe762',24);veritySay('Wow, {player} woke me up. Now I have to carry this whole circus.',p.id,true);return true;}
