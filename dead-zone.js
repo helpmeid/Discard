@@ -310,9 +310,31 @@ function shopOffers(){
  }
  return offers;
 }
+function sellWeaponsByRarity(p,tier){
+ if(!Number.isSafeInteger(tier)||tier<0||tier>=WEAPON_TIER_NAMES.length)return false;
+ normalizeCopies(p);
+ let total=0,count=0;
+ for(let i=p.inventory.length-1;i>=0;i--){
+  const id=p.inventory[i];
+  if(itemDefs[id]?.type!=='weapon'||weaponTier(id)!==tier)continue;
+  if(p.inventory.filter(item=>itemDefs[item]?.type==='weapon').length<=1)break;
+  total+=weaponSaleValue(id,levelOf(p,i));count++;
+  p.inventory.splice(i,1);p.itemLevels.splice(i,1);
+  for(const hand of ['primary','secondary']){
+   const old=p.equippedIndices[hand];
+   if(old===i){p.equippedIndices[hand]=-1;p[hand]=null;}
+   else if(old>i)p.equippedIndices[hand]--;
+  }
+ }
+ if(!count){world.notice='No spare '+WEAPON_TIER_NAMES[tier]+' weapons to sell.';return false;}
+ normalizeCopies(p);p.credits+=total;
+ world.notice=name(p.id)+' sold '+count+' '+WEAPON_TIER_NAMES[tier]+' weapons for '+total+' credits';
+ return true;
+}
 function shopAction(p,req){
  if(!world||!p||!world.players.includes(p)||!shopNearby(p)||!req||!Number.isSafeInteger(req.serial)||req.serial!==(p.shopSerial||0)+1)return false;
  p.shopSerial=req.serial;normalizeCopies(p);p.credits=Math.max(0,Math.floor(Number(p.credits)||0));
+ if(req.type==='sell-rarity')return sellWeaponsByRarity(p,req.tier);
  if(req.type==='sell'){
   const i=req.slot;if(!Number.isSafeInteger(i)||i<0||i>=p.inventory.length||itemDefs[p.inventory[i]]?.type!=='weapon'||p.inventory[i]!==req.item||levelOf(p,i)!==req.level){world.notice='Your inventory changed. Select the weapon again.';return false;}
   if(p.inventory.filter(id=>itemDefs[id]?.type==='weapon').length<=1){world.notice='Keep at least one weapon to defend yourself.';return false;}
@@ -948,7 +970,17 @@ function drawConcreteBarriers(){
  }
 }
 
-function repairDoor(p){const h=nearDoor(p);if(!h){world.notice='Get closer to a door to repair it';return;}if(warehouseLocked(h))return;if(h.doorHp<=0){if((p.boards||0)<2){world.notice='You need 2 wooden boards to rebuild this door';return;}p.boards-=2;h.doorMaxHp=100+(h.boards||0)*55;h.doorHp=Math.min(65,h.doorMaxHp);h.doorOpen=false;world.notice=name(p.id)+' rebuilt a destroyed door (65 HP)';return;}if(h.doorHp>=h.doorMaxHp){world.notice='Door is already fully repaired';return;}if(!p.boards){world.notice='You need a wooden board to repair the door';return;}p.boards--;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+65);world.notice=name(p.id)+' repaired a door (+65 HP)';}
+function repairConcrete(p){
+ if(!world||!p||p.hp<=0)return false;
+ let best=null,dist=78;
+ for(const b of world.barriers||[]){if(b.hp<=0||b.hp>=(b.maxHp||1800))continue;const d=Math.hypot(p.x-b.x,p.y-b.y);if(d<dist){best=b;dist=d;}}
+ if(!best)return false;
+ if((p.concrete||0)<1){world.notice='Need 1 concrete material to repair this barrier';return true;}
+ p.concrete--;const amount=Math.min(550,(best.maxHp||1800)-best.hp);best.hp+=amount;
+ world.notice=name(p.id)+' repaired concrete (+'+amount+' HP)';
+ return true;
+}
+function repairDoor(p){if(repairConcrete(p))return;const h=nearDoor(p);if(!h){world.notice='Get closer to a door to repair it';return;}if(warehouseLocked(h))return;if(h.doorHp<=0){if((p.boards||0)<2){world.notice='You need 2 wooden boards to rebuild this door';return;}p.boards-=2;h.doorMaxHp=100+(h.boards||0)*55;h.doorHp=Math.min(65,h.doorMaxHp);h.doorOpen=false;world.notice=name(p.id)+' rebuilt a destroyed door (65 HP)';return;}if(h.doorHp>=h.doorMaxHp){world.notice='Door is already fully repaired';return;}if(!p.boards){world.notice='You need a wooden board to repair the door';return;}p.boards--;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+65);world.notice=name(p.id)+' repaired a door (+65 HP)';}
 function toggleDoor(p,board=false){const h=nearDoor(p);if(!h)return false;if(casinoLocked(h)||warehouseLocked(h)){world.notice=warehouseLocked(h)?'BLACKSITE WAREHOUSE LOCKED UNTIL WAVE 20':'Casino locked until wave 5';return false;}if(board){if(h.doorHp<=0){world.notice='This door is destroyed';return false;}if(h.boards>=4){world.notice='Door fully reinforced (4/4)';return false;}if(!(p.boards>0)){world.notice='You need wooden boards! Loot them from chests.';return false;}p.boards--;h.boards=Math.min(4,(h.boards||0)+1);h.doorMaxHp=100+h.boards*55;h.doorHp=Math.min(h.doorMaxHp,h.doorHp+55);h.doorOpen=false;world.notice=name(p.id)+' boarded a door ('+h.boards+'/4)';}else{if(h.doorHp<=0){world.notice='This door is broken';return true;}h.doorOpen=!h.doorOpen;world.notice=name(p.id)+(h.doorOpen?' opened':' closed')+' a door';}return true;}
 function move(entity,dx,dy,r=12){const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/Math.max(4,r*.75)));for(let i=0;i<steps;i++){if(!solid(entity.x+dx/steps,entity.y,r))entity.x+=dx/steps;else if(entity.vx)entity.vx=0;if(!solid(entity.x,entity.y+dy/steps,r))entity.y+=dy/steps;else if(entity.vy)entity.vy=0;}}
 function healActor(p,amount){const restored=Math.max(0,Math.min(amount,100-p.hp));if(!restored)return 0;p.hp+=restored;p.healSerial=(p.healSerial||0)+1;p.healTotal=(p.healTotal||0)+restored;p.healAt=world.time||0;return restored;}
@@ -1197,6 +1229,8 @@ function showShop(){
  const columns=make('div');columns.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px';
  const selling=make('section',undefined,columns),buying=make('section',undefined,columns);
  make('h3','SELL YOUR WEAPONS',selling);
+ const bulk=make('div',undefined,selling);bulk.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(90px,1fr));gap:6px;margin:9px 0 14px';
+ for(let tier=0;tier<WEAPON_TIER_NAMES.length;tier++){const count=p.inventory.filter(id=>itemDefs[id]?.type==='weapon'&&weaponTier(id)===tier).length;const b=make('button','SELL ALL '+WEAPON_TIER_NAMES[tier]+' ('+count+')',bulk);b.disabled=!count||!!shopPending||p.inventory.filter(id=>itemDefs[id]?.type==='weapon').length<=1;b.style.cssText='background:#263a32;border:1px solid '+WEAPON_TIER_COLORS[tier]+';padding:8px;color:#fff;border-radius:7px;cursor:pointer;font-size:11px';b.onclick=()=>requestShop({type:'sell-rarity',tier});}
  const weapons=p.inventory.map((id,i)=>({id,i})).filter(x=>itemDefs[x.id]?.type==='weapon');
  for(const {id,i} of weapons){
   const row=make('div',undefined,selling);row.style.cssText='padding:10px;margin:7px 0;background:#1c342b;border:1px solid #426451;border-radius:7px';
@@ -1349,7 +1383,7 @@ const hints=[];const down=world?.players.find(q=>own?.hp>0&&q.id!==own.id&&q.hp<
 if(near)hints.push({text:'CHEST · Hold '+binds.interact.replace('Key','')+' to open  '+Math.round((p?.chestTarget===near.id?p?.chestHold||0:0)/1.25*100)+'%',progress:Math.min(1,(p?.chestTarget===near.id?p?.chestHold||0:0)/1.25),color:'#e8c67a'});
 if(drop)hints.push({text:'LOOT · Press '+binds.interact.replace('Key','')+' to pick up '+((drop.quantity?drop.quantity+' × ':'')+(drop.resource==='ammo'?'Ammo':itemDefs[drop.item]?.name||'supplies')),color:'#9fe1ac'});
 if(own?.hp>0&&world?.verity&&Math.hypot(own.x-world.verity.x,own.y-world.verity.y)<=72){const v=world.verity;if(v.state==='sleeping')hints.push({text:'VERITY DELIVERY · Press '+binds.interact.replace('Key','')+' to open box & wake him',color:'#ffe087'});else if(v.state==='down')hints.push({text:'✚ REVIVE VERITY · Hold '+binds.interact.replace('Key','')+' · '+Math.round((v.reviveHold||0)/3*100)+'%',progress:Math.min(1,(v.reviveHold||0)/3),color:'#ffd368'});else hints.push({text:'☀ VERITY · G: Inventory / Heal · '+Math.round(v.hp)+' HP',color:'#ffe087'});}
-if(cyberwareNearby(own)&&!cyberOpen)hints.push({text:'BLACKSITE CYBERWARE · Press '+binds.interact.replace('Key','')+' to access implants',color:'#a7e4da'});if(shopNearby(own)&&!shopOpen)hints.push({text:'WEAPON SHOP · Press '+binds.interact.replace('Key','')+' to buy / sell · '+(own.credits||0)+' credits',color:'#9fe5b2'});if(rouletteNearby(own)&&!rouletteOpen)hints.push({text:'CASINO · Press '+binds.interact.replace('Key','')+' to use roulette',color:'#dbb6f5'});if(house&&warehouseLocked(house))hints.push({text:'UNLOCKS ON WAVE 20',color:'#e7aa92'});else if(house&&casinoLocked(house))hints.push({text:'UNLOCKS ON WAVE 5',color:'#eab1eb'});else if(house)hints.push({text:'DOOR · '+binds.door.replace('Key','')+' '+(house.doorOpen?'Close':'Open')+'   '+binds.board.replace('Key','')+' Board   '+binds.repair.replace('Key','')+' Repair  🪵'+(p?.boards||0),color:'#d3e3d2'});
+if(cyberwareNearby(own)&&!cyberOpen)hints.push({text:'BLACKSITE CYBERWARE · Press '+binds.interact.replace('Key','')+' to access implants',color:'#a7e4da'});if(shopNearby(own)&&!shopOpen)hints.push({text:'WEAPON SHOP · Press '+binds.interact.replace('Key','')+' to buy / sell · '+(own.credits||0)+' credits',color:'#9fe5b2'});if(rouletteNearby(own)&&!rouletteOpen)hints.push({text:'CASINO · Press '+binds.interact.replace('Key','')+' to use roulette',color:'#dbb6f5'});const barrierToRepair=(world.barriers||[]).find(b=>own?.hp>0&&b.hp>0&&b.hp<(b.maxHp||1800)&&Math.hypot(own.x-b.x,own.y-b.y)<78);if(barrierToRepair)hints.push({text:'DAMAGED CONCRETE · Press '+binds.repair.replace('Key','')+' to repair (+550 HP, costs 1 concrete)',color:'#d8d8cf'});if(house&&warehouseLocked(house))hints.push({text:'UNLOCKS ON WAVE 20',color:'#e7aa92'});else if(house&&casinoLocked(house))hints.push({text:'UNLOCKS ON WAVE 5',color:'#eab1eb'});else if(house)hints.push({text:'DOOR · '+binds.door.replace('Key','')+' '+(house.doorOpen?'Close':'Open')+'   '+binds.board.replace('Key','')+' Board   '+binds.repair.replace('Key','')+' Repair  🪵'+(p?.boards||0),color:'#d3e3d2'});
 const baseY=H-180;
 hints.forEach((hint,i)=>{const y=baseY-i*49,w=420,x=(W-w)/2;ctx.fillStyle='#091b19ed';ctx.fillRect(x,y,w,43);ctx.strokeStyle=hint.color;ctx.lineWidth=1.5;ctx.strokeRect(x+.5,y+.5,w-1,42);ctx.fillStyle=hint.color;ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillText(hint.text,W/2,y+23);if(hint.progress!==undefined){ctx.fillStyle='#27332b';ctx.fillRect(x+12,y+32,w-24,5);ctx.fillStyle=hint.color;ctx.fillRect(x+12,y+32,(w-24)*hint.progress,5);}});
 }
