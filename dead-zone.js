@@ -189,10 +189,13 @@ function weaponProgress(kind,slot,other){
 
 const player=(id,i)=>({id,cyberMods:[],cyberPsycho:false,psychoCooldown:0,credits:0,shopSerial:0,rouletteSerial:0,rouletteResult:null,x:MAPW/2+(i%2)*34-17,y:MAPH/2+Math.floor(i/2)*34-17,vx:0,vy:0,hp:100,kills:0,cool:0,invuln:0,color:['#93d1ff','#f7c576','#cda5ff','#99e3ab'][i],inventory:['bat'],itemLevels:[1],equippedIndices:{primary:0,secondary:-1},weaponLevels:{bat:1},primary:'bat',secondary:null,activeSlot:'primary',weapon:'bat',armor:null,ammo:0,face:0,swing:0,medkits:0,mints:0,boards:0,concrete:3,stamina:100,energy:0,reviveHold:0,reviveTarget:null,chestHold:0,chestTarget:null,chestComplete:false});
 // Each new world rolls a fresh block layout; orthogonal turns keep door geometry exact.
+const HOUSE_FRAME_CACHE=new WeakMap();
 function houseFrame(h){
+ const cached=HOUSE_FRAME_CACHE.get(h);
+ if(cached&&cached.boundsX===h.x&&cached.boundsY===h.y&&cached.boundsW===h.w&&cached.boundsH===h.h&&cached.turn===(h.turn||0))return cached;
  const turn=h.turn||0,angle=turn*Math.PI/2;
- return {cx:h.x+h.w/2,cy:h.y+h.h/2,angle,c:Math.cos(angle),sn:Math.sin(angle),
-  w:h.rawW||((turn%2)?h.h:h.w),h:h.rawH||((turn%2)?h.w:h.h)};
+ const f={boundsX:h.x,boundsY:h.y,boundsW:h.w,boundsH:h.h,turn,cx:h.x+h.w/2,cy:h.y+h.h/2,angle,c:Math.cos(angle),sn:Math.sin(angle),w:h.rawW||((turn%2)?h.h:h.w),h:h.rawH||((turn%2)?h.w:h.h)};
+ HOUSE_FRAME_CACHE.set(h,f);return f;
 }
 function localHousePoint(h,x,y){
  const f=houseFrame(h),dx=x-f.cx,dy=y-f.cy;
@@ -212,7 +215,7 @@ function makeMap(){
  const clinic={x:2640,y:1810,w:415,h:380,rawW:415,rawH:380,turn:0,type:5,venue:'clinic',
   doorX:2847.5,doorY:2190,doorOpen:true,doorHp:100,doorMaxHp:100,boards:0};
  for(let y=180;y<MAPH-190;y+=430)for(let x=180;x<MAPW-190;x+=500){
-  if(Math.hypot(x-MAPW/2,y-MAPH/2)<375)continue;
+  if(Math.hypot(x-MAPW/2,y-MAPH/2)<375||Math.random()<.16)continue;
   const n=houses.length,turn=Math.floor(Math.random()*4),type=Math.floor(Math.random()*5);
   const rawW=[230,195,260,215,245][type],rawH=[185,215,175,195,225][type];
   const w=turn%2?rawH:rawW,h=turn%2?rawW:rawH;
@@ -220,6 +223,8 @@ function makeMap(){
   const py=Math.min(MAPH-h-65,Math.max(155,y+(Math.random()-.5)*34));
   if(px<clinic.x+clinic.w+80&&px+w>clinic.x-80&&py<clinic.y+clinic.h+75&&py+h>clinic.y-75)continue;
   const angle=turn*Math.PI/2,doorX=px+w/2-Math.sin(angle)*rawH/2,doorY=py+h/2+Math.cos(angle)*rawH/2;
+  // Leave a clear walking approach to each door, even when a vehicle is parked nearby.
+  if(carCollision(doorX-Math.sin(angle)*43,doorY+Math.cos(angle)*43,18))continue;
   const house={x:px,y:py,w,h,rawW,rawH,turn,type,doorX,doorY,doorOpen:false,doorHp:100,doorMaxHp:100,boards:0};
   houses.push(house);
   const centerX=px+w/2,centerY=py+h/2;
@@ -1406,7 +1411,7 @@ function advanceGame(now){
  while(accumulator>=Net.STEP-1e-7){
   const heldFire=localInput.fire;localInput.fire=heldFire||fireTap;
   if(session.mode==='host'&&!hostWorker){if(!((pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen)&&!peers().size))tick(Net.STEP);}
-  else if(!world.ended&&!workerPaused){const own=world.players.find(p=>p.id===who());if(own&&!prediction.state)prediction.seed(own);prediction.step(localInput);stepAttackPreview();for(const e of world.effects){e.life-=Net.STEP;e.x+=e.vx*Net.STEP;e.y+=e.vy*Net.STEP;}world.effects=world.effects.filter(e=>e.life>0);}
+  else if(!world.ended&&!workerPaused){const own=world.players.find(p=>p.id===who());if(own&&!prediction.state)prediction.seed(own);if(own?.cyberPsycho)prediction.seed(own);else prediction.step(localInput);stepAttackPreview();for(const e of world.effects){e.life-=Net.STEP;e.x+=e.vx*Net.STEP;e.y+=e.vy*Net.STEP;}world.effects=world.effects.filter(e=>e.life>0);}
   localInput.fire=heldFire;fireTap=false;
   for(const k of edgeKeys)localInput[k]=k==='swap'?0:false;
   accumulator-=Net.STEP;
@@ -1629,7 +1634,8 @@ function drawCenterBell(){
 }
 function drawObjectives(){if(world.mode!=='story')return;const site=missionSites[Math.min(2,world.story.stage)],pulse=1+Math.sin((world.time||0)*3)*.08;ctx.save();ctx.strokeStyle='#d8c387';ctx.lineWidth=2;ctx.setLineDash([8,5]);ctx.beginPath();ctx.ellipse(site.x,site.y,65*pulse,65*pulse,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f3dc9f';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.fillText(site.label,site.x,site.y-80);glow(site.x,site.y,90,'#a8bf85');ctx.restore();}
 function drawAtmosphere(p){if(!world||!p)return;ctx.save();const x=p.x-camera.x,y=p.y-camera.y;const g=ctx.createRadialGradient(x,y,75,x,y,540);g.addColorStop(0,'#06101b00');g.addColorStop(.55,'#06101b25');g.addColorStop(1,'#020811ba');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='screen';ctx.translate(x,y);ctx.rotate(p.face||0);const beam=ctx.createRadialGradient(0,0,10,0,0,260);beam.addColorStop(0,'#e0d5a32a');beam.addColorStop(1,'#e0d5a300');ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,260,-.43,.43);ctx.closePath();ctx.fill();ctx.restore();if(p.invuln>.15){ctx.fillStyle='#cd33331c';ctx.fillRect(0,0,W,H);}}
-function drawMiniMap(){if(!world||!miniCanvas)return;const mc=miniCanvas.getContext('2d');const size=260,x=0,y=0,scaleX=(size-20)/MAPW,scaleY=(size-42)/MAPH;mc.clearRect(0,0,size,size);mc.save();mc.fillStyle='#071a18ec';mc.fillRect(x,y,size,size);mc.strokeStyle='#87bba4';mc.lineWidth=2;mc.strokeRect(x+.5,y+.5,size-1,size-1);mc.fillStyle='#d5ead8';mc.textAlign='left';mc.font='bold 10px system-ui';mc.fillText('SECTOR RADAR',x+10,y+13);mc.save();mc.beginPath();mc.rect(x+9,y+20,size-18,size-29);mc.clip();const px=wx=>x+10+wx*scaleX,py=wy=>y+20+wy*scaleY;mc.strokeStyle='#52676277';mc.lineWidth=.6;mc.fillStyle='#334849';
+let radarLastDraw=0;
+function drawMiniMap(){if(!world||!miniCanvas)return;const now=performance.now();if(now-radarLastDraw<65)return;radarLastDraw=now;const mc=miniCanvas.getContext('2d');const size=260,x=0,y=0,scaleX=(size-20)/MAPW,scaleY=(size-42)/MAPH;mc.clearRect(0,0,size,size);mc.save();mc.fillStyle='#071a18ec';mc.fillRect(x,y,size,size);mc.strokeStyle='#87bba4';mc.lineWidth=2;mc.strokeRect(x+.5,y+.5,size-1,size-1);mc.fillStyle='#d5ead8';mc.textAlign='left';mc.font='bold 10px system-ui';mc.fillText('SECTOR RADAR',x+10,y+13);mc.save();mc.beginPath();mc.rect(x+9,y+20,size-18,size-29);mc.clip();const px=wx=>x+10+wx*scaleX,py=wy=>y+20+wy*scaleY;mc.strokeStyle='#52676277';mc.lineWidth=.6;mc.fillStyle='#334849';
  for(let roadX=90;roadX<MAPW;roadX+=500)mc.fillRect(px(roadX-55),py(0),115*scaleX,MAPH*scaleY);
  for(let roadY=65;roadY<MAPH;roadY+=430)mc.fillRect(px(0),py(roadY-43),MAPW*scaleX,93*scaleY);
  mc.strokeStyle='#a1bab8';mc.lineWidth=.8;
