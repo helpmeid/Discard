@@ -214,6 +214,7 @@ let preferenceSaveTimer = null;
 const APP_VERSION = "4.8.2";
 const UPDATE_LOG = [
   { version: "4.8.2", notes: ["Dead Zone: the center bell now sends visible expanding shockwave rings all the way to the corners of the map, with sound reaching the entire playable area."] },
+  { version: "4.8.2", notes: ["Dead Zone: anime-style Sandevistan now grants major speed and agility, slows the world to 12%, lasts six seconds, has rainbow spectral afterimages, and features a more dramatic activation."] },
   { version: "4.8.1", notes: ["Dead Zone: casino roulette now spins a red/green wheel and stops on green for a successful jackpot or red for a failed roll, matching the authoritative result."] },
   { version: "4.8.0", notes: ["Dead Zone: unanimous ready votes skip 10-second wave breaks; casino roulette spins with animated wheel; shop bulk-sells selected weapon rarities while keeping a last weapon; concrete barriers repair with one concrete material; larger hammer shockwave AOE; Inferno Flamethrower replaces the Sunbreaker sword in the Legendary tier and burns groups of infected; invite Discard friends directly from the lobby or pause menu."] },
   { version: "4.7.1", notes: ["Dead Zone: 10-second between-wave breaks, zombies spawn only outdoors, previously trapped zombies are moved out of locked venues, and both wave-locked locations have opaque black roofs labeled only by their unlock wave."] },
