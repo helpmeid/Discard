@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.4.0";
+const APP_VERSION = "4.4.1";
 const UPDATE_LOG = [
+  { version: "4.4.1", notes: ["Dead Zone: 15-second intervals between completed waves; railgun projectiles pass through walls and obstacles, including when Verity uses a railgun."] },
   { version: "4.4.0", notes: ["Dead Zone late-wave optimization: nearby-only zombie collision checks, staggered line-of-sight tests, shared target lists, and longer path cache reuse without reducing horde sizes."] },
   { version: "4.3.9", notes: ["Dead Zone: Verity now spawns beside the central bell, with collision-safe fallback spots so the bell stays accessible."] },
   { version: "4.3.8", notes: ["Dead Zone: reduced the preparation break between completed waves from 45 seconds to 20 seconds."] },
