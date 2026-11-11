@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.2.7';
+const DEAD_ZONE_VERSION='7.2.8';
 const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.34',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.34';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
@@ -279,7 +279,9 @@ function buyCyberware(p,request){
  if(p.cyberMods.includes(mod.id)||p.cyberMods.length>=CYBERWARE.length)return false;
  if((p.credits||0)<mod.price){world.notice='Not enough credits for '+mod.name;return false;}
  p.credits-=mod.price;p.cyberMods.push(mod.id);normalizeCopies(p);
- if(p.cyberMods.length>=4){p.cyberPsycho=true;p.psychoCooldown=0;p.hp=Math.max(p.hp,65);world.notice='CYBERPSYCHOSIS: '+name(p.id)+' has turned hostile! Teammates must stop them!';}
+ if(p.cyberMods.length>=4){p.cyberPsycho=true;p.psychoCooldown=0;p.hp=Math.max(p.hp,65);
+  if(world.players.length===1){world.ended=true;world.won=false;world.endReason='cyberpsychosis';world.notice='CYBERPSYCHOSIS · Nobody is left to stop you. Run ended.';}
+  else world.notice='CYBERPSYCHOSIS: '+name(p.id)+' has turned hostile! Teammates must stop them!';}
  else world.notice=name(p.id)+' installed '+mod.name+' ('+p.cyberMods.length+'/3 safe implants)';
  return true;
 }
@@ -1447,7 +1449,7 @@ function drawSandyAfterimages(q){
   ctx.fillRect(-13,-12,25,24);ctx.beginPath();ctx.ellipse(4,0,10,9,0,0,Math.PI*2);ctx.fill();ctx.fillRect(-14,-17,9,7);ctx.fillRect(-14,9,9,7);ctx.restore();
  }
  ctx.restore();
- ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=colors[Math.floor(now/75)%colors.length];ctx.globalAlpha=.6;ctx.lineWidth=2;ctx.shadowBlur=14;ctx.shadowColor=ctx.strokeStyle;ctx.beginPath();ctx.arc(q.x,q.y,23+Math.sin(now/100)*2,0,Math.PI*2);ctx.stroke();ctx.restore();
+
 }
 function drawScene(){if(!ctx)return;const own=world?.players.find(q=>q.id===who());
  if(session?.id!==lastDamageWorld||own?.id!==lastDamagePlayer){lastDamageWorld=session?.id;lastDamagePlayer=own?.id||'';lastDamageHp=own?.hp??null;hitOverlayAt=-Infinity;}
@@ -1463,7 +1465,7 @@ ctx.translate(-Math.min(13,q.recoil||0),0);ctx.rotate(-(q.recoil||0)*.012);ctx.s
 ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor='#060e0c';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
 drawWeaponModel(weapon);
 ctx.restore();drawMuzzleFlash(q);ctx.fillStyle='#f1f1e5';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(name(q.id)+(q.cyberPsycho?' · CYBERPSYCHO':''),q.x,q.y-30);ctx.fillStyle='#d65855';ctx.fillRect(q.x-19,q.y-25,38*q.hp/100,4);}
-for(const b of world.shots){if(b.kind==='flamethrower'){ctx.save();ctx.globalAlpha=.75;const pulse=14+Math.abs(Math.sin((world.time||0)*21))*14;const g=ctx.createRadialGradient(b.x,b.y,3,b.x,b.y,pulse+28);g.addColorStop(0,'#fff7a0');g.addColorStop(.35,'#ff9c30b9');g.addColorStop(1,'#f5411b00');ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,pulse+28,0,Math.PI*2);ctx.fill();ctx.restore();continue;}if(b.kind==='crossbow'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.strokeStyle='#d3c9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(0,0);ctx.stroke();ctx.strokeStyle='#a9c8b9';ctx.beginPath();ctx.moveTo(-4,-3);ctx.lineTo(0,0);ctx.lineTo(-4,3);ctx.moveTo(-18,-3);ctx.lineTo(-14,0);ctx.lineTo(-18,3);ctx.stroke();ctx.restore();continue;}const speed=Math.hypot(b.vx,b.vy)||1,ux=b.vx/speed,uy=b.vy/speed;ctx.save();ctx.lineCap='round';ctx.strokeStyle=b.kind==='shotgun'?'#f5bb77aa':'#ffe5a8b3';ctx.lineWidth=b.kind==='shotgun'?3:2.5;ctx.beginPath();ctx.moveTo(b.x-ux*26,b.y-uy*26);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff6d7';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(b.x-ux*12,b.y-uy*12);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle='#fff5c7';ctx.beginPath();ctx.arc(b.x,b.y,2.6,0,Math.PI*2);ctx.fill();ctx.restore();}drawEffects();drawLockedVenueRoofs();if(world.sandevistan){ctx.save();ctx.globalAlpha=.8;ctx.lineWidth=5;ctx.strokeStyle=world.sandevistan.owner===who()?'#79efff':'#92a5d9';ctx.strokeRect(camera.x+8,camera.y+8,W-16,H-16);ctx.restore();}updateHUD(p);if(world.ended&&!gameOverShown){gameOverShown=true;shopOpen=false;if(shopPanel)shopPanel.style.display='none';verityOpen=false;if(verityPanel)verityPanel.style.display='none';inventoryOpen=false;if(inventoryPanel)inventoryPanel.style.display='none';localStorage.removeItem(saveKey());screen((world.won?'EXTRACTION COMPLETE · ':'GAME OVER · ')+'Wave '+world.wave+' · Score '+world.score);button('⌂ Return to Start Menu',returnToMenu);}}ctx.restore();
+for(const b of world.shots){if(b.kind==='flamethrower'){ctx.save();ctx.globalAlpha=.75;const pulse=14+Math.abs(Math.sin((world.time||0)*21))*14;const g=ctx.createRadialGradient(b.x,b.y,3,b.x,b.y,pulse+28);g.addColorStop(0,'#fff7a0');g.addColorStop(.35,'#ff9c30b9');g.addColorStop(1,'#f5411b00');ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,pulse+28,0,Math.PI*2);ctx.fill();ctx.restore();continue;}if(b.kind==='crossbow'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.strokeStyle='#d3c9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(0,0);ctx.stroke();ctx.strokeStyle='#a9c8b9';ctx.beginPath();ctx.moveTo(-4,-3);ctx.lineTo(0,0);ctx.lineTo(-4,3);ctx.moveTo(-18,-3);ctx.lineTo(-14,0);ctx.lineTo(-18,3);ctx.stroke();ctx.restore();continue;}const speed=Math.hypot(b.vx,b.vy)||1,ux=b.vx/speed,uy=b.vy/speed;ctx.save();ctx.lineCap='round';ctx.strokeStyle=b.kind==='shotgun'?'#f5bb77aa':'#ffe5a8b3';ctx.lineWidth=b.kind==='shotgun'?3:2.5;ctx.beginPath();ctx.moveTo(b.x-ux*26,b.y-uy*26);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff6d7';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(b.x-ux*12,b.y-uy*12);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle='#fff5c7';ctx.beginPath();ctx.arc(b.x,b.y,2.6,0,Math.PI*2);ctx.fill();ctx.restore();}drawEffects();drawLockedVenueRoofs();if(world.sandevistan){ctx.save();ctx.globalAlpha=.8;ctx.lineWidth=5;ctx.strokeStyle=world.sandevistan.owner===who()?'#79efff':'#92a5d9';ctx.strokeRect(camera.x+8,camera.y+8,W-16,H-16);ctx.restore();}updateHUD(p);if(world.ended&&!gameOverShown){gameOverShown=true;shopOpen=false;if(shopPanel)shopPanel.style.display='none';verityOpen=false;if(verityPanel)verityPanel.style.display='none';inventoryOpen=false;if(inventoryPanel)inventoryPanel.style.display='none';localStorage.removeItem(saveKey());screen((world.endReason==='cyberpsychosis'?'CYBERPSYCHOSIS · NO ONE LEFT TO STOP YOU · ':world.won?'EXTRACTION COMPLETE · ':'GAME OVER · ')+'Wave '+world.wave+' · Score '+world.score);button('⌂ Return to Start Menu',returnToMenu);}}ctx.restore();
 if(world?.sandevistan&&world.sandevistan.until>world.time){
  const now=performance.now(),pulse=.5+.5*Math.sin(now/160);
  ctx.save();
@@ -1554,7 +1556,7 @@ function networkSnapshot(){
  const shots=world.shots.slice(-32).map(b=>[Math.round(b.x),Math.round(b.y),Math.round(b.vx),Math.round(b.vy),b.life,b.kind,b.owner]);
  const effects=world.effects.slice(-12).map(e=>[e.id,Math.round(e.x),Math.round(e.y),Math.round(e.vx),Math.round(e.vy),e.color,e.life,e.max,e.size,e.blood?1:0,e.ring?1:0,e.radius||0]);
  const ack={};for(const [id,stream]of hostStreams)ack[id]=stream.ack;
- return{t:'dz-state',protocol:2,epoch:inputEpoch,id:session.id,seq:++snapshotSerial,ack,world:{players,zombies,shots,effects,bellLast:world.bellLast,skipVotes:world.skipVotes||{},sandevistan:world.sandevistan||null,time:world.time,wave:world.wave,score:world.score,remaining:world.remaining,between:world.between,ended:world.ended,won:world.won,story:{...world.story},notice:world.notice,verity:world.verity,verityChat:(world.verityChat||[]).slice(-8),verityChatSerial:world.verityChatSerial||0,mythicCreated:!!world.mythicCreated}};
+ return{t:'dz-state',protocol:2,epoch:inputEpoch,id:session.id,seq:++snapshotSerial,ack,world:{players,zombies,shots,effects,bellLast:world.bellLast,skipVotes:world.skipVotes||{},sandevistan:world.sandevistan||null,time:world.time,wave:world.wave,score:world.score,remaining:world.remaining,between:world.between,ended:world.ended,won:world.won,endReason:world.endReason||null,story:{...world.story},notice:world.notice,verity:world.verity,verityChat:(world.verityChat||[]).slice(-8),verityChatSerial:world.verityChatSerial||0,mythicCreated:!!world.mythicCreated}};
 }
 function sendMetadata(){
  const data={mythicCreated:!!world.mythicCreated,barriers:world.barriers||[],players:world.players.map(p=>{const q={id:p.id};for(const k of inventoryFields)q[k]=p[k];return q;}),doors:world.houses.map(h=>[h.doorOpen,h.doorHp,h.boards,h.doorMaxHp]),chests:world.chests.map(c=>!!c.opened),drops:world.drops};
@@ -1584,7 +1586,7 @@ function receiveSnapshot(d,now){
  world.players=next.players.map(value=>Object.assign(oldPlayers.get(value.id)||player(value.id,0),value));
  world.zombies=next.zombies.map(z=>Object.assign(oldZombies.get(z[0])||{},{netId:z[0],x:z[1],y:z[2],hp:z[3],maxHp:z[4],kind:z[5],hit:z[6],boss:z[7],attackPower:z[8]||1,face:z[9]||0}));
  world.shots=(next.shots||[]).map(b=>({x:b[0],y:b[1],vx:b[2],vy:b[3],life:b[4],kind:b[5],owner:b[6]}));
- for(const k of ['time','wave','score','remaining','between','bellLast','skipVotes','sandevistan','ended','won','story','notice','verity','verityChat','verityChatSerial','mythicCreated'])if(next[k]!==undefined)world[k]=next[k];
+ for(const k of ['time','wave','score','remaining','between','bellLast','skipVotes','sandevistan','ended','won','endReason','story','notice','verity','verityChat','verityChatSerial','mythicCreated'])if(next[k]!==undefined)world[k]=next[k];
  for(const e of next.effects||[]){if(guestEffectsSeen.has(e[0]))continue;guestEffectsSeen.add(e[0]);world.effects.push({id:e[0],x:e[1],y:e[2],vx:e[3],vy:e[4],color:e[5],life:e[6],max:e[7],size:e[8],blood:e[9]===1,ring:e[10]===1,radius:e[11]||0});}
  if(guestEffectsSeen.size>1024)guestEffectsSeen=new Set([...guestEffectsSeen].slice(-256));if(world.effects.length>180)world.effects.splice(0,world.effects.length-180);
  const own=world.players.find(p=>p.id===who());if(own)prediction.reconcile(own,d.ack?.[who()]||0);
