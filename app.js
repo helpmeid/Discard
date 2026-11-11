@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.3.0";
+const APP_VERSION = "4.3.1";
 const UPDATE_LOG = [
+  { version: "4.3.1", notes: ["Dead Zone: improved zombie and Verity pathfinding around houses, doors, vehicles and barriers.", "More recognizable melee weapons, including a broad chopping machete.", "Hold V to preview concrete barrier placement, then left-click to confirm.", "Includes distinct gun models, recoil and green healing feedback from Dead Zone 6.5.4."] },
   { version: "4.3.0", notes: ["Improved version visibility and refreshed the Discard loader to detect out-of-date cached scripts."] },
   { version: "4.2.9", notes: ["Dead Zone updates: Verity chats and jokes with teammates, more frequent weapon drops, Mythic rarity, stronger bosses, roulette table, and improved weapon effects."] },
   { version: "4.2.8", notes: ["Fixed zombie melee attacks after the body-collision update: zombies can damage survivors from just outside their separation radius without clipping through them."] },

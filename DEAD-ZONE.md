@@ -76,3 +76,31 @@ armor-hit sparks were added.
 Validation: syntax check and all three targeted effect tests pass. The existing
 suite has 16 passes and one house-entry navigation failure, reproduced unchanged
 on the pre-update source. Live browser visuals have not been verified.
+
+## Navigation, melee silhouettes and placement (6.5.5 / Discard 4.3.1)
+
+Zombies and Verity now share clearance-aware paths around houses, vehicles and
+concrete barriers. Cached target fields are shared by the horde, with route
+smoothing and invalidation when doors or barriers change. Zombies approach and
+break closed doors; Verity opens doors to follow the team. Actors embedded in
+old geometry walk out in bounded movement steps instead of teleporting. The old
+short-range steering and Verity emergency teleport have been removed.
+
+The machete now uses a short, broad chopping blade with a clipped rounded nose,
+contrasting with the long curved katana. Crowbar hooks, pipe coupling, tapered
+spiked bat and wrapped katana grip further distinguish the melee silhouettes.
+All 23 weapon models were inspected in a silhouette preview.
+
+Hold the barrier key (V by default) to display a green/red placement preview.
+Left-click to confirm one barrier per fresh click; release V to cancel. Weapon
+fire is suppressed while previewing. The preview and host placement use the
+same footprint, obstacle, survivor-clearance and resource checks. Barriers have
+1800 HP and remain destructible: infected attack them when no route exists.
+
+Validation: 29 checks pass across the existing suite, effects, six navigation
+checks and three barrier checks. The house-entry regression now measures valid
+contact distance (28 units) rather than requiring overlap with the existing
+27.5-unit survivor separation. Navigation checks cover entry/exit, closed doors,
+Verity, door changes, exact grid/collision agreement and a crowded horde. A native
+65-zombie benchmark simulated 12 seconds in approximately 0.75 seconds on the
+development machine. These are automated simulations, not live multiplayer QA.
