@@ -143,3 +143,51 @@ weapon checks for tier counts, old rarity preservation, loot reachability,
 mythic caps, roulette, every ranged weapon, all 48 distinct drawing traces, and
 Verity's new weapons. Model contact sheets were visually inspected. Live
 multiplayer gameplay has not been verified for this release.
+
+## Sector Supply, casino and special delivery (6.7.0)
+
+Two existing buildings near the central district are converted into venues:
+Sector Supply northwest of the square, and the casino southwest of it. Both are
+labelled on the map with S/C. The shop has a counter and stock shelves. Enter
+and press the bound Interact key (E by default) at the counter to buy or sell.
+Spare weapons sell for per-player credits based on rarity and level. At least
+one weapon must be kept. Credits buy rotating, wave-gated weapons and supplies;
+Mythic weapons are not sold by the shop. Credits and transaction serials are
+saved and sent through reliable inventory metadata. The host validates location,
+stock, funds and the selected copy, and rejects replayed transactions.
+
+The roulette table is now physically inside the casino. Its door remains locked
+and immune to door-opening/breaking until wave 5; the table also rejects rolls
+before wave 5 and from outside the room. At wave 5 the door opens automatically.
+Old saves receive venue roles and misplaced pre-wave-5 survivors inside the newly
+converted casino are moved to its entrance.
+
+Sleeping Verity arrives at the existing wave-10 Endless spawn in a taped cardboard
+parcel with a shipping label and floating Zs. Interact opens the box and wakes
+him. The opened box remains at the delivery location. Nearby prompts honor the
+Interact key binding. Verity healing remains available through his G inventory;
+V is reserved for the barrier preview to avoid accidental mint use.
+
+All 48 weapons repeat attacks while mouse/attack is held, respecting their own
+cooldowns and ammo. Melee hits now land after their visible wind-up. Slow melee
+weapons have heavier swing timing, wider trails, larger blood droplets/stains
+and stronger knockback. Strong Legendary/Mythic hits can produce expanding floor
+shockwaves with nearby-zombie knockback; these waves add no splash damage. A
+per-attacker cooldown and existing particle/stain limits bound visual load.
+Shockwave events are included in multiplayer snapshots.
+
+Stationary wall-hugging survivors no longer invalidate the horde's target field:
+path targets can connect to a nearby valid navigation cell without requiring
+the survivor to have the larger AI clearance radius. Actual zombie movement
+still follows collision-safe routes.
+
+A permanent DEAD ZONE v6.7.0 badge is visible in menus and during play, with the
+version also shown in the lobby heading. The script and host worker cache
+references have been refreshed together.
+
+Validation: syntax checks and 50 automated checks pass across the seven current
+Dead Zone suites. New checks cover venues and locks, sales/purchases and wallet
+metadata, shop buttons, paused-worker trading, boxed Verity, hold attacks for all
+48 weapons, delayed melee impact, large blood/shockwaves and stationary survivors
+pressed against inside/outside walls. The building/package rendering was
+visually inspected. Live production multiplayer gameplay remains unverified.

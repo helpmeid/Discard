@@ -11,13 +11,14 @@ self.onmessage=({data})=>{
  if(data.type==='init'){
   self.currentUser={id:data.host};self.state={friends:Object.fromEntries(data.players.map(id=>[id,{}]))};
   self.viewPerson=id=>({displayName:data.names[id]||'Survivor'});
-  importScripts('dead-zone-net.js?v=2.0.1','dead-zone.js?v=6.6.0');
+  importScripts('dead-zone-net.js?v=2.0.1','dead-zone.js?v=6.7.0');
   self.deadZoneWorker.initialize(data);
   setInterval(()=>postMessage({type:'checkpoint',world:self.deadZoneWorker.getWorld()}),1000);
  }else if(data.type==='packet')self.deadZoneHandle(data.from,data.packet);
  else if(data.type==='input')self.deadZoneWorker.input(data.commands,data.epoch);
  else if(data.type==='equip')self.deadZoneWorker.equip(data.id,data.slot,data.hand);
  else if(data.type==='swap')self.deadZoneWorker.swap(data.id,data.hand);
+ else if(data.type==='shop')self.deadZoneWorker.shop(data.id,data.request);
  else if(data.type==='drop')self.deadZoneWorker.drop(data.id,data.request);
  else if(data.type==='verity')self.deadZoneWorker.verity(data.id,data.request);
  else if(data.type==='verityChat')self.deadZoneWorker.verityChat(data.id,data.message);
