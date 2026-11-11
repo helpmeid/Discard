@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.2.8';
+const DEAD_ZONE_VERSION='7.2.9';
 const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.34',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.34';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
@@ -24,9 +24,9 @@ let totalPlaytimeFlush=0;const totalTimeKey=()=> 'deadzone-total-playtime-v1-'+S
 let hudClock=0,snapshotSerial=0,lastSnapshotSerial=0;
 let saveClock=0;let gameChatLog=null,gameChatInput=null,lastGameChatAt=0,lastVerityChatSeen=0;let announcedDeaths=new Map();let guestVisuals=new Map();
 function saveGame(){if(!session||session.mode!=='host'||session.phase!=='play'||!world||world.ended)return false;if(window.__DEAD_ZONE_WORKER__){window.deadZoneHostSave?.(world);return true;}if(hostWorker){hostWorker.postMessage({type:'save'});return persistSave(hostCheckpoint||world);}return persistSave(world);}
-function persistSave(source,key=slotKey(session?.saveSlot||1),owner=who()){
+function persistSave(source,key=slotKey(session?.saveSlot||1),owner=who(),allowEnded=false){
  try{
-  if(!source||source.ended)return false;
+  if(!source||(source.ended&&!allowEnded))return false;
   const copy=JSON.parse(JSON.stringify(source));
   if(!copy.players.some(p=>p.id===owner))return false;
   copy.savedPlayers=copy.savedPlayers||{};
@@ -1133,7 +1133,21 @@ function voteSkipRound(id){
  if(everyone){world.between=0.01;world.skipVotes={};world.notice='ALL PLAYERS READY · NEXT WAVE STARTING!';}
  return true;
 }
-function tick(dt){if(!world||world.ended)return;const w=world;w.time=(w.time||0)+dt;if(w.sandevistan&&(w.time>=w.sandevistan.until||!w.players.some(p=>p.id===w.sandevistan.owner&&p.hp>0)))w.sandevistan=null;w.effects=(w.effects||[]).filter(e=>(e.life-=dt)>0);for(const e of w.effects){e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=Math.max(0,1-dt*4);e.vy*=Math.max(0,1-dt*4);}updateCasino();storyTick(dt);if(w.players.every(p=>p.hp<=0)){w.ended=true;return;}if(w.ended)return;
+function tick(dt){
+ if(!world||world.ended)return;
+ const previousAlive=new Set(world.players.filter(p=>p.hp>0).map(p=>p.id));
+ const wasEnded=!!world.ended;
+ tickSimulation(dt);
+ if(!world)return;
+ const newlyDead=world.players.some(p=>p.hp<=0&&previousAlive.has(p.id));
+ if(newlyDead&&world.players.length&&world.players.every(p=>p.hp<=0)){world.ended=true;world.won=false;}
+ if(newlyDead||(!wasEnded&&world.ended&&!world.won)){
+  // Capture authoritative deaths before the next periodic save, even if the run ended.
+  if(window.__DEAD_ZONE_WORKER__)window.deadZoneHostDeath?.(world);
+  else if(session?.mode==='host')persistSave(world,slotKey(session?.saveSlot||1),who(),true);
+ }
+}
+function tickSimulation(dt){if(!world||world.ended)return;const w=world;w.time=(w.time||0)+dt;if(w.sandevistan&&(w.time>=w.sandevistan.until||!w.players.some(p=>p.id===w.sandevistan.owner&&p.hp>0)))w.sandevistan=null;w.effects=(w.effects||[]).filter(e=>(e.life-=dt)>0);for(const e of w.effects){e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=Math.max(0,1-dt*4);e.vy*=Math.max(0,1-dt*4);}updateCasino();storyTick(dt);if(w.players.every(p=>p.hp<=0)){w.ended=true;return;}if(w.ended)return;
 const stepDt=dt;
 for(const p of w.players){if(w.mode==='creative'){p.ammo=999999;p.credits=99999999;}const a={...(p.id===who()&&!window.__DEAD_ZONE_WORKER__?localInput:hostInput(p.id,stepDt))};
  if(a.sandevistan)activateSandevistan(p);
@@ -1529,7 +1543,7 @@ function startNetworkMatch(){
    const worker=new Worker(workerScriptURL);hostWorker=worker;inputEpoch=crypto.randomUUID();hostCheckpoint=JSON.parse(JSON.stringify(world));prediction.seed(world.players.find(p=>p.id===who()));
    worker.onmessage=({data})=>{if(hostWorker!==worker)return;
     if(data.type==='view')receiveSnapshot(data.packet,performance.now());
-    else if(data.type==='checkpoint'){hostCheckpoint=data.world;if(data.save)persistSave(data.world);}
+    else if(data.type==='checkpoint'){hostCheckpoint=data.world;if(data.death)persistSave(data.world,slotKey(session?.saveSlot||1),who(),true);else if(data.save)persistSave(data.world);}
     else if(data.type==='joined'){hostCheckpoint=data.world;const peer=peers().get(data.id);if(peer){peer.ready=true;emit(data.id,{t:'dz-start',id:session.id,protocol:2,epoch:data.epoch,code:session.code,world:data.world});}}
     else if(data.type==='network'){if(data.to===who()){if(data.packet.t==='dz-meta')receiveMetadata(data.packet);}else emit(data.to,data.packet);}
    };
