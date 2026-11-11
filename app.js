@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.9";
+const APP_VERSION = "4.8.10";
 const UPDATE_LOG = [
+  { version: "4.8.10", notes: ["Dead Zone: Mantis Blades now replace melee attacks with a blade on each arm without locking guns or weapon switching. The Inferno Flamethrower sprays a continuous tapered flame stream instead of fireballs."] },
   { version: "4.8.9", notes: ["Dead Zone: Sandevistan now slows affected players’ melee swing animations, attack windups, and melee cooldowns even more, while its user swings at normal speed."] },
   { version: "4.8.8", notes: ["Dead Zone: player deaths now immediately commit an authoritative host save, including from the simulation worker. A full squad wipe saves a finished-run tombstone, preventing refresh from loading the previous alive checkpoint."] },
   { version: "4.8.7", notes: ["Dead Zone: solo cyberpsychosis immediately ends the run with a special game-over message; Sandevistan no longer draws a rainbow ring around the player while keeping rainbow motion afterimages."] },
