@@ -365,6 +365,8 @@ const BOSS_NAMES={boss:'TITAN',colossus:'COLOSSUS',plague:'PLAGUE BEHEMOTH',drea
 const bossSize=z=>z.kind==='apocalypse'?3.4:z.kind==='dreadnought'?3:z.kind==='colossus'?2.55:z.kind==='plague'?2.3:z.boss?2:1;
 function chooseZombieType(wave){const choices=['walker','walker','walker','runner','crawler'];if(wave>=3)choices.push('stalker','toxic');if(wave>=5)choices.push('armored','brute','sprinter');if(wave>=7)choices.push('berserker');if(wave>=9)choices.push('juggernaut');return choices[Math.floor(Math.random()*choices.length)];}
 const BELL_X=MAPW/2,BELL_Y=MAPH/2;
+const BELL_SHOCKWAVE_RADIUS=Math.hypot(MAPW/2,MAPH/2)+100;
+const BELL_SHOCKWAVE_DURATION=4;
 function makeNoise(x,y,radius=650,duration=4){if(!world)return;world.noise={x,y,radius,until:world.time+duration,serial:(world.noise?.serial||0)+1};}
 function zombieSpawn(boss=false){world.zombieSerial=world.zombieSerial||0;const living=world.players.filter(p=>p.hp>0);const target=living[Math.floor(Math.random()*living.length)]||world.players[0];// Check both solid walls AND building interiors: solid() intentionally allows enterable rooms.
  let x=null,y=null;
@@ -1136,7 +1138,7 @@ for(const p of w.players){if(w.mode==='creative'){p.ammo=999999;p.credits=999999
 if(p.pendingMelee&&p.weapon!==p.pendingMelee.weapon)p.pendingMelee=null;
 if(p.pendingMelee){p.pendingMelee.remaining-=dt;if(p.pendingMelee.remaining<=0){const strike=p.pendingMelee;p.pendingMelee=null;resolveMelee(p,strike.weapon,strike.damage,strike.angle);}}
 if(a.swap===1||a.swap===2)swapWeapon(p,a.swap===1?'primary':'secondary');if(a.mint&&p.mints>0&&p.hp<100){p.mints--;healActor(p,22);w.notice=name(p.id)+' used Care Mints';}
-const chest=nearbyChest(p);if(down||!a.use||!chest||Math.hypot(p.x-chest.x,p.y-chest.y)>80){p.chestHold=0;p.chestTarget=null;p.chestComplete=false;}else if(p.chestTarget!==chest.id){p.chestTarget=chest.id;p.chestHold=0;p.chestComplete=false;}else if(!p.chestComplete){p.chestHold=Math.min(1.25,(p.chestHold||0)+dt);if(p.chestHold>=1.25){chest.opened=true;p.chestComplete=true;p.useLatch=true;const item=randomLoot(w.wave);const offsets=[[-25,-18],[25,-18],[-25,22],[25,22],[0,0]];let pos={x:chest.x,y:chest.y};for(const [ox,oy] of offsets){if(!solid(chest.x+ox,chest.y+oy,10)){pos={x:chest.x+ox,y:chest.y+oy};break;}}w.drops.push({id:++w.dropSerial,item,x:pos.x,y:pos.y});w.notice='Chest opened! Press E to pick up '+itemDefs[item].name;}}if(a.use&&!down&&!p.useLatch&&Math.hypot(p.x-BELL_X,p.y-BELL_Y)<75){if(w.time-(w.bellLast??-100)>=12){w.bellLast=w.time;makeNoise(BELL_X,BELL_Y,2200,10);w.notice='THE CENTER BELL RANG! Zombies are heading to the sound!';}else w.notice='The bell needs a moment before it can ring again';p.useLatch=true;}
+const chest=nearbyChest(p);if(down||!a.use||!chest||Math.hypot(p.x-chest.x,p.y-chest.y)>80){p.chestHold=0;p.chestTarget=null;p.chestComplete=false;}else if(p.chestTarget!==chest.id){p.chestTarget=chest.id;p.chestHold=0;p.chestComplete=false;}else if(!p.chestComplete){p.chestHold=Math.min(1.25,(p.chestHold||0)+dt);if(p.chestHold>=1.25){chest.opened=true;p.chestComplete=true;p.useLatch=true;const item=randomLoot(w.wave);const offsets=[[-25,-18],[25,-18],[-25,22],[25,22],[0,0]];let pos={x:chest.x,y:chest.y};for(const [ox,oy] of offsets){if(!solid(chest.x+ox,chest.y+oy,10)){pos={x:chest.x+ox,y:chest.y+oy};break;}}w.drops.push({id:++w.dropSerial,item,x:pos.x,y:pos.y});w.notice='Chest opened! Press E to pick up '+itemDefs[item].name;}}if(a.use&&!down&&!p.useLatch&&Math.hypot(p.x-BELL_X,p.y-BELL_Y)<75){if(w.time-(w.bellLast??-100)>=12){w.bellLast=w.time;makeNoise(BELL_X,BELL_Y,BELL_SHOCKWAVE_RADIUS,10);w.notice='THE CENTER BELL RANG! Zombies are heading to the sound!';}else w.notice='The bell needs a moment before it can ring again';p.useLatch=true;}
 if(a.use&&!down&&!p.useLatch&&(!verityNear||w.verity.state==='active')&&(!chest||w.drops.some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65))&&!(w.mode==='story'&&w.story.stage<2&&Math.hypot(p.x-missionSites[w.story.stage].x,p.y-missionSites[w.story.stage].y)<70)){action(p,{use:true});p.useLatch=true;}if(a.use&&!down&&verityNear){if(w.verity.state==='down'){verityInteract(p,dt);}else if(w.verity.state==='sleeping'&&!p.useLatch){verityInteract(p,dt);p.useLatch=true;}}if(!a.use){p.useLatch=false;if(w.verity?.reviver===p.id){w.verity.reviveHold=0;w.verity.reviver=null;}}if(a.door||a.board||a.repair||a.barrier)action(p,a);
 const heldFire=Boolean(a.fire)||!!a._firePressed;const firePressed=!!a._firePressed||(heldFire&&!p.fireHeld);p.fireHeld=heldFire;
 if(heldFire&&itemDefs[p.weapon]?.type==='weapon'&&p.cool<=0){p.attackSerial=(p.attackSerial||0)+1;const weapon=itemDefs[p.weapon],vx=(Number(a.ax)||p.x+1)-p.x,vy=(Number(a.ay)||p.y)-p.y,angle=Math.atan2(vy,vx);p.face=angle;p.cool=weapon.cool*((p.cyberMods||[]).includes('mantis')&&weapon.range<100?.8:1);weaponParticles(p.weapon,p.x,p.y,angle);
@@ -1802,7 +1804,18 @@ function drawCenterBell(){
  ctx.save();ctx.translate(BELL_X,BELL_Y);
  ctx.fillStyle='#1b2624';ctx.fillRect(-23,-22,46,50);ctx.strokeStyle='#c89e51';ctx.lineWidth=4;ctx.strokeRect(-23,-22,46,50);
  ctx.fillStyle='#d6b66e';ctx.beginPath();ctx.arc(0,-30,18,Math.PI,0);ctx.lineTo(20,-5);ctx.lineTo(-20,-5);ctx.closePath();ctx.fill();ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
- if(age>=0&&age<2.2){ctx.save();ctx.strokeStyle='#ffdd79';ctx.lineWidth=5*(1-age/2.2);ctx.globalAlpha=Math.max(0,1-age/2.2);for(let i=0;i<3;i++){const r=35+age*165-i*34;if(r>0){ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();}}ctx.restore();}
+ if(age>=0&&age<BELL_SHOCKWAVE_DURATION){
+  ctx.save();ctx.strokeStyle='#ffdd79';ctx.lineWidth=5;ctx.shadowColor='#ffe897';ctx.shadowBlur=13;
+  // The leading shockwave reaches every map corner in four seconds.
+  const progress=age/BELL_SHOCKWAVE_DURATION;
+  const leadingRadius=35+progress*BELL_SHOCKWAVE_RADIUS;
+  for(let i=0;i<3;i++){
+   const radius=leadingRadius-i*135;if(radius<=0)continue;
+   ctx.globalAlpha=Math.max(.2,(1-progress)*(.72-i*.18));
+   ctx.lineWidth=5-i*1.3;ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
+ }
  const me=world.players.find(q=>q.id===who());
  if(me&&me.hp>0&&Math.hypot(me.x-BELL_X,me.y-BELL_Y)<115){
   const wait=Math.max(0,12-age),ready=wait<=0;
