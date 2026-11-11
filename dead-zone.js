@@ -166,7 +166,47 @@ function weaponProgress(kind,slot,other){
 }
 
 const player=(id,i)=>({id,credits:0,shopSerial:0,rouletteSerial:0,rouletteResult:null,x:MAPW/2+(i%2)*34-17,y:MAPH/2+Math.floor(i/2)*34-17,vx:0,vy:0,hp:100,kills:0,cool:0,invuln:0,color:['#93d1ff','#f7c576','#cda5ff','#99e3ab'][i],inventory:['bat'],itemLevels:[1],equippedIndices:{primary:0,secondary:-1},weaponLevels:{bat:1},primary:'bat',secondary:null,activeSlot:'primary',weapon:'bat',armor:null,ammo:0,face:0,swing:0,medkits:0,mints:0,boards:0,concrete:3,stamina:100,energy:0,reviveHold:0,reviveTarget:null,chestHold:0,chestTarget:null,chestComplete:false});
-function makeMap(){const houses=[],chests=[];for(let y=180;y<MAPH-190;y+=430)for(let x=180;x<MAPW-190;x+=500){if(Math.hypot(x-MAPW/2,y-MAPH/2)<340)continue;const n=houses.length,type=n%5,w=[230,195,260,215,245][type],h=[185,215,175,195,225][type],px=x+(n%3)*17,py=Math.min(y+(n%2)*19-(y>MAPH-550&&x===180?85:0),MAPH-h-90);houses.push({x:px,y:py,w,h,type,doorX:px+w/2,doorY:py+h,doorOpen:false,doorHp:100,doorMaxHp:100,boards:0});chests.push({id:chests.length,x:px+45+n%3*45,y:py+68+n%2*40,opened:false});if(n%3===0)chests.push({id:chests.length,x:px+w-48,y:py+50,opened:false});}const map={houses,chests};ensureVenues(map);return map;}
+// Each new world rolls a fresh block layout; orthogonal turns keep door geometry exact.
+function houseFrame(h){
+ const turn=h.turn||0,angle=turn*Math.PI/2;
+ return {cx:h.x+h.w/2,cy:h.y+h.h/2,angle,c:Math.cos(angle),sn:Math.sin(angle),
+  w:h.rawW||((turn%2)?h.h:h.w),h:h.rawH||((turn%2)?h.w:h.h)};
+}
+function localHousePoint(h,x,y){
+ const f=houseFrame(h),dx=x-f.cx,dy=y-f.cy;
+ return {x:dx*f.c+dy*f.sn,y:-dx*f.sn+dy*f.c};
+}
+function houseWall(h,x,y,r=12){
+ if(x<h.x-r-8||x>h.x+h.w+r+8||y<h.y-r-8||y>h.y+h.h+r+8)return false;
+ const f=houseFrame(h),p=localHousePoint(h,x,y),halfW=f.w/2,halfH=f.h/2,t=6;
+ const withinX=Math.abs(p.x)<=halfW+t+r,withinY=Math.abs(p.y)<=halfH+t+r;
+ const side=withinY&&(Math.abs(Math.abs(p.x)-halfW)<t+r);
+ const top=withinX&&Math.abs(p.y+halfH)<t+r;
+ const bottom=withinX&&Math.abs(p.y-halfH)<t+r&&(Math.abs(p.x)>34-r||!doorPassable(h));
+ return side||top||bottom;
+}
+function makeMap(){
+ const houses=[],chests=[];
+ const clinic={x:2640,y:1810,w:415,h:380,rawW:415,rawH:380,turn:0,type:5,venue:'clinic',
+  doorX:2847.5,doorY:2190,doorOpen:true,doorHp:100,doorMaxHp:100,boards:0};
+ for(let y=180;y<MAPH-190;y+=430)for(let x=180;x<MAPW-190;x+=500){
+  if(Math.hypot(x-MAPW/2,y-MAPH/2)<375)continue;
+  const n=houses.length,turn=Math.floor(Math.random()*4),type=Math.floor(Math.random()*5);
+  const rawW=[230,195,260,215,245][type],rawH=[185,215,175,195,225][type];
+  const w=turn%2?rawH:rawW,h=turn%2?rawW:rawH;
+  const px=Math.min(MAPW-w-65,Math.max(162,x+(Math.random()-.5)*34));
+  const py=Math.min(MAPH-h-65,Math.max(155,y+(Math.random()-.5)*34));
+  if(px<clinic.x+clinic.w+80&&px+w>clinic.x-80&&py<clinic.y+clinic.h+75&&py+h>clinic.y-75)continue;
+  const angle=turn*Math.PI/2,doorX=px+w/2-Math.sin(angle)*rawH/2,doorY=py+h/2+Math.cos(angle)*rawH/2;
+  const house={x:px,y:py,w,h,rawW,rawH,turn,type,doorX,doorY,doorOpen:false,doorHp:100,doorMaxHp:100,boards:0};
+  houses.push(house);
+  const centerX=px+w/2,centerY=py+h/2;
+  chests.push({id:chests.length,x:centerX-24,y:centerY-18,opened:false});
+  if(n%3===0)chests.push({id:chests.length,x:centerX+37,y:centerY+30,opened:false});
+ }
+ houses.push(clinic);
+ const map={houses,chests};ensureVenues(map);return map;
+}
 function venue(kind,w=world){return w?.houses?.find(h=>h.venue===kind)||null;}
 function ensureVenues(w){
  if(!w?.houses?.length)return;
@@ -319,12 +359,7 @@ function aiGrid(){
  });
  for(let y=0;y<AI_ROWS;y++)for(let x=0;x<AI_COLS;x++)if((x+.5)*AI_STEP<radius||(y+.5)*AI_STEP<radius||(x+.5)*AI_STEP>MAPW-radius||(y+.5)*AI_STEP>MAPH-radius)free[y*AI_COLS+x]=0;
  for(let i=0;i<70;i++){const x=90+(i%7)*500,y=155+Math.floor(i/7)*245;rectangle(x-24,y-43,x+29,y+47);}
- for(const h of world.houses){
-  rectangle(h.x-6,h.y-6,h.x+6,h.doorY+6);rectangle(h.x+h.w-6,h.y-6,h.x+h.w+6,h.doorY+6);
-  rectangle(h.x-6,h.y-6,h.x+h.w+6,h.y+6);rectangle(h.x-6,h.doorY-6,h.doorX-34,h.doorY+6);
-  rectangle(h.doorX+34,h.doorY-6,h.x+h.w+6,h.doorY+6);
-  if(!doorPassable(h))rectangle(h.doorX-34,h.doorY-6,h.doorX+34,h.doorY+6);
- }
+ for(const h of world.houses)visit(h.x-20,h.y-20,h.x+h.w+20,h.y+h.h+20,(x,y)=>houseWall(h,x,y,radius));
  for(const b of world.barriers||[]){
   if(b.hp<=0)continue;const cs=Math.cos(b.angle),sn=Math.sin(b.angle),ex=Math.abs(cs)*42+Math.abs(sn)*14,ey=Math.abs(sn)*42+Math.abs(cs)*14;
   visit(b.x-ex,b.y-ey,b.x+ex,b.y+ey,(x,y)=>{const dx=x-b.x,dy=y-b.y,lx=dx*cs+dy*sn,ly=-dx*sn+dy*cs;return(lx-Math.max(-42,Math.min(42,lx)))**2+(ly-Math.max(-14,Math.min(14,ly)))**2<radius*radius;});
@@ -380,7 +415,7 @@ function aiWaypoint(actor,gx,gy,key){
 function aiDoorGoal(actor,gx,gy){
  const from=houseAt(actor.x,actor.y),to=houseAt(gx,gy);
  const h=from!==to?(from||to):null;
- if(h&&!doorPassable(h))return{door:h,x:h.doorX,y:h.doorY+(from===h?-42:42)};
+ if(h&&!doorPassable(h)){const f=houseFrame(h),sign=from===h?-1:1;return{door:h,x:h.doorX-Math.sin(f.angle)*sign*42,y:h.doorY+Math.cos(f.angle)*sign*42};}
  return{door:null,x:gx,y:gy};
 }
 function aiRecover(actor,speed,dt){
@@ -641,6 +676,26 @@ function drawVerityEquipment(v){
  ctx.save();const bodyTurn=v.state==='down'?0:v.roll>0?v.step*1.8:Math.sin(v.step||0)*.11;
  ctx.rotate(-bodyTurn+(v.face||0));ctx.translate(17,5);ctx.translate(-Math.min(13,v.recoil||0),0);ctx.scale(.58,.58);drawWeaponModel(v.weapon);ctx.restore();
 }
+function drawCyberClinic(h){
+ ctx.save();ctx.fillStyle='#061a29';ctx.fillRect(h.x,h.y,h.w,h.h);
+ ctx.fillStyle='#102b3c';ctx.fillRect(h.x+11,h.y+11,h.w-22,h.h-22);
+ ctx.strokeStyle='#46e7ef';ctx.lineWidth=5;ctx.strokeRect(h.x+12,h.y+12,h.w-24,h.h-24);
+ for(let station=0;station<4;station++){
+  const x=h.x+45+(station%2)*225,y=h.y+57+Math.floor(station/2)*146;
+  ctx.fillStyle='#1d4d5b';ctx.fillRect(x,y,125,77);
+  ctx.strokeStyle='#55f9dd';ctx.lineWidth=3;ctx.strokeRect(x,y,125,77);
+  ctx.fillStyle='#1e1d33';ctx.fillRect(x+18,y+18,90,36);
+  ctx.fillStyle='#8e6bff';ctx.fillRect(x+27,y+26,72,19);
+ }
+ ctx.strokeStyle='#d2b7fc';ctx.lineWidth=11;ctx.beginPath();
+ ctx.moveTo(h.x,h.doorY);ctx.lineTo(h.x,h.y);ctx.lineTo(h.x+h.w,h.y);
+ ctx.lineTo(h.x+h.w,h.doorY);ctx.lineTo(h.doorX+34,h.doorY);
+ ctx.moveTo(h.doorX-34,h.doorY);ctx.lineTo(h.x,h.doorY);ctx.stroke();
+ ctx.fillStyle='#b9fffc';ctx.font='bold 17px monospace';ctx.textAlign='center';
+ ctx.fillText('NEON RIPPERDOC · CYBERWARE',h.x+h.w/2,h.y-15);
+ ctx.fillText('CYBERWARE TERMINAL [E]',h.x+h.w/2,h.y+h.h/2+14);
+ ctx.restore();
+}
 function drawVenueHouse(h){
  const shop=h.venue==='shop',locked=casinoLocked(h),accent=shop?'#8fd6a4':'#d79bf2';
  ctx.save();ctx.fillStyle='#081210aa';ctx.fillRect(h.x+8,h.y+11,h.w,h.h);
@@ -695,10 +750,10 @@ function drawVerity(v){
 }
 
 function newWorld(ids){const m=makeMap();return{noise:null,bellLast:-100,mode:session?.gameMode||'endless',story:{stage:0,hold:0,defense:0},effects:[],blood:[],eventSerial:0,time:0,won:false,wave:0,difficulty:session?.difficulty||'normal',score:0,players:ids.map((id,i)=>player(id,i)),zombies:[],zombieSerial:0,shots:[],spawned:0,remaining:0,between:2,ended:false,houses:m.houses,chests:m.chests,barriers:[],barrierSerial:0,barrierRevision:0,drops:[],dropSerial:0,mythicCreated:false,verity:null,verityChat:[],verityChatSerial:0,notice:''};}
-function houseAt(x,y){return(world?.houses||[]).find(h=>x>h.x+10&&x<h.x+h.w-10&&y>h.y+10&&y<h.y+h.h-10);}
+function houseAt(x,y){return(world?.houses||[]).find(h=>x>h.x+9&&x<h.x+h.w-9&&y>h.y+9&&y<h.y+h.h-9);}
 function nearDoor(p){let best=null,d=85;for(const h of world?.houses||[]){let dist=Math.hypot(p.x-h.doorX,p.y-h.doorY);if(dist<d){best=h;d=dist;}}return best;}
 function carCollision(x,y,r=12){for(let i=0;i<70;i++){const cx=90+(i%7)*500,cy=155+Math.floor(i/7)*245;const nearX=Math.max(cx-24,Math.min(x,cx+29)),nearY=Math.max(cy-43,Math.min(y,cy+47));if((x-nearX)**2+(y-nearY)**2<r*r)return true;}return false;}
-function solid(x,y,r=12){if(barrierCollision(x,y,r))return true;if(x<r||y<r||x>MAPW-r||y>MAPH-r||carCollision(x,y,r))return true;for(const h of world?.houses||[]){const t=6,half=34;const overlaps=(ax,ay,bx,by)=>{const closestX=Math.max(ax,Math.min(x,bx)),closestY=Math.max(ay,Math.min(y,by));return (x-closestX)**2+(y-closestY)**2<r*r;};if(overlaps(h.x-t,h.y-t,h.x+t,h.y+h.h+t)||overlaps(h.x+h.w-t,h.y-t,h.x+h.w+t,h.y+h.h+t)||overlaps(h.x-t,h.y-t,h.x+h.w+t,h.y+t))return true;if(overlaps(h.x-t,h.y+h.h-t,h.doorX-half,h.y+h.h+t)||overlaps(h.doorX+half,h.y+h.h-t,h.x+h.w+t,h.y+h.h+t))return true;if(!doorPassable(h)&&overlaps(h.doorX-half,h.doorY-t,h.doorX+half,h.doorY+t))return true;}return false;}
+function solid(x,y,r=12){if(barrierCollision(x,y,r))return true;if(x<r||y<r||x>MAPW-r||y>MAPH-r||carCollision(x,y,r))return true;for(const h of world?.houses||[])if(houseWall(h,x,y,r))return true;return false;}
 
 // Concrete barriers use an oriented 84 × 28 rectangle. The same collision
 // check is used for survivors, infected, shots and placement validation.
@@ -1034,7 +1089,7 @@ el('p','dz-inv-foot','1 / 2: change weapons  ·  Hold Shift: sprint  ·  I: clos
 function selectHand(hand){selectedInventoryHand=hand;for(const b of slots.children)b.classList.toggle('active',b.dataset.hand===hand);}
 for(let i=0;i<slots.children.length;i++){const b=slots.children[i],key=i===0?'primary':'secondary';b.dataset.hand=key;b.onclick=()=>{selectHand(key);if(p[key]){if(session.mode==='host')swapWeapon(p,key);else emit(session.host,{t:'dz-swap',id:session.id,hand:key});}};}
 selectHand(selectedInventoryHand);inventoryPanel.scrollTop=scrollPositions.panel;right.scrollTop=scrollPositions.backpack;left.scrollTop=scrollPositions.side;}
-function visualHouse(h){if(h.venue){drawVenueHouse(h);return;}const c=['#54615a','#62584d','#555e67','#685849','#4a6158'][h.type||0],floor=['#675f52','#6f6659','#555d5b','#776b5c','#59685f'][h.type||0];ctx.fillStyle='#0c1818';ctx.fillRect(h.x+9,h.y+11,h.w,h.h);ctx.fillStyle=c;ctx.fillRect(h.x,h.y,h.w,h.h);ctx.fillStyle=floor;ctx.fillRect(h.x+11,h.y+11,h.w-22,h.h-22);drawInterior(h);ctx.fillStyle='#393b33';ctx.fillRect(h.x+24,h.y+24,64,25);ctx.fillRect(h.x+h.w-90,h.y+35,65,33);ctx.fillStyle='#90806c';ctx.fillRect(h.x+27,h.y+29,58,9);ctx.fillStyle='#8f9b92';ctx.fillRect(h.x+h.w-70,h.y+h.h-55,48,24);ctx.strokeStyle='#d0c8b5';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(h.x,h.y+h.h);ctx.lineTo(h.x,h.y);ctx.lineTo(h.x+h.w,h.y);ctx.lineTo(h.x+h.w,h.y+h.h);ctx.lineTo(h.doorX+31,h.y+h.h);ctx.moveTo(h.doorX-31,h.y+h.h);ctx.lineTo(h.x,h.y+h.h);ctx.stroke();ctx.strokeStyle='#354e51';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(h.x+25,h.y);ctx.lineTo(h.x+70,h.y);ctx.moveTo(h.x+h.w,h.y+45);ctx.lineTo(h.x+h.w,h.y+85);ctx.stroke();if(h.type===2){ctx.fillStyle='#8b826f';ctx.fillRect(h.x+95,h.y+28,75,45);}if(h.type===3){ctx.fillStyle='#35352f';ctx.fillRect(h.x+14,h.y+82,90,18);}ctx.fillStyle=h.doorHp<=0?'#24211c':h.doorOpen?'#887354':h.boards>=3?'#9c372e':h.boards>=1?'#cd8e36':'#79502d';if(h.doorOpen){ctx.fillRect(h.doorX-34,h.doorY-30,9,35);}else{ctx.fillRect(h.doorX-30,h.doorY-11,60,14);ctx.fillStyle='#c6b16c';for(let b=0;b<(h.boards||0);b++)ctx.fillRect(h.doorX-28,h.doorY-10+b*3,56,2);ctx.fillStyle='#181915';ctx.fillRect(h.doorX-30,h.doorY-19,60,3);ctx.fillStyle=h.doorHp/(h.doorMaxHp||100)>.5?'#6fdb85':'#e9b05e';ctx.fillRect(h.doorX-30,h.doorY-19,60*Math.max(0,Math.min(1,h.doorHp/(h.doorMaxHp||100))),3);}}
+function visualHouse(h){if(h.turn){const f=houseFrame(h);ctx.save();ctx.translate(f.cx,f.cy);ctx.rotate(f.angle);visualHouse({...h,turn:0,x:-f.w/2,y:-f.h/2,w:f.w,h:f.h,doorX:0,doorY:f.h/2});ctx.restore();return;}if(h.venue==='clinic'){drawCyberClinic(h);return;}if(h.venue){drawVenueHouse(h);return;}const c=['#54615a','#62584d','#555e67','#685849','#4a6158'][h.type||0],floor=['#675f52','#6f6659','#555d5b','#776b5c','#59685f'][h.type||0];ctx.fillStyle='#0c1818';ctx.fillRect(h.x+9,h.y+11,h.w,h.h);ctx.fillStyle=c;ctx.fillRect(h.x,h.y,h.w,h.h);ctx.fillStyle=floor;ctx.fillRect(h.x+11,h.y+11,h.w-22,h.h-22);drawInterior(h);ctx.fillStyle='#393b33';ctx.fillRect(h.x+24,h.y+24,64,25);ctx.fillRect(h.x+h.w-90,h.y+35,65,33);ctx.fillStyle='#90806c';ctx.fillRect(h.x+27,h.y+29,58,9);ctx.fillStyle='#8f9b92';ctx.fillRect(h.x+h.w-70,h.y+h.h-55,48,24);ctx.strokeStyle='#d0c8b5';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(h.x,h.y+h.h);ctx.lineTo(h.x,h.y);ctx.lineTo(h.x+h.w,h.y);ctx.lineTo(h.x+h.w,h.y+h.h);ctx.lineTo(h.doorX+31,h.y+h.h);ctx.moveTo(h.doorX-31,h.y+h.h);ctx.lineTo(h.x,h.y+h.h);ctx.stroke();ctx.strokeStyle='#354e51';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(h.x+25,h.y);ctx.lineTo(h.x+70,h.y);ctx.moveTo(h.x+h.w,h.y+45);ctx.lineTo(h.x+h.w,h.y+85);ctx.stroke();if(h.type===2){ctx.fillStyle='#8b826f';ctx.fillRect(h.x+95,h.y+28,75,45);}if(h.type===3){ctx.fillStyle='#35352f';ctx.fillRect(h.x+14,h.y+82,90,18);}ctx.fillStyle=h.doorHp<=0?'#24211c':h.doorOpen?'#887354':h.boards>=3?'#9c372e':h.boards>=1?'#cd8e36':'#79502d';if(h.doorOpen){ctx.fillRect(h.doorX-34,h.doorY-30,9,35);}else{ctx.fillRect(h.doorX-30,h.doorY-11,60,14);ctx.fillStyle='#c6b16c';for(let b=0;b<(h.boards||0);b++)ctx.fillRect(h.doorX-28,h.doorY-10+b*3,56,2);ctx.fillStyle='#181915';ctx.fillRect(h.doorX-30,h.doorY-19,60,3);ctx.fillStyle=h.doorHp/(h.doorMaxHp||100)>.5?'#6fdb85':'#e9b05e';ctx.fillRect(h.doorX-30,h.doorY-19,60*Math.max(0,Math.min(1,h.doorHp/(h.doorMaxHp||100))),3);}}
 function nearbyChest(p){if(!p||!world)return null;let nearest=null,best=80;for(const c of world.chests){if(c.opened)continue;const d=Math.hypot(c.x-p.x,c.y-p.y);if(d<best){best=d;nearest=c;}}return nearest;}
 function formatPlaytime(seconds){const n=Math.max(0,Math.floor(Number(seconds)||0)),h=Math.floor(n/3600),m=Math.floor(n%3600/60),sec=n%60;return h>0?[h,m,sec].map(v=>String(v).padStart(2,'0')).join(':'):[m,sec].map(v=>String(v).padStart(2,'0')).join(':');}
 let lastDamagePlayer='',lastDamageHp=null,lastDamageWorld=null,hitOverlayAt=-Infinity,hitOverlaySeed=0;
