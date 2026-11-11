@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.5";
+const APP_VERSION = "4.8.6";
 const UPDATE_LOG = [
+  { version: "4.8.6", notes: ["Dead Zone: holding E rapidly picks up nearby loot every 0.12 seconds without interrupting revive or other interactions. Sandevistan lasts 9 seconds, keeps the 25-second post-effect cooldown, and slows all player bullets to 12% while time dilation is active."] },
   { version: "4.8.5", notes: ["Dead Zone: Sandevistan now lasts eight seconds with a 25-second cooldown after the effect ends. Mantis Blades become a locked integrated melee weapon with twin blade art, and players can uninstall any augment at the wave-20 Blacksite warehouse."] },
   { version: "4.8.4", notes: ["Dead Zone: Sandevistan green cinematic world tint now appears for every player in the session, including slowed teammates, while preserving rainbow afterimages."] },
   { version: "4.8.3", notes: ["Dead Zone: Sandevistan now bathes the entire gameplay world in a green cinematic tint, with an emerald vignette and subtle glitch scanlines, while retaining rainbow afterimages."] },
