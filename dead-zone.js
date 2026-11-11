@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='6.7.4';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.19',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.19';
+const DEAD_ZONE_VERSION='6.7.5';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.20',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.20';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -215,7 +215,7 @@ function verityAction(p,req){
   p.inventory.splice(i,1);p.itemLevels.splice(i,1);
   for(const hand of ['primary','secondary']){const k=p.equippedIndices[hand];if(k===i)p.equippedIndices[hand]=-1;else if(k>i)p.equippedIndices[hand]=k-1;}
   if(old){p.inventory.push(old);p.itemLevels.push(def.type==='weapon'?oldLevel:0);}
-  if(def.type==='weapon'){v.weapon=id;v.weaponLevel=level;if(def.range>=100){const given=Math.min(p.ammo||0,30);p.ammo-=given;v.ammo=(v.ammo||0)+given;}}
+  if(def.type==='weapon'){v.weapon=id;v.weaponLevel=level;if(def.range>=100)v.ammo=0;}
   else v.armor=id;
   normalizeCopies(p);world.notice=name(p.id)+' gave Verity '+def.name;return true;
  }
@@ -243,7 +243,7 @@ function showVerityInventory(){
  const add=(tag,text,parent=verityPanel)=>{const el=document.createElement(tag);el.textContent=text;parent.append(el);return el;};
  const heading=add('h2','☀ VERITY · COMPANION INVENTORY');heading.style.margin='0 0 12px';
  const close=add('button','✕ Close (G / Esc)');close.style.cssText='padding:9px;background:#49352d;color:white;border-radius:7px';close.onclick=()=>{verityOpen=false;showVerityInventory();canvas.focus();};
- add('p','♥ '+Math.ceil(v.hp)+'/100 HP  ·  Ammo: '+(v.ammo||0)+'  ·  Care Mints: '+(p.mints||0));
+ add('p','♥ '+Math.ceil(v.hp)+'/100 HP  ·  Ammo: ∞+'  ·  Care Mints: '+(p.mints||0));
  const heal=add('button','🍬 Heal Verity · 1 Care Mint (+25 HP)');heal.disabled=!p.mints||v.hp>=100;heal.style.cssText='padding:10px;margin-bottom:12px;color:white;background:#276347;border:1px solid #95c9a0;border-radius:8px;cursor:pointer';heal.onclick=()=>requestVerity({type:'heal'});
  add('h3','VERITY EQUIPMENT');
  for(const kind of ['weapon','armor']){const id=v[kind],row=add('div',(kind==='weapon'?'⚔ Weapon: ':'🛡 Armor: ')+(itemDefs[id]?.name||'Empty')+(kind==='weapon'&&id?' · Level '+(v.weaponLevel||1):''));row.style.margin='9px 0';if(id){const take=add('button','Take back',row);take.style.marginLeft='14px';take.onclick=()=>requestVerity({type:'take',kind});}}
@@ -454,10 +454,9 @@ function tickVerity(dt){
   if(distance<desired*.75){tx=v.x-Math.cos(ang)*80;ty=v.y-Math.sin(ang)*80;}
   else if(distance>desired*1.2){tx=target.x-Math.cos(ang)*desired;ty=target.y-Math.sin(ang)*desired;}
   else {tx=v.x;ty=v.y;}
-  if(def.range>=100&&v.ammo<1){v.cool=Math.max(v.cool,1);}
-  else if(v.cool<=0&&distance<Math.min(def.range+15,760)&&clearShot(v.x,v.y,target.x,target.y)){
+  if(v.cool<=0&&distance<Math.min(def.range+15,760)&&clearShot(v.x,v.y,target.x,target.y)){
    v.cool=def.cool*1.08;weaponParticles(v.weapon,v.x,v.y,ang);
-   if(def.range>=100){v.ammo--;v.flash=v.weapon==='crossbow'?0:.14;v.flashAngle=ang;v.recoil=shotgunPellets(v.weapon)>1?12:6;for(const spread of shotgunPellets(v.weapon)>1?[-.2,0,.2]:[0])world.shots.push({x:v.x+Math.cos(ang)*16,y:v.y+Math.sin(ang)*16,vx:Math.cos(ang+spread)*730,vy:Math.sin(ang+spread)*730,life:def.range/730,damage:Math.round(weaponDamage(v.weapon,v.weaponLevel||1)*.85),owner:'verity',kind:v.weapon,trail:[]});if(v.weapon!=='crossbow')burst(v.x,v.y,'#ffe29b',4);}
+   if(def.range>=100){v.flash=v.weapon==='crossbow'?0:.14;v.flashAngle=ang;v.recoil=shotgunPellets(v.weapon)>1?12:6;for(const spread of shotgunPellets(v.weapon)>1?[-.2,0,.2]:[0])world.shots.push({x:v.x+Math.cos(ang)*16,y:v.y+Math.sin(ang)*16,vx:Math.cos(ang+spread)*730,vy:Math.sin(ang+spread)*730,life:def.range/730,damage:Math.round(weaponDamage(v.weapon,v.weaponLevel||1)*.85),owner:'verity',kind:v.weapon,trail:[]});if(v.weapon!=='crossbow')burst(v.x,v.y,'#ffe29b',4);}
    else if(distance<def.range+20){const dmg=Math.round(weaponDamage(v.weapon,v.weaponLevel||1)*.87);target.hp-=dmg;impact(target,v,dmg);target.hit=.12;if(target.hp<=0){world.score+=target.boss?500:10;zombieLoot(target);}}
   }
  }else if(target){v.face=Math.atan2(target.y-v.y,target.x-v.x);}
