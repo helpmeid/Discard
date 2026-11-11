@@ -1483,6 +1483,18 @@ if(window.__DEAD_ZONE_WORKER__)window.deadZoneWorker={
  equip(id,slot,hand){const p=world.players.find(p=>p.id===id);if(p)equip(p,slot,hand);},
  swap(id,hand){const p=world.players.find(p=>p.id===id);if(p)swapWeapon(p,hand);},
  shop(id,request){const p=world.players.find(p=>p.id===id);if(p)shopAction(p,request);},drop(id,request){const p=world.players.find(p=>p.id===id);if(p)dropInventoryItem(p,request);},verity(id,request){const p=world.players.find(p=>p.id===id);if(p)verityAction(p,request);},verityChat(id,message){verityReplyToPlayer(id,message);},merge(id,request){const p=world.players.find(p=>p.id===id);if(p)mergeWeapon(p,request);},evolve(id,request){const p=world.players.find(p=>p.id===id);if(p)evolveWeapon(p,request);},
+ addPeer(id){
+  if(!id||id===who()||session.phase!=='play')return;
+  let peer=peers().get(id);
+  if(!peer){peer={};peers().set(id,peer);}
+  if(!world.players.some(p=>p.id===id))restoreSquadmate(id);
+  peer.epoch=peer.epoch||crypto.randomUUID();
+  peer.netReady=false;
+  peer.startSent=performance.now();
+  hostStreams.delete(id);metadataSent.delete(id);
+  if(typeof state==='object'&&state){state.friends=state.friends||{};state.friends[id]=state.friends[id]||{};}
+  postMessage({type:'joined',id,epoch:peer.epoch,world});
+ },
  setPaused(value){pauseOpen=!!value;}
 };
 function releaseControls(){keys.clear();mouse.down=false;localInput={};fireTap=previousFireSample=false;}
