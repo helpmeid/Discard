@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.2.4';
+const DEAD_ZONE_VERSION='7.2.5';
 const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.34',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.34';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
@@ -1461,7 +1461,7 @@ ctx.lineJoin='round';ctx.lineCap='round';ctx.shadowColor='#060e0c';ctx.shadowBlu
 drawWeaponModel(weapon);
 ctx.restore();drawMuzzleFlash(q);ctx.fillStyle='#f1f1e5';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(name(q.id)+(q.cyberPsycho?' · CYBERPSYCHO':''),q.x,q.y-30);ctx.fillStyle='#d65855';ctx.fillRect(q.x-19,q.y-25,38*q.hp/100,4);}
 for(const b of world.shots){if(b.kind==='flamethrower'){ctx.save();ctx.globalAlpha=.75;const pulse=14+Math.abs(Math.sin((world.time||0)*21))*14;const g=ctx.createRadialGradient(b.x,b.y,3,b.x,b.y,pulse+28);g.addColorStop(0,'#fff7a0');g.addColorStop(.35,'#ff9c30b9');g.addColorStop(1,'#f5411b00');ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,pulse+28,0,Math.PI*2);ctx.fill();ctx.restore();continue;}if(b.kind==='crossbow'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.strokeStyle='#d3c9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(0,0);ctx.stroke();ctx.strokeStyle='#a9c8b9';ctx.beginPath();ctx.moveTo(-4,-3);ctx.lineTo(0,0);ctx.lineTo(-4,3);ctx.moveTo(-18,-3);ctx.lineTo(-14,0);ctx.lineTo(-18,3);ctx.stroke();ctx.restore();continue;}const speed=Math.hypot(b.vx,b.vy)||1,ux=b.vx/speed,uy=b.vy/speed;ctx.save();ctx.lineCap='round';ctx.strokeStyle=b.kind==='shotgun'?'#f5bb77aa':'#ffe5a8b3';ctx.lineWidth=b.kind==='shotgun'?3:2.5;ctx.beginPath();ctx.moveTo(b.x-ux*26,b.y-uy*26);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff6d7';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(b.x-ux*12,b.y-uy*12);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle='#fff5c7';ctx.beginPath();ctx.arc(b.x,b.y,2.6,0,Math.PI*2);ctx.fill();ctx.restore();}drawEffects();drawLockedVenueRoofs();if(world.sandevistan){ctx.save();ctx.globalAlpha=.8;ctx.lineWidth=5;ctx.strokeStyle=world.sandevistan.owner===who()?'#79efff':'#92a5d9';ctx.strokeRect(camera.x+8,camera.y+8,W-16,H-16);ctx.restore();}updateHUD(p);if(world.ended&&!gameOverShown){gameOverShown=true;shopOpen=false;if(shopPanel)shopPanel.style.display='none';verityOpen=false;if(verityPanel)verityPanel.style.display='none';inventoryOpen=false;if(inventoryPanel)inventoryPanel.style.display='none';localStorage.removeItem(saveKey());screen((world.won?'EXTRACTION COMPLETE · ':'GAME OVER · ')+'Wave '+world.wave+' · Score '+world.score);button('⌂ Return to Start Menu',returnToMenu);}}ctx.restore();
-if(world?.sandevistan&&world.sandevistan.owner===who()){
+if(world?.sandevistan&&world.sandevistan.until>world.time){
  const now=performance.now(),pulse=.5+.5*Math.sin(now/160);
  ctx.save();
  // A translucent cinematic color grade affects the world, not the HUD.
