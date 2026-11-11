@@ -1286,7 +1286,7 @@ function showShop(){
 let rouletteStamp='',rouletteAnimatingUntil=0;
 function showRoulette(){
  if(!root)return;
- if(!roulettePanel){roulettePanel=document.createElement('section');roulettePanel.style.cssText='position:absolute;z-index:27;inset:10% 16%;max-height:80%;overflow:auto;padding:24px;background:linear-gradient(150deg,#142723,#251a24);border:2px solid #dfb66c;border-radius:17px;box-shadow:0 20px 90px #000e;color:#f9efd7';root.append(roulettePanel);const css=document.createElement('style');css.textContent='@keyframes dz-real-wheel-spin{0%{transform:rotate(0deg)}75%{transform:rotate(1480deg)}100%{transform:rotate(1710deg)}}';roulettePanel.append(css);}
+ if(!roulettePanel){roulettePanel=document.createElement('section');roulettePanel.style.cssText='position:absolute;z-index:27;inset:10% 16%;max-height:80%;overflow:auto;padding:24px;background:linear-gradient(150deg,#142723,#251a24);border:2px solid #dfb66c;border-radius:17px;box-shadow:0 20px 90px #000e;color:#f9efd7';root.append(roulettePanel);if(!document.getElementById('dzRouletteWheelKeyframes')){const css=document.createElement('style');css.id='dzRouletteWheelKeyframes';css.textContent='@keyframes dz-real-wheel-spin{0%{transform:rotate(0deg)}75%{transform:rotate(1480deg)}100%{transform:rotate(1710deg)}}';document.head.append(css);}}
  roulettePanel.style.display=rouletteOpen?'block':'none';if(!rouletteOpen){rouletteStamp='';roulettePending=false;return;}
  const p=world?.players.find(q=>q.id===who());
  if(!p||p.hp<=0||world.wave<5||!rouletteNearby(p)){rouletteOpen=false;roulettePanel.style.display='none';rouletteStamp='';roulettePending=false;return;}
@@ -1702,7 +1702,7 @@ function separateZombies(dt){
 function weaponParticles(id,x,y,angle=0){
  const colors={chainsaw:['#ffe7a1','#f6a33c','#ffffff'],flamethrower:['#ffcb5c','#ff6325','#ffd290'],reaper:['#d54f80','#7837a9','#f4aad0'],voidblade:['#ad67ff','#5de0ee','#e3baff'],railgun:['#72e6ff','#aefcff','#587eff'],hellfire:['#ff693b','#ffbf4c','#ffea89'],thunderbolt:['#80bdff','#e8f9ff','#ad8aff'],eclipse:['#ff52da','#85f7ff','#fff7b0']};
  const palette=colors[id]||itemDefs[id]?.effectColors;if(!palette||!world)return;
- const n=id==='chainsaw'?10:weaponTier(id)===5?21:12;
+ const n=id==='flamethrower'?5:id==='chainsaw'?10:weaponTier(id)===5?21:12;
  for(let i=0;i<n;i++){
   const a=angle+(Math.random()-.5)*2.6,d=25+Math.random()*110,vx=Math.cos(a)*d,vy=Math.sin(a)*d;
   const life=.14+Math.random()*.32;
