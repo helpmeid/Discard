@@ -243,7 +243,7 @@ function showVerityInventory(){
  const add=(tag,text,parent=verityPanel)=>{const el=document.createElement(tag);el.textContent=text;parent.append(el);return el;};
  const heading=add('h2','☀ VERITY · COMPANION INVENTORY');heading.style.margin='0 0 12px';
  const close=add('button','✕ Close (G / Esc)');close.style.cssText='padding:9px;background:#49352d;color:white;border-radius:7px';close.onclick=()=>{verityOpen=false;showVerityInventory();canvas.focus();};
- add('p','♥ '+Math.ceil(v.hp)+'/100 HP  ·  Ammo: ∞+'  ·  Care Mints: '+(p.mints||0));
+ add('p','♥ '+Math.ceil(v.hp)+'/100 HP  ·  Ammo: ∞  ·  Care Mints: '+(p.mints||0));
  const heal=add('button','🍬 Heal Verity · 1 Care Mint (+25 HP)');heal.disabled=!p.mints||v.hp>=100;heal.style.cssText='padding:10px;margin-bottom:12px;color:white;background:#276347;border:1px solid #95c9a0;border-radius:8px;cursor:pointer';heal.onclick=()=>requestVerity({type:'heal'});
  add('h3','VERITY EQUIPMENT');
  for(const kind of ['weapon','armor']){const id=v[kind],row=add('div',(kind==='weapon'?'⚔ Weapon: ':'🛡 Armor: ')+(itemDefs[id]?.name||'Empty')+(kind==='weapon'&&id?' · Level '+(v.weaponLevel||1):''));row.style.margin='9px 0';if(id){const take=add('button','Take back',row);take.style.marginLeft='14px';take.onclick=()=>requestVerity({type:'take',kind});}}
