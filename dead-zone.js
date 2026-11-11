@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.0.0';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.29',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.29';
+const DEAD_ZONE_VERSION='7.1.0';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.30',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.30';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -893,7 +893,7 @@ function placeConcreteBarrier(p,target){
  world.notice=name(p.id)+' placed reinforced concrete (1800 HP)';return true;
 }
 function drawBarrierPreview(){
- if(!pressed('barrier')||pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen||session?.phase!=='play'||world.ended)return;
+ if(!pressed('barrier')||pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen||cyberOpen||session?.phase!=='play'||world.ended)return;
  const p=world.players.find(q=>q.id===who());if(!p||p.hp<=0)return;
  const placement=barrierPlacement(p,{x:mouse.x+camera.x,y:mouse.y+camera.y});
  ctx.save();ctx.translate(placement.x,placement.y);ctx.rotate(placement.angle);
@@ -1456,13 +1456,13 @@ function draw(){
 }
 function advanceGame(now){
  if(!session||session.phase!=='play'||!world){pumpAt=now;return;}
- if(hostWorker){const paused=!!((pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen)&&!peers().size);if(paused!==workerPaused){workerPaused=paused;hostWorker.postMessage({type:'pause',paused});}}
+ if(hostWorker){const paused=!!((pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen||cyberOpen)&&!peers().size);if(paused!==workerPaused){workerPaused=paused;hostWorker.postMessage({type:'pause',paused});}}
  if(!pumpAt){pumpAt=now;return;}const elapsed=Math.max(0,Math.min(.25,(now-pumpAt)/1000));pumpAt=now;
  if(!world.ended){totalPlaytime+=elapsed;totalPlaytimeFlush+=elapsed;if(totalPlaytimeFlush>=5){flushTotalPlaytime();totalPlaytimeFlush=0;}}
  accumulator=Math.min(accumulator+elapsed,Net.STEP*8);
  while(accumulator>=Net.STEP-1e-7){
   const heldFire=localInput.fire;localInput.fire=heldFire||fireTap;
-  if(session.mode==='host'&&!hostWorker){if(!((pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen)&&!peers().size))tick(Net.STEP);}
+  if(session.mode==='host'&&!hostWorker){if(!((pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen||cyberOpen)&&!peers().size))tick(Net.STEP);}
   else if(!world.ended&&!workerPaused){const own=world.players.find(p=>p.id===who());if(own&&!prediction.state)prediction.seed(own);if(own?.cyberPsycho)prediction.seed(own);else prediction.step(localInput);stepAttackPreview();for(const e of world.effects){e.life-=Net.STEP;e.x+=e.vx*Net.STEP;e.y+=e.vy*Net.STEP;}world.effects=world.effects.filter(e=>e.life>0);}
   localInput.fire=heldFire;fireTap=false;
   for(const k of edgeKeys)localInput[k]=k==='swap'?0:false;
@@ -1485,7 +1485,7 @@ function advanceGame(now){
 }
 function frame(now){
  raf=requestAnimationFrame(frame);if(!session||root.style.display==='none')return;
- const sample=document.activeElement===gameChatInput||pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen||document.hidden?{}:input();
+ const sample=document.activeElement===gameChatInput||pauseOpen||inventoryOpen||verityOpen||rouletteOpen||shopOpen||cyberOpen||document.hidden?{}:input();
  if(sample.fire&&!previousFireSample)fireTap=true;previousFireSample=!!sample.fire;
  for(const k of edgeKeys)sample[k]=sample[k]||localInput[k];localInput=sample;
  advanceGame(now);
