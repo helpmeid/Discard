@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.20";
+const APP_VERSION = "4.8.21";
 const UPDATE_LOG = [
+  { version: "4.8.21", notes: ["Dead Zone: level 5 Legendary weapons now have a clearly labeled MERGE LEGENDARY INTO MYTHIC action in the inventory, with selectable Mythic results."] },
   { version: "4.8.20", notes: ["Dead Zone: selling the last Mythic frees the Mythic slot so another can be found or forged through upgrades and roulette."] },
   { version: "4.8.19", notes: ["Dead Zone: Sandevistan now slows the Inferno Flamethrower\u2019s flowing flame particles, emission and fading to 12% speed for everyone."] },
   { version: "4.8.18", notes: ["Dead Zone: released flamethrower flames now keep travelling and fade naturally for a fraction of a second instead of instantly disappearing."] },
