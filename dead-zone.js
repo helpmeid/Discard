@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.4.2';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.40',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
+const DEAD_ZONE_VERSION='7.4.3';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.41',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -1536,22 +1536,21 @@ function drawFluidFlames(){
   const turn=Math.abs(Math.atan2(Math.sin(a-e.angle),Math.cos(a-e.angle)));
   if(turn>.42){
    // Don't leave an orphaned ribbon when the player snaps the weapon around.
-   for(const f of fluidFlames)if(f.owner===q.id)f.life=Math.min(f.life,f.age+.045);
+   for(const f of fluidFlames)if(f.owner===q.id)f.life=Math.min(f.life,f.age+.16);
   }
   e.angle=a;
   e.carry=Math.min(18,e.carry+dt*260);
   const count=Math.min(16,Math.floor(e.carry));e.carry-=count;
   flameEmitters.set(q.id,e);
   for(let i=0;i<count;i++){
-   const off=(Math.random()-.5)*.47,dir=a+off,velocity=510+Math.random()*140,life=.28+Math.random()*.11;
+   const off=(Math.random()-.5)*.47,dir=a+off,velocity=510+Math.random()*140,life=.34+Math.random()*.16;
    fluidFlames.push({owner:q.id,x:nozzle.x,y:nozzle.y,vx:Math.cos(dir)*velocity,vy:Math.sin(dir)*velocity,
     drift:(Math.random()-.5)*105,age:0,life,sz:12+Math.random()*8,phase:Math.random()*6.28});
   }
  }
  for(const id of flameEmitters.keys())if(!active.has(id))flameEmitters.delete(id);
- // Once the trigger is released, its old plume vanishes rather than drifting
- // across the map as a separate detached jet.
- for(let i=fluidFlames.length-1;i>=0;i--)if(!active.has(fluidFlames[i].owner))fluidFlames.splice(i,1);
+ // Releasing the trigger only stops new emission. Existing flames retain
+ // their momentum and fade over their remaining lifetime (roughly 0.3-0.5s).
  // Fixed cap protects Chromebooks when four players spray at once.
  if(fluidFlames.length>480)fluidFlames.splice(0,fluidFlames.length-480);
  ctx.save();ctx.globalCompositeOperation='lighter';
