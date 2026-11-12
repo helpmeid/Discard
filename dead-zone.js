@@ -1,7 +1,7 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.4.5';
+const DEAD_ZONE_VERSION='7.4.6';
 const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.41',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
@@ -44,7 +44,7 @@ function continueGame(slot=1){
  const saved=readSave(slot);if(!saved||!session||session.mode!=='host')return;
  world=saved.world;ensureVenues(world);world.savedPlayers=world.savedPlayers||{};
  for(const p of world.players)if(p.id!==who())world.savedPlayers[p.id]=p;
- world.players=world.players.filter(p=>p.id===who());for(const p of world.players)normalizeCopies(p);world.effects=[];world.blood=[];world.shots=[];world.ashPiles=world.ashPiles||[];
+ world.players=world.players.filter(p=>p.id===who());for(const p of world.players)normalizeCopies(p);syncMythicAvailability();world.effects=[];world.blood=[];world.shots=[];world.ashPiles=world.ashPiles||[];
  world.players[0].vx=0;world.players[0].vy=0;
  session.saveSlot=slot;session.gameMode=(world.mode==='story'?'endless':world.mode)||'endless';session.difficulty=world.difficulty||saved.difficulty||'normal';
  session.phase='play';saveClock=0;gameOverShown=false;pauseOpen=false;menu.style.display='none';
@@ -156,7 +156,7 @@ function evolveWeapon(p,r){
  if(!world||world.wave<5||!p||p.hp<=0||!rouletteNearby(p)||!Number.isSafeInteger(r?.slot)||typeof r.choice!=='string')return false;
  normalizeCopies(p);const i=r.slot,id=p.inventory[i],tier=weaponTier(id);
  if(tier<0||tier>=5||!nextWeapons(id).includes(r.choice))return false;
- if(weaponTier(r.choice)===5&&world.mythicCreated)return false;
+ if(weaponTier(r.choice)===5&&syncMythicAvailability())return false;
  const chance=ROULETTE_ODDS[tier],success=Math.random()<chance,oldName=itemDefs[id].name;
  if(success){p.inventory[i]=r.choice;p.itemLevels[i]=1;if(weaponTier(r.choice)===5)world.mythicCreated=true;}
  else{
@@ -176,7 +176,7 @@ function upgradeWeapon(p,request){
  normalizeCopies(p);
  const slot=request.slot,old=p.inventory[slot],tier=weaponTier(old);
  if(tier<0||tier>=5||levelOf(p,slot)!==5||!nextWeapons(old).includes(request.choice))return false;
- if(weaponTier(request.choice)===5&&world.mythicCreated){world.notice='The only Mythic weapon is already claimed';return false;}
+ if(weaponTier(request.choice)===5&&syncMythicAvailability()){world.notice='A Mythic weapon is still carried or on the ground';return false;}
  p.inventory[slot]=request.choice;p.itemLevels[slot]=1;
  if(weaponTier(request.choice)===5)world.mythicCreated=true;
  normalizeCopies(p);
@@ -317,12 +317,15 @@ function shopOffers(){
  return offers;
 }
 // Selling the last Mythic releases the match's Mythic slot for future loot and upgrades.
-function releaseMythicAfterSale(){
- if(!world?.mythicCreated)return;
- const held=world.players.some(p=>p.inventory?.some(id=>weaponTier(id)===5));
- const onGround=world.drops?.some(d=>weaponTier(d.item)===5);
- if(!held&&!onGround)world.mythicCreated=false;
+function syncMythicAvailability(){
+ if(!world)return false;
+ const survivors=[...(world.players||[]),...Object.values(world.savedPlayers||{})];
+ const held=survivors.some(p=>p.inventory?.some(id=>weaponTier(id)===5));
+ const onGround=(world.drops||[]).some(d=>weaponTier(d.item)===5);
+ world.mythicCreated=held||onGround;
+ return world.mythicCreated;
 }
+function releaseMythicAfterSale(){syncMythicAvailability();}
 function sellWeaponsByRarity(p,tier){
  if(!Number.isSafeInteger(tier)||tier<0||tier>=WEAPON_TIER_NAMES.length)return false;
  normalizeCopies(p);
@@ -1370,7 +1373,7 @@ function showRoulette(){
    },2250);
   }else if(!roulettePending)rouletteSpinPhase='idle';
  }
- const gear=p.inventory.map((id,i)=>({id,i})).filter(q=>weaponTier(q.id)>=0&&weaponTier(q.id)<5&&!(weaponTier(q.id)===4&&world.mythicCreated));
+ const gear=p.inventory.map((id,i)=>({id,i})).filter(q=>weaponTier(q.id)>=0&&weaponTier(q.id)<5&&!(weaponTier(q.id)===4&&syncMythicAvailability()));
  if(!gear.some(g=>g.i===rouletteSelectedSlot)){rouletteSelectedSlot=gear[0]?.i??-1;rouletteSelectedChoice='';}
  const picked=gear.find(g=>g.i===rouletteSelectedSlot),choices=picked?nextWeapons(picked.id):[];
  if(!choices.includes(rouletteSelectedChoice))rouletteSelectedChoice=choices[0]||'';
@@ -1428,7 +1431,7 @@ const rarity=id=>{const n=weaponTier(id)>=0?weaponTier(id):id==='military'?4:id=
 if((p.cyberMods||[]).includes('mantis')){const aug=el('div','dz-full-armor','',left);el('small','','INSTALLED ARM AUGMENT',aug);el('strong','','⚔ TWO ARM BLADES · AUTOMATIC MELEE · GUNS ENABLED',aug);}
 const armor=el('div','dz-full-armor','',left);el('small','','BODY ARMOR',armor);el('strong','','🛡 '+(itemDefs[p.armor]?.name||'No armor equipped'),armor);if(p.armor)el('small','dz-item-stats',statText(p.armor),armor);el('h3','','CYBERWARE · '+(p.cyberMods||[]).length+'/6',left);el('p','dz-muted',(p.cyberMods||[]).map(id=>CYBERWARE.find(m=>m.id===id)?.name||id).join(' · ')||(p.cyberPsycho?'CYBERPSYCHOSIS ACTIVE':'Visit the NEON RIPPERDOC clinic to install cyberware.'),left);
 el('h3','','SUPPLIES · DROP TO SHARE',left);for(const [icon,label,key] of [['🧱','CONCRETE','concrete'],['🪵','BOARDS','boards'],['🍬','CARE MINTS','mints'],['➕','MEDKITS','medkits'],['⚡','ENERGY DRINKS','energy'],['◈','AMMO','ammo']]){const count=Math.max(0,Math.floor(Number(p[key])||0)),row=el('div','dz-supply dz-drop-supply','',left);el('span','',icon+'  '+label,row);el('b','',String(count),row);const btn=el('button','dz-drop-button','DROP '+(key==='ammo'?Math.min(12,count):1),row);btn.disabled=count<1;btn.onclick=()=>requestInventoryDrop('stack',key,key==='ammo'?Math.min(12,count):1);if(key==='ammo'&&count>12){const all=el('button','dz-drop-button','DROP ALL',row);all.onclick=()=>requestInventoryDrop('stack',key,count);}}
-const right=el('main','dz-full-backpack','',layout);el('div','dz-inv-eyebrow','SCAVENGED EQUIPMENT',right);el('h2','','BACKPACK',right);el('p','dz-muted','All weapons start at level 1. Duplicate pickups automatically merge into your highest available copy to raise its level (maximum 5). From wave 5, enter the casino and take a weapon to the roulette table to gamble for the next rarity. Failure destroys the weapon permanently.',right);const grid=el('div','dz-inv-grid','',right);const icons={bat:'🏏',crowbar:'🔧',axe:'🪓',pistol:'🔫',shotgun:'💥',jacket:'🧥',vest:'🦺',heavy:'🛡️'};p.inventory.forEach((id,i)=>{const def=itemDefs[id];if(!def)return;const active=id===p.weapon||id===p.armor;const wrapper=el('div','dz-drop-item','',grid);const tile=el('button','dz-inv-item'+(active?' selected':''),'',wrapper);const tier=rarity(id);tile.style.borderColor=tier.color;tile.style.boxShadow='inset 0 0 0 1px '+tier.color+'55,0 0 14px '+tier.color+'22';el('div','dz-inv-icon',icons[id]||(def.type==='weapon'?(def.range>100?'🔫':'⚔'):'📦'),tile);el('strong','',def.name,tile);el('small','',tier.label+' · '+def.type.toUpperCase()+(active?' · ACTIVE':''),tile);el('small','dz-item-stats',statText(id,i),tile);tile.onclick=()=>{const hand=selectedInventoryHand;if(session.mode==='host')equip(p,i,hand);else emit(session.host,{t:'dz-equip',id:session.id,slot:i,hand});showInventory();};const drop=el('button','dz-drop-button','DROP ITEM',wrapper);drop.disabled=def.type==='weapon'&&p.inventory.filter(v=>itemDefs[v]?.type==='weapon').length<=1;drop.onclick=()=>requestInventoryDrop('gear',i);if(def.type==='weapon'){const level=levelOf(p,i),duplicate=p.inventory.findIndex((v,j)=>j!==i&&v===id);const merge=el('button','dz-merge-button','MERGE DUPLICATE · '+level+'/5',wrapper);merge.disabled=level>=5||duplicate<0;merge.onclick=()=>weaponProgress('merge',i,duplicate);if(level===5&&nextWeapons(id).length&&!(weaponTier(id)===4&&world.mythicCreated)){const upgradeSelect=el('select','dz-lobby-select','',wrapper);for(const choice of nextWeapons(id)){const o=el('option','',itemDefs[choice].name,upgradeSelect);o.value=choice;}const isMythicMerge=weaponTier(id)===4;const upgradeBtn=el('button','dz-merge-button',isMythicMerge?'✦ MERGE LEGENDARY INTO MYTHIC':'↑ UPGRADE LEVEL 5 TO NEXT RARITY',wrapper);upgradeBtn.onclick=()=>weaponProgress('upgrade',i,upgradeSelect.value);}if(nextWeapons(id).length)el('small','dz-evolve-label','🎰 Roulette is available from wave 5 · Level 5 weapons upgrade from your backpack',wrapper);else el('small','dz-evolve-label','MAXED MYTHIC',wrapper)}});
+const right=el('main','dz-full-backpack','',layout);el('div','dz-inv-eyebrow','SCAVENGED EQUIPMENT',right);el('h2','','BACKPACK',right);el('p','dz-muted','All weapons start at level 1. Duplicate pickups automatically merge into your highest available copy to raise its level (maximum 5). From wave 5, enter the casino and take a weapon to the roulette table to gamble for the next rarity. Failure destroys the weapon permanently.',right);const grid=el('div','dz-inv-grid','',right);const icons={bat:'🏏',crowbar:'🔧',axe:'🪓',pistol:'🔫',shotgun:'💥',jacket:'🧥',vest:'🦺',heavy:'🛡️'};p.inventory.forEach((id,i)=>{const def=itemDefs[id];if(!def)return;const active=id===p.weapon||id===p.armor;const wrapper=el('div','dz-drop-item','',grid);const tile=el('button','dz-inv-item'+(active?' selected':''),'',wrapper);const tier=rarity(id);tile.style.borderColor=tier.color;tile.style.boxShadow='inset 0 0 0 1px '+tier.color+'55,0 0 14px '+tier.color+'22';el('div','dz-inv-icon',icons[id]||(def.type==='weapon'?(def.range>100?'🔫':'⚔'):'📦'),tile);el('strong','',def.name,tile);el('small','',tier.label+' · '+def.type.toUpperCase()+(active?' · ACTIVE':''),tile);el('small','dz-item-stats',statText(id,i),tile);tile.onclick=()=>{const hand=selectedInventoryHand;if(session.mode==='host')equip(p,i,hand);else emit(session.host,{t:'dz-equip',id:session.id,slot:i,hand});showInventory();};const drop=el('button','dz-drop-button','DROP ITEM',wrapper);drop.disabled=def.type==='weapon'&&p.inventory.filter(v=>itemDefs[v]?.type==='weapon').length<=1;drop.onclick=()=>requestInventoryDrop('gear',i);if(def.type==='weapon'){const level=levelOf(p,i),duplicate=p.inventory.findIndex((v,j)=>j!==i&&v===id);const merge=el('button','dz-merge-button','MERGE DUPLICATE · '+level+'/5',wrapper);merge.disabled=level>=5||duplicate<0;merge.onclick=()=>weaponProgress('merge',i,duplicate);if(level===5&&nextWeapons(id).length){const upgradeSelect=el('select','dz-lobby-select','',wrapper);for(const choice of nextWeapons(id)){const o=el('option','',itemDefs[choice].name,upgradeSelect);o.value=choice;}const isMythicMerge=weaponTier(id)===4;const upgradeBtn=el('button','dz-merge-button',isMythicMerge?'✦ MERGE LEGENDARY INTO MYTHIC':'↑ UPGRADE LEVEL 5 TO NEXT RARITY',wrapper);upgradeBtn.disabled=isMythicMerge&&syncMythicAvailability();if(upgradeBtn.disabled)el('small','dz-evolve-label','Another Mythic is still held or on the ground. Sell it to unlock this.',wrapper);upgradeBtn.onclick=()=>weaponProgress('upgrade',i,upgradeSelect.value);}if(nextWeapons(id).length)el('small','dz-evolve-label','🎰 Roulette is available from wave 5 · Level 5 weapons upgrade from your backpack',wrapper);else el('small','dz-evolve-label','MAXED MYTHIC',wrapper)}});
 el('p','dz-inv-foot','1 / 2: change weapons  ·  Hold Shift: sprint  ·  I: close inventory  ·  B: reinforce doors with boards',right);
 function selectHand(hand){selectedInventoryHand=hand;for(const b of slots.children)b.classList.toggle('active',b.dataset.hand===hand);}
 for(let i=0;i<slots.children.length;i++){const b=slots.children[i],key=i===0?'primary':'secondary';b.dataset.hand=key;b.onclick=()=>{selectHand(key);if(p[key]){if(session.mode==='host')swapWeapon(p,key);else emit(session.host,{t:'dz-swap',id:session.id,hand:key});}};}
