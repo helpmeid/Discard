@@ -1,8 +1,8 @@
 /* Dead Zone: host-authoritative top-down co-op zombie survival. */
 (()=>{
 'use strict';
-const DEAD_ZONE_VERSION='7.4.1';
-const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.39',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
+const DEAD_ZONE_VERSION='7.4.2';
+const workerScriptURL=typeof document!=='undefined'&&document.currentScript?.src?new URL('dead-zone-host-worker.js?v=2.2.40',document.currentScript.src).href:'dead-zone-host-worker.js?v=2.2.35';
 const Net=window.DeadZoneNet;if(!Net)throw Error('Dead Zone networking module did not load');
 const DIFFICULTIES={easy:{speed:.9,hp:.75,damage:.65,count:.8},normal:{speed:1,hp:1,damage:1,count:1},hard:{speed:1.26,hp:1.3,damage:1.45,count:1.3},nightmare:{speed:1.6,hp:1.8,damage:2,count:1.6}};
 const MAX=4,W=960,H=600,MAPW=3600,MAPH=2600,keys=new Set(),mouse={x:480,y:300,down:false};
@@ -1004,13 +1004,20 @@ function spawnDrop(){const living=world.players.filter(p=>p.hp>0);if(!living.len
 // Continuous flamethrower: the host checks a wide, obstructed cone each fuel tick.
 // Fire damage is independent from projectile lifetime or network snapshot rate.
 function flameCone(p,angle,damage){
- const w=world,muzzle=weaponMuzzle(p,'flamethrower',angle),reach=itemDefs.flamethrower.range||275,halfAngle=.43;
+ const w=world,muzzle=weaponMuzzle(p,'flamethrower',angle),reach=itemDefs.flamethrower.range||275,halfAngle=.57;
  for(const z of w.zombies){
   if(z.hp<=0)continue;
   const dx=z.x-muzzle.x,dy=z.y-muzzle.y,d=Math.hypot(dx,dy),radius=z.boss?18+bossSize(z)*8:16;
-  if(d>reach+radius)continue;
+  const closeDist=Math.hypot(z.x-p.x,z.y-p.y);
+  // The nozzle sits ahead of the player's center: very close infected can be
+  // behind the muzzle even when they're directly in front of the survivor.
+  const close=closeDist<=65+radius;
+  if(!close&&d>reach+radius)continue;
   const angular=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)));
-  if(angular>halfAngle+Math.atan2(radius,Math.max(1,d))||!clearShot(muzzle.x,muzzle.y,z.x,z.y))continue;
+  if(!close&&angular>halfAngle+Math.atan2(radius,Math.max(1,d)))continue;
+  // Trace close targets from the player's center to avoid the muzzle starting
+  // beyond the enemy, while retaining wall/door occlusion.
+  if(close?!clearShot(p.x,p.y,z.x,z.y):!clearShot(muzzle.x,muzzle.y,z.x,z.y))continue;
   igniteZombie(z,p.id);
   const amount=Math.max(1,Math.round(damage*(1-d/reach*.38)));
   z.hp=Math.max(0,z.hp-amount);z.hit=.15;
@@ -1186,7 +1193,7 @@ if(p.pendingMelee){p.pendingMelee.remaining-=meleeTime;if(p.pendingMelee.remaini
 if(a.swap===1||a.swap===2)swapWeapon(p,a.swap===1?'primary':'secondary');if(a.mint&&p.mints>0&&p.hp<100){p.mints--;healActor(p,22);w.notice=name(p.id)+' used Care Mints';}
 const chest=nearbyChest(p);if(down||!a.use||!chest||Math.hypot(p.x-chest.x,p.y-chest.y)>80){p.chestHold=0;p.chestTarget=null;p.chestComplete=false;}else if(p.chestTarget!==chest.id){p.chestTarget=chest.id;p.chestHold=0;p.chestComplete=false;}else if(!p.chestComplete){p.chestHold=Math.min(1.25,(p.chestHold||0)+dt);if(p.chestHold>=1.25){chest.opened=true;p.chestComplete=true;p.useLatch=true;const item=randomLoot(w.wave);const offsets=[[-25,-18],[25,-18],[-25,22],[25,22],[0,0]];let pos={x:chest.x,y:chest.y};for(const [ox,oy] of offsets){if(!solid(chest.x+ox,chest.y+oy,10)){pos={x:chest.x+ox,y:chest.y+oy};break;}}w.drops.push({id:++w.dropSerial,item,x:pos.x,y:pos.y});w.notice='Chest opened! Press E to pick up '+itemDefs[item].name;}}if(a.use&&!down&&!p.useLatch&&Math.hypot(p.x-BELL_X,p.y-BELL_Y)<75){if(w.time-(w.bellLast??-100)>=12){w.bellLast=w.time;makeNoise(BELL_X,BELL_Y,BELL_SHOCKWAVE_RADIUS,10);w.notice='THE CENTER BELL RANG! Zombies are heading to the sound!';}else w.notice='The bell needs a moment before it can ring again';p.useLatch=true;}
 if(a.use&&!down&&(!p.useLatch||(w.drops||[]).some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65)&&w.time>=(p.nextPickupAt||0))&&(!verityNear||w.verity.state==='active')&&(!chest||w.drops.some(d=>Math.hypot(d.x-p.x,d.y-p.y)<65))&&!(w.mode==='story'&&w.story.stage<2&&Math.hypot(p.x-missionSites[w.story.stage].x,p.y-missionSites[w.story.stage].y)<70)){action(p,{use:true});p.useLatch=true;p.nextPickupAt=w.time+.12;}if(a.use&&!down&&verityNear){if(w.verity.state==='down'){verityInteract(p,dt);}else if(w.verity.state==='sleeping'&&!p.useLatch){verityInteract(p,dt);p.useLatch=true;}}if(!a.use){p.useLatch=false;if(w.verity?.reviver===p.id){w.verity.reviveHold=0;w.verity.reviver=null;}}if(a.door||a.board||a.repair||a.barrier)action(p,a);
-const heldFire=Boolean(a.fire)||!!a._firePressed;const firePressed=!!a._firePressed||(heldFire&&!p.fireHeld);p.fireHeld=heldFire;
+const heldFire=Boolean(a.fire)||!!a._firePressed;const firePressed=!!a._firePressed||(heldFire&&!p.fireHeld);p.fireHeld=heldFire;p.flameActive=heldFire&&effectiveWeapon(p)==='flamethrower'&&(p.ammo>0||w.mode==='creative');
 const attackWeapon=effectiveWeapon(p);
 if(heldFire&&itemDefs[attackWeapon]?.type==='weapon'&&p.cool<=0){p.attackSerial=(p.attackSerial||0)+1;const weapon=itemDefs[attackWeapon],vx=(Number(a.ax)||p.x+1)-p.x,vy=(Number(a.ay)||p.y)-p.y,angle=Math.atan2(vy,vx);p.face=angle;p.cool=weapon.cool*((p.cyberMods||[]).includes('mantis')&&weapon.range<100?.8:1);weaponParticles(attackWeapon,p.x,p.y,angle);
 if(weapon.range<100){
@@ -1520,7 +1527,7 @@ function drawFluidFlames(){
   // trigger immediately stops emission even if flameUntil is still in the past packet.
   const localHeld=effectiveWeapon(q)==='flamethrower'&&
    (mouse.down||pressed('attack'))&&(q.ammo>0||world.mode==='creative');
-  const firing=local?localHeld:(q.flameUntil||0)>=(world.time||0);
+  const firing=local?localHeld:!!q.flameActive;
   if(!firing)continue;
   active.add(q.id);
   const a=local?Math.atan2(mouse.y+camera.y-q.y,mouse.x+camera.x-q.x):(q.flameAngle??q.face??0);
@@ -1536,7 +1543,7 @@ function drawFluidFlames(){
   const count=Math.min(16,Math.floor(e.carry));e.carry-=count;
   flameEmitters.set(q.id,e);
   for(let i=0;i<count;i++){
-   const off=(Math.random()-.5)*.32,dir=a+off,velocity=510+Math.random()*140,life=.28+Math.random()*.11;
+   const off=(Math.random()-.5)*.47,dir=a+off,velocity=510+Math.random()*140,life=.28+Math.random()*.11;
    fluidFlames.push({owner:q.id,x:nozzle.x,y:nozzle.y,vx:Math.cos(dir)*velocity,vy:Math.sin(dir)*velocity,
     drift:(Math.random()-.5)*105,age:0,life,sz:12+Math.random()*8,phase:Math.random()*6.28});
   }
@@ -1672,7 +1679,7 @@ function advancePlayerMovement(p,a,dt){
  else Net.stepMovement(p,a,move,dt);
  if((p.energy||0)<energy)world.notice=name(p.id)+' automatically used an energy drink';
 }
-const motionFields=['flameUntil','flameAngle','sandyBoost','timeScale','sandyReadyAt','cyberPsycho','x','y','vx','vy','hp','stamina','exhausted','energy','face','swing','swingTotal','swingDir','flash','flashX','flashY','flashAngle','recoil','invuln','reviveHold','reviveTarget','chestHold','chestTarget','chestComplete','attackSerial','healSerial','healTotal','healAt'];
+const motionFields=['flameActive','flameUntil','flameAngle','sandyBoost','timeScale','sandyReadyAt','cyberPsycho','x','y','vx','vy','hp','stamina','exhausted','energy','face','swing','swingTotal','swingDir','flash','flashX','flashY','flashAngle','recoil','invuln','reviveHold','reviveTarget','chestHold','chestTarget','chestComplete','attackSerial','healSerial','healTotal','healAt'];
 const inventoryFields=['cyberMods','cyberPsycho','credits','shopSerial','rouletteSerial','rouletteResult','inventory','itemLevels','equippedIndices','weaponLevels','primary','secondary','activeSlot','weapon','armor','ammo','medkits','mints','boards','concrete','energy','kills','color'];
 function networkSnapshot(){
  const players=world.players.map(p=>{const q={id:p.id};for(const k of motionFields)if(p[k]!==undefined)q[k]=typeof p[k]==='number'?Math.round(p[k]*1000)/1000:p[k];return q;});
