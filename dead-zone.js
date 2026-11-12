@@ -316,6 +316,13 @@ function shopOffers(){
  }
  return offers;
 }
+// Selling the last Mythic releases the match's Mythic slot for future loot and upgrades.
+function releaseMythicAfterSale(){
+ if(!world?.mythicCreated)return;
+ const held=world.players.some(p=>p.inventory?.some(id=>weaponTier(id)===5));
+ const onGround=world.drops?.some(d=>weaponTier(d.item)===5);
+ if(!held&&!onGround)world.mythicCreated=false;
+}
 function sellWeaponsByRarity(p,tier){
  if(!Number.isSafeInteger(tier)||tier<0||tier>=WEAPON_TIER_NAMES.length)return false;
  normalizeCopies(p);
@@ -334,6 +341,7 @@ function sellWeaponsByRarity(p,tier){
  }
  if(!count){world.notice='No spare '+WEAPON_TIER_NAMES[tier]+' weapons to sell.';return false;}
  normalizeCopies(p);p.credits+=total;
+ releaseMythicAfterSale();
  world.notice=name(p.id)+' sold '+count+' '+WEAPON_TIER_NAMES[tier]+' weapons for '+total+' credits';
  return true;
 }
@@ -347,7 +355,7 @@ function shopAction(p,req){
   const id=p.inventory[i],value=weaponSaleValue(id,levelOf(p,i));p.inventory.splice(i,1);p.itemLevels.splice(i,1);
   for(const hand of ['primary','secondary']){const n=p.equippedIndices[hand];if(n===i){p.equippedIndices[hand]=-1;p[hand]=null;}else if(n>i)p.equippedIndices[hand]--;}
   if(p.equippedIndices.primary<0)p.equippedIndices.primary=p.inventory.findIndex(id=>itemDefs[id]?.type==='weapon');
-  normalizeCopies(p);p.credits+=value;world.notice=name(p.id)+' sold '+itemDefs[id].name+' for '+value+' credits';return true;
+  normalizeCopies(p);p.credits+=value;releaseMythicAfterSale();world.notice=name(p.id)+' sold '+itemDefs[id].name+' for '+value+' credits';return true;
  }
  if(req.type==='buy'){
   const offer=shopOffers().find(o=>o.id===req.item);if(!offer){world.notice='That item is not in the current shop stock.';return false;}
