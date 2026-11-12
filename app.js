@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.18";
+const APP_VERSION = "4.8.19";
 const UPDATE_LOG = [
+  { version: "4.8.19", notes: ["Dead Zone: Sandevistan now slows the Inferno Flamethrower\u2019s flowing flame particles, emission and fading to 12% speed for everyone."] },
   { version: "4.8.18", notes: ["Dead Zone: released flamethrower flames now keep travelling and fade naturally for a fraction of a second instead of instantly disappearing."] },
   { version: "4.8.17", notes: ["Dead Zone: wider flamethrower cone; flame visuals stop on trigger release; nearby zombies now take fire damage even when inside the weapon nozzle."] },
   { version: "4.8.16", notes: ["Dead Zone: wider fluid flamethrower, better particle flow and no detached trails when turning or releasing fire; gameplay text selection and dragging disabled."] },
