@@ -211,8 +211,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.16";
+const APP_VERSION = "4.8.17";
 const UPDATE_LOG = [
+  { version: "4.8.17", notes: ["Dead Zone: wider flamethrower cone; flame visuals stop on trigger release; nearby zombies now take fire damage even when inside the weapon nozzle."] },
   { version: "4.8.16", notes: ["Dead Zone: wider fluid flamethrower, better particle flow and no detached trails when turning or releasing fire; gameplay text selection and dragging disabled."] },
   { version: "4.8.15", notes: ["Dead Zone: rebuilt flamethrower with persistent, moving flame particles; direct and damage-over-time fire kills leave charcoal ash piles saved and synced for teammates."] },
   { version: "4.8.14", notes: ["Dead Zone: flame particles now roll forward as turbulent tongues instead of a solid cone. Burning zombies have more visible animated fire."] },
