@@ -1519,6 +1519,9 @@ function drawFluidFlames(){
   flameSprite(['#ffde82','#ff8e1a','rgba(232,46,5,.55)']),
   flameSprite(['#ffb044','#f45a12','rgba(148,28,5,.35)'])
  ];
+ // Sandevistan slows the flamethrower's emitted stream, movement, flicker and fade
+ // on every client's screen, including flames already airborne.
+ const flameDt=world.sandevistan?.until>world.time?dt*.12:dt;
  const active=new Set();
  for(const q of world.players){
   if(q.hp<=0)continue;
@@ -1539,7 +1542,7 @@ function drawFluidFlames(){
    for(const f of fluidFlames)if(f.owner===q.id)f.life=Math.min(f.life,f.age+.16);
   }
   e.angle=a;
-  e.carry=Math.min(18,e.carry+dt*260);
+  e.carry=Math.min(18,e.carry+flameDt*260);
   const count=Math.min(16,Math.floor(e.carry));e.carry-=count;
   flameEmitters.set(q.id,e);
   for(let i=0;i<count;i++){
@@ -1555,13 +1558,13 @@ function drawFluidFlames(){
  if(fluidFlames.length>480)fluidFlames.splice(0,fluidFlames.length-480);
  ctx.save();ctx.globalCompositeOperation='lighter';
  for(let i=fluidFlames.length-1;i>=0;i--){
-  const f=fluidFlames[i];f.age+=dt;
+  const f=fluidFlames[i];f.age+=flameDt;
   if(f.age>=f.life){fluidFlames.splice(i,1);continue;}
-  const t=f.age/f.life,speedFade=1-f.age*.72,wiggle=Math.sin(f.phase+f.age*27)*f.drift*dt;
+  const t=f.age/f.life,speedFade=1-f.age*.72,wiggle=Math.sin(f.phase+f.age*27)*f.drift*flameDt;
   const vlen=Math.hypot(f.vx,f.vy)||1;
-  f.x+=f.vx*speedFade*dt-f.vy/vlen*wiggle;
-  f.y+=f.vy*speedFade*dt+f.vx/vlen*wiggle;
-  f.vx*=1-dt*.58;f.vy*=1-dt*.58;
+  f.x+=f.vx*speedFade*flameDt-f.vy/vlen*wiggle;
+  f.y+=f.vy*speedFade*flameDt+f.vx/vlen*wiggle;
+  f.vx*=1-flameDt*.58;f.vy*=1-flameDt*.58;
   if(f.x<camera.x-80||f.x>camera.x+W+80||f.y<camera.y-80||f.y>camera.y+H+80)continue;
   const size=f.sz*(1+1.4*t)*(1-.50*t),alpha=Math.min(1,f.age/.035)*Math.min(1,(1-t)*2.4);
   ctx.globalAlpha=alpha*.75;
