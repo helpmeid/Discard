@@ -50,6 +50,7 @@ const settingControls = {
   bubbleShape: document.querySelector("#bubblePreference"),
   compact: document.querySelector("#compactPreference"),
   tabDisguise: document.querySelector("#tabDisguise"),
+  disguiseTarget: document.querySelector("#disguiseTarget"),
   notifications: document.querySelector("#notifications"),
   backgroundStyle: document.querySelector("#backgroundStyle"),
   backgroundColor: document.querySelector("#backgroundColor"),
@@ -83,6 +84,7 @@ const defaultPreferences = {
   bubbleShape: "soft",
   compact: false,
   tabDisguise: false,
+  disguiseTarget: "minga",
   notifications: true,
   mutedIds: [],
   pinnedIds: [],
@@ -211,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.22";
+const APP_VERSION = "4.8.23";
 const UPDATE_LOG = [
+  { version: "4.8.23", notes: ["Settings: choose SmartPass or Minga for the tab disguise, or turn it off to restore Discard. SmartPass also changes the sign-in and sidebar branding.", "Fixed mismatched app cache versions that made the auto-updating loader fall back to an older saved release."] },
   { version: "4.8.22", notes: ["Dead Zone: repaired stale Mythic limits in existing save slots so level 5 Legendaries can upgrade when no Mythic remains; blocked upgrades now explain why."] },
   { version: "4.8.21", notes: ["Dead Zone: level 5 Legendary weapons now have a clearly labeled MERGE LEGENDARY INTO MYTHIC action in the inventory, with selectable Mythic results."] },
   { version: "4.8.20", notes: ["Dead Zone: selling the last Mythic frees the Mythic slot so another can be found or forged through upgrades and roulette."] },
@@ -338,12 +341,16 @@ document.head.append(tabIcon);
 const disguiseKey = "discard-tab-disguise";
 const coverKeyStorage = "discard-cover-keybind";
 let tabDisguised = false;
+let disguiseTarget = "minga";
+const disguiseTargetKey = "discard-disguise-target";
+// Self-contained icon works offline and in the single-file loader.
+const smartPassIcon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#17a86b"/><path d="m16 32 10 10 22-22" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>');
 let coverOn = false;
 // Browsers prohibit replacing the origin with app.minga.io; use a visible URL fragment instead.
 const mingaAddressFragment = "#app.minga.io/home";
 let addressBeforeMinga = location.hash === mingaAddressFragment ? "" : location.hash;
 function updateMingaAddress() {
-  const enabled = tabDisguised || coverOn;
+  const enabled = (tabDisguised && disguiseTarget === "minga") || coverOn;
   const desired = enabled ? mingaAddressFragment : addressBeforeMinga;
   if (location.hash === desired) return;
   try { history.replaceState(history.state, "", location.pathname + location.search + desired); }
@@ -384,10 +391,17 @@ function updateUnreadBadge(total) {
 }
 function renderDisguise() {
   const on = tabDisguised || coverOn;
-  const base = on ? "minga-icon.png" : BRAND_IMAGE;
-  const title = on ? "Home · Home – Minga" : "Discard";
+  const smartPass = tabDisguised && disguiseTarget === "smartpass" && !coverOn;
+  const base = on ? (smartPass ? smartPassIcon : "minga-icon.png") : BRAND_IMAGE;
+  const title = on ? (smartPass ? "SmartPass" : "Home · Home – Minga") : "Discard";
+  document.querySelectorAll(".brand").forEach(brand => {
+    const image = brand.querySelector(".brand-mark");
+    if (image) { image.src = smartPass ? smartPassIcon : BRAND_IMAGE; image.alt = ""; }
+    const label = brand.querySelector("span");
+    if (label) label.textContent = smartPass ? "SmartPass" : "Discard";
+  });
   document.title = unreadTotal && !on ? `(${unreadTotal}) ${title}` : title;
-  if (unreadTotal) {
+  if (unreadTotal && !on) {
     badgedIconFor = base;
     drawBadgedIcon(base);
   } else {
@@ -397,14 +411,18 @@ function renderDisguise() {
   document.querySelector("#mingaCover")?.classList.toggle("on", coverOn);
   updateMingaAddress();
 }
-function applyTabDisguise(on, remember = true) {
+function applyTabDisguise(on, remember = true, target = disguiseTarget) {
+  disguiseTarget = target === "smartpass" ? "smartpass" : "minga";
   tabDisguised = on;
   renderDisguise();
   if (remember) {
-    try { localStorage.setItem(disguiseKey, on ? "1" : ""); } catch {}
+    try { localStorage.setItem(disguiseKey, on ? "1" : ""); localStorage.setItem(disguiseTargetKey, disguiseTarget); } catch {}
   }
 }
-try { if (localStorage.getItem(disguiseKey)) applyTabDisguise(true, false); } catch {}
+try {
+  disguiseTarget = localStorage.getItem(disguiseTargetKey) === "smartpass" ? "smartpass" : "minga";
+  if (localStorage.getItem(disguiseKey)) applyTabDisguise(true, false);
+} catch {}
 
 function comboFromEvent(event) {
   if (["Control", "Shift", "Alt", "Meta"].includes(event.key)) return "";
@@ -1632,6 +1650,7 @@ function applyPreferencesLocal(input) {
   if (["soft", "square"].includes(input.bubbleShape)) current.bubbleShape = input.bubbleShape;
   if (typeof input.compact === "boolean") current.compact = input.compact;
   if (typeof input.tabDisguise === "boolean") current.tabDisguise = input.tabDisguise;
+  if (["minga", "smartpass"].includes(input.disguiseTarget)) current.disguiseTarget = input.disguiseTarget;
   if (typeof input.notifications === "boolean") current.notifications = input.notifications;
   if (Array.isArray(input.mutedIds)) current.mutedIds = [...new Set(input.mutedIds.filter(id => typeof id === "string" && safeIdPattern.test(id)))].slice(0, 500);
   if (Array.isArray(input.pinnedIds)) current.pinnedIds = [...new Set(input.pinnedIds.filter(id => typeof id === "string" && pinIdPattern.test(id)))].slice(0, 500);
@@ -3446,6 +3465,7 @@ function applyPreferences(input) {
   settingControls.particleTrail.checked = preferences.particleTrail;
   settingControls.compact.checked = preferences.compact;
   settingControls.tabDisguise.checked = preferences.tabDisguise;
+  settingControls.disguiseTarget.value = preferences.disguiseTarget;
   settingControls.notifications.checked = preferences.notifications;
   document.querySelector("#customThemeControls").classList.toggle("hidden", !customBackground);
   const gradient = preferences.backgroundStyle !== "solid";
@@ -3460,7 +3480,7 @@ function applyPreferences(input) {
     const preset = themePresets[Number(button.dataset.index)];
     button.classList.toggle("active", presetPreferences(preset).backgroundColor === preferences.backgroundColor && presetPreferences(preset).backgroundEndColor === preferences.backgroundEndColor && presetPreferences(preset).backgroundStyle === preferences.backgroundStyle);
   });
-  applyTabDisguise(preferences.tabDisguise);
+  applyTabDisguise(preferences.tabDisguise, true, preferences.disguiseTarget);
 }
 
 function currentPreferences() {
@@ -3483,6 +3503,7 @@ function currentPreferences() {
     bubbleShape: settingControls.bubbleShape.value,
     compact: settingControls.compact.checked,
     tabDisguise: settingControls.tabDisguise.checked,
+    disguiseTarget: settingControls.disguiseTarget.value,
     notifications: settingControls.notifications.checked,
     backgroundStyle: settingControls.backgroundStyle.value,
     backgroundColor: settingControls.backgroundColor.value,
