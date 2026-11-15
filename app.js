@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.24";
+const APP_VERSION = "4.8.25";
 const UPDATE_LOG = [
+  { version: "4.8.25", notes: ["Matched the SmartPass cover Home and Calendar icons to the reference. Disguise changes only the browser tab branding; the Discard logo and name inside the app stay unchanged."] },
   { version: "4.8.24", notes: ["SmartPass disguise now uses the supplied logo and matching tab title. Added a SmartPass home cover with Welcome, the current date, and a return button; the cover keybind follows your selected disguise."] },
   { version: "4.8.23", notes: ["Settings: choose SmartPass or Minga for the tab disguise, or turn it off to restore Discard. SmartPass also changes the sign-in and sidebar branding.", "Fixed mismatched app cache versions that made the auto-updating loader fall back to an older saved release."] },
   { version: "4.8.22", notes: ["Dead Zone: repaired stale Mythic limits in existing save slots so level 5 Legendaries can upgrade when no Mythic remains; blocked upgrades now explain why."] },
@@ -395,12 +396,7 @@ function renderDisguise() {
   const smartPass = (tabDisguised || coverOn) && disguiseTarget === "smartpass";
   const base = on ? (smartPass ? smartPassIcon : "minga-icon.png") : BRAND_IMAGE;
   const title = on ? (smartPass ? "SmartPass x Flex | Digital Hall Pass" : "Home · Home – Minga") : "Discard";
-  document.querySelectorAll(".brand").forEach(brand => {
-    const image = brand.querySelector(".brand-mark");
-    if (image) { image.src = smartPass ? smartPassIcon : BRAND_IMAGE; image.alt = ""; }
-    const label = brand.querySelector("span");
-    if (label) label.textContent = smartPass ? "SmartPass" : "Discard";
-  });
+
   document.title = unreadTotal && !on ? `(${unreadTotal}) ${title}` : title;
   if (unreadTotal && !on) {
     badgedIconFor = base;
