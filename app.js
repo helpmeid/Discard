@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.25";
+const APP_VERSION = "4.8.26";
 const UPDATE_LOG = [
+  { version: "4.8.26", notes: ["SmartPass cover fills the viewport and more closely matches the reference, without a return button or personal name. Date and time update live. Favicon updates reliably and ignores late unread badge callbacks while disguised. Use your configured disguise keybind to leave the cover."] },
   { version: "4.8.25", notes: ["Matched the SmartPass cover Home and Calendar icons to the reference. Disguise changes only the browser tab branding; the Discard logo and name inside the app stay unchanged."] },
   { version: "4.8.24", notes: ["SmartPass disguise now uses the supplied logo and matching tab title. Added a SmartPass home cover with Welcome, the current date, and a return button; the cover keybind follows your selected disguise."] },
   { version: "4.8.23", notes: ["Settings: choose SmartPass or Minga for the tab disguise, or turn it off to restore Discard. SmartPass also changes the sign-in and sidebar branding.", "Fixed mismatched app cache versions that made the auto-updating loader fall back to an older saved release."] },
@@ -335,7 +336,7 @@ document.documentElement.dataset.discardVersion = APP_VERSION;
 document.querySelectorAll(".brand-mark").forEach(image => { image.src = BRAND_IMAGE; });
 // Reuse the page's own icon link; a second one would be ignored by the browser, breaking the Minga disguise.
 document.querySelectorAll('link[rel~="icon"]').forEach(link => link.remove());
-const tabIcon = document.createElement("link");
+let tabIcon = document.createElement("link");
 tabIcon.rel = "icon";
 tabIcon.href = BRAND_IMAGE;
 document.head.append(tabIcon);
@@ -362,6 +363,17 @@ function updateMingaAddress() {
 // The disguise is remembered outside the account so the sign-in screen is covered too.
 let unreadTotal = 0;
 let badgedIconFor = "";
+function setTabIcon(source) {
+  // Replace the element when the source changes so browsers reliably refresh the favicon.
+  if (tabIcon.getAttribute("href") === source && tabIcon.isConnected) return;
+  const next = document.createElement("link");
+  next.rel = "icon";
+  next.type = source.startsWith("data:image/svg") ? "image/svg+xml" : "image/png";
+  next.href = source;
+  document.querySelectorAll('link[rel~="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
+  document.head.append(next);
+  tabIcon = next;
+}
 function drawBadgedIcon(source) {
   const image = new Image();
   image.onload = () => {
@@ -377,11 +389,11 @@ function drawBadgedIcon(source) {
       context.lineWidth = 4;
       context.strokeStyle = "#fff";
       context.stroke();
-      if (badgedIconFor === source) tabIcon.href = canvas.toDataURL("image/png");
+      if (badgedIconFor === source && !tabDisguised && !coverOn) setTabIcon(canvas.toDataURL("image/png"));
     } catch {
       // A tainted canvas (local file icon) can't be exported, so fall back to a plain red dot.
       const dot = "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='#888'/><circle cx='48' cy='48' r='14' fill='#e5283b' stroke='#fff' stroke-width='4'/></svg>");
-      if (badgedIconFor === source) tabIcon.href = dot;
+      if (badgedIconFor === source && !tabDisguised && !coverOn) setTabIcon(dot);
     }
   };
   image.src = source;
@@ -403,13 +415,14 @@ function renderDisguise() {
     drawBadgedIcon(base);
   } else {
     badgedIconFor = "";
-    tabIcon.href = base;
+    setTabIcon(base);
   }
   document.querySelector("#mingaCover")?.classList.toggle("on", coverOn && disguiseTarget === "minga");
   const smartCover = document.querySelector("#smartPassCover");
   if (smartCover) { smartCover.hidden = !(coverOn && disguiseTarget === "smartpass"); smartCover.setAttribute("aria-hidden", String(smartCover.hidden)); }
   const coverDescription = document.querySelector("#coverDescription");
   if (coverDescription) coverDescription.textContent = `Toggles a full ${disguiseTarget === "smartpass" ? "SmartPass" : "Minga"} cover over the page`;
+  if (smartCover && !smartCover.hidden) updateSmartPassDate();
   updateMingaAddress();
 }
 function applyTabDisguise(on, remember = true, target = disguiseTarget) {
@@ -467,12 +480,19 @@ setupDisguiseKeybind();
 
 function updateSmartPassDate() {
   const date = document.querySelector("#smartPassDate");
-  if (date) date.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).toUpperCase();
+  if (date) {
+    const now = new Date();
+    const day = now.getDate();
+    const ordinal = day % 100 >= 11 && day % 100 <= 13 ? "TH" : ({ 1: "ST", 2: "ND", 3: "RD" }[day % 10] || "TH");
+    date.textContent = now.toLocaleDateString("en-US", { weekday: "long", month: "long" }).toUpperCase() + " " + day + ordinal + "·" + now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
 }
 updateSmartPassDate();
-window.setInterval(updateSmartPassDate, 60000);
+window.setInterval(updateSmartPassDate, 1000);
+window.addEventListener("focus", renderDisguise);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) renderDisguise(); });
 document.querySelector("#smartPassPreview")?.addEventListener("click", () => { coverOn = true; disguiseTarget = "smartpass"; renderDisguise(); });
-document.querySelector("#smartPassBack")?.addEventListener("click", () => { coverOn = false; renderDisguise(); });
+
 
 const idPattern = /^dsc-[a-z0-9]{6,16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;

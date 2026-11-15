@@ -711,29 +711,27 @@
     #mingaCover .mg-pfp { position: absolute; left: 1.68%; top: 11.8%; width: 1.9%; height: 4.03%; border-radius: 50%; background: linear-gradient(100deg, #e1e6eb 30%, #f4f7fa 50%, #e1e6eb 70%) 0 0 / 300% 100%; animation: mgShimmer 1.3s linear infinite; }
     @keyframes mgShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
   
-    #smartPassCover { position:fixed; inset:0; z-index:2147483645; overflow:auto; background:#f5f6f8; color:#211b56; font:16px Arial,sans-serif; color-scheme:light; }
+    #smartPassCover { position:fixed; inset:0; width:100%; height:100%; min-height:100dvh; isolation:isolate; z-index:2147483647; overflow:auto; background:#f5f6f8; color:#211b56; font:16px Arial,sans-serif; color-scheme:light; }
     #smartPassCover[hidden] { display:none; }
     .sp-school { height:51px; display:flex; align-items:center; justify-content:center; gap:12px; background:white; border-bottom:1px solid #e5e7eb; }
-    .sp-nav { min-height:74px; padding:10px 24px; display:flex; align-items:center; justify-content:flex-end; gap:12px; background:white; box-shadow:0 3px 8px #1c245009; }
-    .sp-tabs { display:flex; gap:38px; margin-right:auto; margin-left:40%; align-self:stretch; }
+    .sp-nav { position:relative; height:74px; padding:10px 18px; display:flex; align-items:center; justify-content:flex-end; gap:12px; background:white; box-shadow:0 3px 8px #1c245009; }
+    .sp-tabs { position:absolute; left:50%; transform:translateX(-50%); top:10px; bottom:4px; display:flex; gap:38px; }
     .sp-tab { display:grid; place-items:center; gap:4px; min-width:90px; color:#78899f; font-size:14px; }
     .sp-tab.active { color:#00b27b; border-bottom:3px solid #00b27b; }
     .sp-symbol { display:block; width:24px; height:24px; flex:none; }
     #smartPassCover button { border:0; border-radius:8px; padding:13px 15px; font:14px Arial,sans-serif; background:#00b47c; color:white; box-shadow:0 2px 6px #0000000b; }
     #smartPassCover .sp-secondary { border:1px solid #d7dadd; background:white; color:#536176; }
     .sp-avatar { width:46px; height:46px; border-radius:50%; background:#e8e9eb; display:grid; place-items:center; color:white; font-size:34px; }
-    .sp-content { max-width:1170px; margin:64px auto 0; display:grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap:80px; padding:0 24px; }
+    .sp-content { width:calc(100% - 192px); max-width:none; margin:64px auto 0; display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:96px; padding:0; }
     .sp-date { color:#65758b; font-size:14px; }
     .sp-welcome { margin:12px 0; font-size:28px; }
     .sp-going { min-height:410px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#7c90a8; }
     .sp-walker { width:60px; height:90px; margin:32px 0 20px; color:#bbc3cf; }
     .sp-going h2 { font-size:24px; margin:18px 0 34px; }
-    .sp-requests { min-height:500px; background:white; border-radius:14px; padding:36px; box-shadow:0 0 5px #00000004; }
+    .sp-requests { min-height:calc(100dvh - 189px); background:white; border-radius:14px; padding:36px; box-shadow:0 0 5px #00000004; }
     .sp-requests h2 { font-size:21px; margin:0; }
     .sp-caught { display:grid; place-items:center; min-height:390px; color:#bac4cf; font-weight:600; }
-    .sp-footer { padding:22px; text-align:center; }
-    #smartPassCover #smartPassBack { background:transparent; box-shadow:none; color:#748297; padding:8px; font-size:12px; }
-    @media(max-width:760px) { .sp-tabs { margin-left:0; gap:8px; } .sp-nav { flex-wrap:wrap; padding:8px 12px; } .sp-content { margin-top:32px; gap:20px; grid-template-columns:1fr; } .sp-requests { min-height:250px; } .sp-caught { min-height:180px; } .sp-going { min-height:300px; } }
+    @media(max-width:760px) { .sp-tabs { position:static; transform:none; margin-right:auto; gap:8px; } .sp-nav { height:auto; min-height:74px; flex-wrap:wrap; padding:8px 12px; } .sp-content { width:calc(100% - 32px); margin-top:32px; gap:20px; grid-template-columns:1fr; } .sp-requests { min-height:250px; } .sp-caught { min-height:180px; } .sp-going { min-height:300px; } }
 
   </style>
 </head>
@@ -884,15 +882,14 @@
     <header class="sp-school">Lumpkin County High School <span aria-hidden="true">⌄</span></header>
     <nav class="sp-nav" aria-label="SmartPass navigation">
       <div class="sp-tabs"><div class="sp-tab active"><svg class="sp-symbol" viewBox="0 0 28 28" aria-hidden="true"><g fill="currentColor"><path d="M3 12 10 8v17H3zm15-4 7 4v13h-7zM11 6h6v19h-6z"/><path d="m9 8 5-5 5 5z"/><rect x="13" y="0.5" width="4" height="2" rx="1"/></g><g fill="white"><path d="M12 20a2 2 0 0 1 4 0v5h-4z"/><rect x="5" y="14" width="2" height="2"/><rect x="5" y="19" width="2" height="2"/><rect x="21" y="14" width="2" height="2"/><rect x="21" y="19" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/></g></svg>Home</div><div class="sp-tab"><svg class="sp-symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="3" width="22" height="22" rx="1.5" fill="currentColor"/><path d="M5 5h18v4H5z" fill="white"/><g fill="white"><path d="M6 12h2v2H6zm5 0h2v2h-2zm5 0h2v2h-2zm5 0h2v2h-2zM6 16h2v2H6zm5 0h2v2h-2zm5 0h2v2h-2zm5 0h2v2h-2zM6 20h2v2H6zm5 0h2v2h-2zm5 0h2v2h-2zm5 0h2v2h-2z"/></g></svg>Calendar</div></div>
-      <button type="button" class="sp-secondary">▣ Schedule Pass</button><button type="button">＋ Create Pass</button><div class="sp-avatar" aria-hidden="true">●</div>
+      <button type="button" class="sp-secondary">▣ Schedule Pass</button><button type="button">＋ Create Pass</button><div class="sp-avatar" aria-hidden="true"><svg viewBox="0 0 48 48" width="46" height="46"><circle cx="24" cy="19" r="10" fill="white"/><path d="M7 45c0-19 34-19 34 0" fill="white"/></svg></div>
     </nav>
     <main class="sp-content">
       <div><div class="sp-date" id="smartPassDate"></div><h1 class="sp-welcome">Welcome</h1>
         <div class="sp-going"><svg class="sp-walker" viewBox="0 0 60 90" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" aria-hidden="true"><circle cx="34" cy="12" r="8" fill="currentColor" stroke="none"/><path d="m29 32-5 22 13 26M27 52l-10 27M31 33l5 15 8 9M15 29l-4 20"/></svg><h2>Going Somewhere?</h2><button type="button">＋ Create Pass</button></div>
       </div>
-      <section class="sp-requests"><h2>◈ &nbsp;Pass Requests</h2><div class="sp-caught">✓ &nbsp;You're all caught up!</div></section>
+      <section class="sp-requests"><h2><svg width="26" height="28" viewBox="0 0 28 28" aria-hidden="true" style="vertical-align:middle;margin-right:8px"><path d="M5 18c5-5 1-8 7-12 6-4 10 0 10 4 0 5-5 7-5 12z" fill="currentColor"/><path d="m4 17 13 9M6 23l2 2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg> Pass Requests</h2><div class="sp-caught">✓ &nbsp;You're all caught up!</div></section>
     </main>
-    <footer class="sp-footer"><button type="button" id="smartPassBack">Back to Discard</button></footer>
   </section>
 
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
@@ -902,7 +899,7 @@
   <script src="chem.js?v=4.1.2"></script>
   <script src="clicker.js?v=4.1.2a"></script>
   <script src="dead-zone-net.js?v=2.0.2"></script>
-  <script src="app.js?v=4.8.25"></script>
+  <script src="app.js?v=4.8.26"></script>
   <script src="garlic.js?v=4.1.2"></script>
   <script src="party-games.js?v=4.1.2"></script>
   <script src="hangman.js?v=4.1.2"></script>
