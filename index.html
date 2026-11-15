@@ -710,6 +710,31 @@
     #mingaCover img { width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; }
     #mingaCover .mg-pfp { position: absolute; left: 1.68%; top: 11.8%; width: 1.9%; height: 4.03%; border-radius: 50%; background: linear-gradient(100deg, #e1e6eb 30%, #f4f7fa 50%, #e1e6eb 70%) 0 0 / 300% 100%; animation: mgShimmer 1.3s linear infinite; }
     @keyframes mgShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  
+    #smartPassCover { position:fixed; inset:0; z-index:2147483645; overflow:auto; background:#f5f6f8; color:#211b56; font:16px Arial,sans-serif; color-scheme:light; }
+    #smartPassCover[hidden] { display:none; }
+    .sp-school { height:51px; display:flex; align-items:center; justify-content:center; gap:12px; background:white; border-bottom:1px solid #e5e7eb; }
+    .sp-nav { min-height:74px; padding:10px 24px; display:flex; align-items:center; justify-content:flex-end; gap:12px; background:white; box-shadow:0 3px 8px #1c245009; }
+    .sp-tabs { display:flex; gap:38px; margin-right:auto; margin-left:40%; align-self:stretch; }
+    .sp-tab { display:grid; place-items:center; gap:4px; min-width:90px; color:#78899f; font-size:14px; }
+    .sp-tab.active { color:#00b27b; border-bottom:3px solid #00b27b; }
+    .sp-symbol { font-size:24px; }
+    #smartPassCover button { border:0; border-radius:8px; padding:13px 15px; font:14px Arial,sans-serif; background:#00b47c; color:white; box-shadow:0 2px 6px #0000000b; }
+    #smartPassCover .sp-secondary { border:1px solid #d7dadd; background:white; color:#536176; }
+    .sp-avatar { width:46px; height:46px; border-radius:50%; background:#e8e9eb; display:grid; place-items:center; color:white; font-size:34px; }
+    .sp-content { max-width:1170px; margin:64px auto 0; display:grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap:80px; padding:0 24px; }
+    .sp-date { color:#65758b; font-size:14px; }
+    .sp-welcome { margin:12px 0; font-size:28px; }
+    .sp-going { min-height:410px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#7c90a8; }
+    .sp-walker { width:60px; height:90px; margin:32px 0 20px; color:#bbc3cf; }
+    .sp-going h2 { font-size:24px; margin:18px 0 34px; }
+    .sp-requests { min-height:500px; background:white; border-radius:14px; padding:36px; box-shadow:0 0 5px #00000004; }
+    .sp-requests h2 { font-size:21px; margin:0; }
+    .sp-caught { display:grid; place-items:center; min-height:390px; color:#bac4cf; font-weight:600; }
+    .sp-footer { padding:22px; text-align:center; }
+    #smartPassCover #smartPassBack { background:transparent; box-shadow:none; color:#748297; padding:8px; font-size:12px; }
+    @media(max-width:760px) { .sp-tabs { margin-left:0; gap:8px; } .sp-nav { flex-wrap:wrap; padding:8px 12px; } .sp-content { margin-top:32px; gap:20px; grid-template-columns:1fr; } .sp-requests { min-height:250px; } .sp-caught { min-height:180px; } .sp-going { min-height:300px; } }
+
   </style>
 </head>
 <body>
@@ -817,7 +842,8 @@
         <div class="setting-row"><span>Update log<br><small style="color:var(--muted)">See what's new in this version</small></span><span class="setting-check"><button type="button" class="profile-btn" id="updateLogOpen">View</button></span></div>
         <label class="setting-row"><span>Disguise tab</span><span class="setting-check"><input id="tabDisguise" type="checkbox"></span></label>
         <label class="setting-row">Disguise as<select id="disguiseTarget"><option value="minga">Minga</option><option value="smartpass">SmartPass</option></select></label>
-        <div class="setting-row"><span>Keybind<br><small style="color:var(--muted)">Toggles a full Minga cover over the page</small></span><span class="setting-check"><button type="button" class="profile-btn" id="disguiseKeybind">Not set</button></span></div>
+        <div class="setting-row"><span>Keybind<br><small id="coverDescription" style="color:var(--muted)">Toggles a full Minga cover over the page</small></span><span class="setting-check"><button type="button" class="profile-btn" id="disguiseKeybind">Not set</button></span></div>
+        <div class="setting-row"><span>SmartPass cover</span><button type="button" class="profile-btn" id="smartPassPreview">Show cover</button></div>
         <div class="backup-row"><button class="profile-btn" id="exportButton" type="button">Export backup</button><button class="profile-btn" id="deleteAccount" type="button">Delete account</button></div>
         <p class="settings-note" id="storageInfo"></p>
         <p class="settings-status" id="settingsStatus" aria-live="polite"></p>
@@ -853,6 +879,22 @@
       </section><div class="reply-bar hidden" id="replyBar"><span class="reply-bar-text"></span><button type="button" id="replyCancel" aria-label="Cancel reply">×</button></div><form class="composer" id="messageForm"><button class="attach-button plus-button" id="plusToggle" type="button" title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">+</button><div class="plus-menu hidden" id="plusMenu" role="menu"><button type="button" role="menuitem" id="plusGame">🧄 <span>Garlic Fone<small>Telephone drawing game</small></span></button><button type="button" role="menuitem" id="plusImpostor">🕵️ <span>Impostor<small>Find the player with no word</small></span></button><button type="button" role="menuitem" id="plusSketch">🎨 <span>Sketch & Guess<small>Draw, guess, and uncover</small></span></button><button type="button" role="menuitem" id="plusUno"><img src="uno-logo.png" alt="" width="22" height="19"> <span>Uno<small>Match colors, empty your hand</small></span></button><button type="button" role="menuitem" id="plusHangman">🔤 <span>Hangman<small>One picks a word, the rest guess</small></span></button><button type="button" role="menuitem" id="plusFile">📎 <span>Send a file<small>Up to 5 MB</small></span></button></div><label class="attach-button" title="Send a file, image or GIF" aria-label="Attach file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><input id="imageFile" type="file" hidden></label><input id="messageInput" autocomplete="off" maxlength="4000" aria-label="Message" placeholder="Write a message..."><button class="attach-button gif-toggle" id="emojiToggle" type="button" title="Emoji" aria-label="Open emoji tab">😀</button><button class="attach-button gif-toggle" id="gifToggle" type="button" title="GIFs" aria-label="Open GIF tab">GIF</button><button class="send-button" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form></div>
     </section>
   </main>
+
+  <section id="smartPassCover" hidden aria-hidden="true" aria-label="SmartPass home">
+    <header class="sp-school">Lumpkin County High School <span aria-hidden="true">⌄</span></header>
+    <nav class="sp-nav" aria-label="SmartPass navigation">
+      <div class="sp-tabs"><div class="sp-tab active"><span class="sp-symbol" aria-hidden="true">♙</span>Home</div><div class="sp-tab"><span class="sp-symbol" aria-hidden="true">▦</span>Calendar</div></div>
+      <button type="button" class="sp-secondary">▣ Schedule Pass</button><button type="button">＋ Create Pass</button><div class="sp-avatar" aria-hidden="true">●</div>
+    </nav>
+    <main class="sp-content">
+      <div><div class="sp-date" id="smartPassDate"></div><h1 class="sp-welcome">Welcome</h1>
+        <div class="sp-going"><svg class="sp-walker" viewBox="0 0 60 90" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" aria-hidden="true"><circle cx="34" cy="12" r="8" fill="currentColor" stroke="none"/><path d="m29 32-5 22 13 26M27 52l-10 27M31 33l5 15 8 9M15 29l-4 20"/></svg><h2>Going Somewhere?</h2><button type="button">＋ Create Pass</button></div>
+      </div>
+      <section class="sp-requests"><h2>◈ &nbsp;Pass Requests</h2><div class="sp-caught">✓ &nbsp;You're all caught up!</div></section>
+    </main>
+    <footer class="sp-footer"><button type="button" id="smartPassBack">Back to Discard</button></footer>
+  </section>
+
   <div id="mingaCover" aria-hidden="true"><div class="mg-stage"><img src="minga-cover.png" alt=""><div class="mg-pfp"></div></div></div>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
   <script src="assets.js?v=4.1.2"></script>
@@ -860,7 +902,7 @@
   <script src="chem.js?v=4.1.2"></script>
   <script src="clicker.js?v=4.1.2a"></script>
   <script src="dead-zone-net.js?v=2.0.2"></script>
-  <script src="app.js?v=4.8.23"></script>
+  <script src="app.js?v=4.8.24"></script>
   <script src="garlic.js?v=4.1.2"></script>
   <script src="party-games.js?v=4.1.2"></script>
   <script src="hangman.js?v=4.1.2"></script>

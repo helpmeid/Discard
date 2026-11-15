@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.23";
+const APP_VERSION = "4.8.24";
 const UPDATE_LOG = [
+  { version: "4.8.24", notes: ["SmartPass disguise now uses the supplied logo and matching tab title. Added a SmartPass home cover with Welcome, the current date, and a return button; the cover keybind follows your selected disguise."] },
   { version: "4.8.23", notes: ["Settings: choose SmartPass or Minga for the tab disguise, or turn it off to restore Discard. SmartPass also changes the sign-in and sidebar branding.", "Fixed mismatched app cache versions that made the auto-updating loader fall back to an older saved release."] },
   { version: "4.8.22", notes: ["Dead Zone: repaired stale Mythic limits in existing save slots so level 5 Legendaries can upgrade when no Mythic remains; blocked upgrades now explain why."] },
   { version: "4.8.21", notes: ["Dead Zone: level 5 Legendary weapons now have a clearly labeled MERGE LEGENDARY INTO MYTHIC action in the inventory, with selectable Mythic results."] },
@@ -344,13 +345,13 @@ let tabDisguised = false;
 let disguiseTarget = "minga";
 const disguiseTargetKey = "discard-disguise-target";
 // Self-contained icon works offline and in the single-file loader.
-const smartPassIcon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#17a86b"/><path d="m16 32 10 10 22-22" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+const smartPassIcon = "data:image/png;base64,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";
 let coverOn = false;
 // Browsers prohibit replacing the origin with app.minga.io; use a visible URL fragment instead.
 const mingaAddressFragment = "#app.minga.io/home";
 let addressBeforeMinga = location.hash === mingaAddressFragment ? "" : location.hash;
 function updateMingaAddress() {
-  const enabled = (tabDisguised && disguiseTarget === "minga") || coverOn;
+  const enabled = (tabDisguised || coverOn) && disguiseTarget === "minga";
   const desired = enabled ? mingaAddressFragment : addressBeforeMinga;
   if (location.hash === desired) return;
   try { history.replaceState(history.state, "", location.pathname + location.search + desired); }
@@ -391,9 +392,9 @@ function updateUnreadBadge(total) {
 }
 function renderDisguise() {
   const on = tabDisguised || coverOn;
-  const smartPass = tabDisguised && disguiseTarget === "smartpass" && !coverOn;
+  const smartPass = (tabDisguised || coverOn) && disguiseTarget === "smartpass";
   const base = on ? (smartPass ? smartPassIcon : "minga-icon.png") : BRAND_IMAGE;
-  const title = on ? (smartPass ? "SmartPass" : "Home · Home – Minga") : "Discard";
+  const title = on ? (smartPass ? "SmartPass x Flex | Digital Hall Pass" : "Home · Home – Minga") : "Discard";
   document.querySelectorAll(".brand").forEach(brand => {
     const image = brand.querySelector(".brand-mark");
     if (image) { image.src = smartPass ? smartPassIcon : BRAND_IMAGE; image.alt = ""; }
@@ -408,7 +409,11 @@ function renderDisguise() {
     badgedIconFor = "";
     tabIcon.href = base;
   }
-  document.querySelector("#mingaCover")?.classList.toggle("on", coverOn);
+  document.querySelector("#mingaCover")?.classList.toggle("on", coverOn && disguiseTarget === "minga");
+  const smartCover = document.querySelector("#smartPassCover");
+  if (smartCover) { smartCover.hidden = !(coverOn && disguiseTarget === "smartpass"); smartCover.setAttribute("aria-hidden", String(smartCover.hidden)); }
+  const coverDescription = document.querySelector("#coverDescription");
+  if (coverDescription) coverDescription.textContent = `Toggles a full ${disguiseTarget === "smartpass" ? "SmartPass" : "Minga"} cover over the page`;
   updateMingaAddress();
 }
 function applyTabDisguise(on, remember = true, target = disguiseTarget) {
@@ -463,6 +468,15 @@ function setupDisguiseKeybind() {
   }, true);
 }
 setupDisguiseKeybind();
+
+function updateSmartPassDate() {
+  const date = document.querySelector("#smartPassDate");
+  if (date) date.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).toUpperCase();
+}
+updateSmartPassDate();
+window.setInterval(updateSmartPassDate, 60000);
+document.querySelector("#smartPassPreview")?.addEventListener("click", () => { coverOn = true; disguiseTarget = "smartpass"; renderDisguise(); });
+document.querySelector("#smartPassBack")?.addEventListener("click", () => { coverOn = false; renderDisguise(); });
 
 const idPattern = /^dsc-[a-z0-9]{6,16}$/;
 const safeIdPattern = /^[\w-]{1,64}$/;
