@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.45";
+const APP_VERSION = "4.8.46";
 const UPDATE_LOG = [
+  { version: "4.8.46", notes: ["Dead Zone: mythic copies of the already-active type can now drop or be forged and merge to level 5 without counting higher levels as extra mythics. Fixed Mantis Blades melee strikes being canceled before damage."] },
   { version: "4.8.45", notes: ["Cursor Studio redesign: redrawn cursor artwork, visually selectable gallery of 14 shapes, Clean/Glossy/Neon finishes, sharper classic and modern arrows, accurate click hotspots and updated instant preview. Existing saved cursor colors and sizes are preserved."] },
   { version: "4.8.44", notes: ["Custom Cursor Studio: colored classic arrow and system pointer options, pixel/crosshair/lightning/moon styles, 16–96px size slider with size presets, nine one-click cursor colors, real-time cursor preview and better clickable-pointer feedback."] },
   { version: "4.8.43", notes: ["Meme Tower Defense: replace emoji-only battlefield characters with original hand-drawn Canvas miniatures, individual tower and enemy silhouettes, drawn portraits in equipped units and collection, and new per-weapon animated projectiles, energy beams, explosive rings, frost bolts and sparkling impacts."] },
