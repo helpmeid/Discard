@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.31";
+const APP_VERSION = "4.8.32";
 const UPDATE_LOG = [
+  { version: "4.8.32", notes: ["Dead Zone burnt bodies expire after 16 seconds (32 max). Added co-op Meme Tower Defense with 2025–26 meme towers, 40 waves, Verity special unit, and a 5-letter friend join code. Free Draw now tracks time played."] },
   { version: "4.8.31", notes: ["Added Free Draw: high-resolution canvas, smooth brushes, shapes, colors, layers, undo/redo, PNG export, and a local saved-drawings gallery."] },
   { version: "4.8.30", notes: ["Dead Zone: multiplayer zombie hitboxes now respect walls, doors, and barriers before contact damage is applied."] },
   { version: "4.8.29", notes: ["Font picker now previews every font name in its own typeface, including the selected font. Your font choice remains private to your browser."] },
@@ -1322,6 +1323,7 @@ function handleData(from, data) {
     unoHandle(from, data);
     return;
   }
+  if (data.t.startsWith("mtd-")) { window.mtdHandle?.(from,data); return; }
   if (data.t.startsWith("party-")) {
     partyGamesHandle(from, data);
     return;
@@ -4271,7 +4273,7 @@ const updateDeadZoneHubPlaytime = () => {
   el.textContent = Math.floor(totalMinutes / 60) + "h " + (totalMinutes % 60) + "m played";
 };
 const setGamesHub = open => {
-  if (open) updateDeadZoneHubPlaytime();
+  if (open) { updateDeadZoneHubPlaytime(); window.updateFreeDrawHubPlaytime?.(); }
   gamesHub.classList.toggle("hidden", !open);
   hubStatus.textContent = "";
 };
@@ -4280,6 +4282,8 @@ document.querySelector("#gamesToggle").addEventListener("click", () => setGamesH
 document.querySelector("#hubClose").addEventListener("click", () => setGamesHub(false));
 gamesHub.addEventListener("click", event => { if (event.target === gamesHub) setGamesHub(false); });
 document.addEventListener("keydown", event => { if (event.key === "Escape") setGamesHub(false); });
+window.mtdNetwork={get id(){return state?.me?.id||null},get friends(){return Object.keys(state?.friends||{})},send:(to,data)=>{connectTo(to);return sendTo(to,data)}};
+document.querySelector("#hubPlayMemeTD").addEventListener("click",()=>{setGamesHub(false);window.openMemeTowerDefense?.()});
 document.querySelector("#hubPlayFreeDraw").addEventListener("click", () => { setGamesHub(false); window.openFreeDraw?.(); });
 document.querySelector("#hubPlayDeadZone").addEventListener("click", () => { setGamesHub(false); window.openDeadZone?.(); });
 document.querySelector("#hubPlayHorizon").addEventListener("click", () => {
