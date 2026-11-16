@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.29";
+const APP_VERSION = "4.8.30";
 const UPDATE_LOG = [
+  { version: "4.8.30", notes: ["Dead Zone: multiplayer zombie hitboxes now respect walls, doors, and barriers before contact damage is applied."] },
   { version: "4.8.29", notes: ["Font picker now previews every font name in its own typeface, including the selected font. Your font choice remains private to your browser."] },
   { version: "4.8.28", notes: ["Expanded personal fonts to 48 choices plus the Discard default, grouped into everyday, serif, monospace, display, and handwriting styles. Font choices still affect only your browser. Online fonts fall back to a local font when offline."] },
   { version: "4.8.27", notes: ["Settings: choose a personal display font. Your choice stays in this browser and only changes your view; messages and other people\u2019s fonts are unchanged."] },
