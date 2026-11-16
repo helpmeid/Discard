@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.34";
+const APP_VERSION = "4.8.35";
 const UPDATE_LOG = [
+  { version: "4.8.35", notes: ["Free Draw: text tool with multiline text, font choices and size; hex color picker and eyedropper; Shift to constrain circles, squares and straight lines."] },
   { version: "4.8.34", notes: ["Meme Tower Defense: 4 difficulties, auto waves, targeting modes, 2 new meme towers, 3 extra enemies, wave records, solo checkpoint saves, reconnect retries, host-exit handling, and improved visual effects and multiplayer performance."] },
   { version: "4.8.33", notes: ["Meme Tower Defense overhaul: neon city map, animated tower effects, placement previews, 2 new towers, 3 new enemy types, 67 Surge team ability, better wave UI and a persistent playtime counter."] },
   { version: "4.8.32", notes: ["Dead Zone burnt bodies expire after 16 seconds (32 max). Added co-op Meme Tower Defense with 2025–26 meme towers, 40 waves, Verity special unit, and a 5-letter friend join code. Free Draw now tracks time played."] },
