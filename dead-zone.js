@@ -1270,7 +1270,7 @@ if(!point&&!door){
 }else z.concreteStuck=0;
 separateZombieFromSurvivors(z);
 
-if(p&&p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<(z.boss?31+bossSize(z)*9:34)&&z.attack<=0&&(p.id==='verity'?w.verity.invuln:p.invuln)<=0){const victim=p.id==='verity'?w.verity:p;victim.hp=Math.max(0,victim.hp-Math.ceil(16*(z.attackPower||1)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-Math.min(.82,(itemDefs[victim.armor]?.defense||0)+((victim.cyberMods||[]).includes('skeleton')?.25:0)))));burst(victim.x,victim.y,'#d15a48',12);victim.invuln=.4;z.attack=.65;if(victim===w.verity&&victim.hp===0){victim.state='down';w.notice='Verity is down! Hold E nearby to revive him';}}
+if(p&&zombieCanHitSurvivor(z,p)&&z.attack<=0&&(p.id==='verity'?w.verity.invuln:p.invuln)<=0){const victim=p.id==='verity'?w.verity:p;victim.hp=Math.max(0,victim.hp-Math.ceil(16*(z.attackPower||1)*(DIFFICULTIES[w.difficulty||'normal']||DIFFICULTIES.normal).damage*(1-Math.min(.82,(itemDefs[victim.armor]?.defense||0)+((victim.cyberMods||[]).includes('skeleton')?.25:0)))));burst(victim.x,victim.y,'#d15a48',12);victim.invuln=.4;z.attack=.65;if(victim===w.verity&&victim.hp===0){victim.state='down';w.notice='Verity is down! Hold E nearby to revive him';}}
 }
 separateZombies(w.sandevistan?dt*.2:dt);for(const z of w.zombies)separateZombieFromSurvivors(z);for(const shot of w.shots){const dt=w.sandevistan?stepDt*.12:stepDt;const steps=Math.max(1,Math.ceil(Math.hypot(shot.vx,shot.vy)*dt/7));for(let step=0;step<steps&&shot.life>0;step++){shot.trail=shot.trail||[];if(step===0)shot.trail.push({x:shot.x,y:shot.y});shot.x+=shot.vx*dt/steps;shot.y+=shot.vy*dt/steps;shot.life-=dt/steps;shot.age=(shot.age||0)+dt/steps;if((shot.kind==='railgun'?(shot.x<3||shot.y<3||shot.x>MAPW-3||shot.y>MAPH-3):solid(shot.x,shot.y,3))){burst(shot.x,shot.y,'#e9c68a',12);burst(shot.x,shot.y,'#faf1ce',6);shot.life=0;continue;}if(shot.kind==='flamethrower'){
  const radius=Math.min(55,18+shot.age*110);shot.hitIds=shot.hitIds||[];
@@ -1858,6 +1858,14 @@ function storyTick(dt){
  }else{if(nearby.length)m.defense+=dt;if(m.defense>=45){world.won=true;world.ended=true;world.notice='Last Signal received. Your team escaped the quarantine.';}}
 }
 function clearShot(ax,ay,bx,by){const n=Math.ceil(Math.hypot(bx-ax,by-ay)/6);for(let i=1;i<n;i++)if(solid(ax+(bx-ax)*i/n,ay+(by-ay)*i/n,2))return false;return true;}
+// Use the same authoritative survivor circle for every peer. Never allow
+// contact damage through walls, closed doors, or concrete barriers.
+function zombieCanHitSurvivor(z,p){
+ if(!z||!p||z.hp<=0||p.hp<=0)return false;
+ const reach=z.boss?31+bossSize(z)*9:34;
+ const dx=p.x-z.x,dy=p.y-z.y;
+ return dx*dx+dy*dy<reach*reach&&clearShot(z.x,z.y,p.x,p.y);
+}
 // Zombie bodies cannot overlap living survivors. Resolve against the authoritative
 // positions after movement, without altering player prediction or blocking doorways.
 function separateZombieFromSurvivors(z){
