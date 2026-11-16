@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.28";
+const APP_VERSION = "4.8.29";
 const UPDATE_LOG = [
+  { version: "4.8.29", notes: ["Font picker now previews every font name in its own typeface, including the selected font. Your font choice remains private to your browser."] },
   { version: "4.8.28", notes: ["Expanded personal fonts to 48 choices plus the Discard default, grouped into everyday, serif, monospace, display, and handwriting styles. Font choices still affect only your browser. Online fonts fall back to a local font when offline."] },
   { version: "4.8.27", notes: ["Settings: choose a personal display font. Your choice stays in this browser and only changes your view; messages and other people\u2019s fonts are unchanged."] },
   { version: "4.8.26", notes: ["SmartPass cover fills the viewport and more closely matches the reference, without a return button or personal name. Date and time update live. Favicon updates reliably and ignores late unread badge callbacks while disguised. Use your configured disguise keybind to leave the cover."] },
@@ -542,9 +543,52 @@ function applyPersonalFont(value) {
   }
   const control = document.querySelector("#personalFont");
   if (control) control.value = selected;
+  const summary = document.querySelector("#fontPickerSummary");
+  if (summary && control) {
+    summary.textContent = control.selectedOptions[0]?.textContent || "Discard default";
+    summary.style.setProperty("--font-preview", personalFonts[selected] || '"DM Sans", sans-serif');
+  }
+  document.querySelectorAll("[data-font-choice]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.fontChoice === selected));
+  });
   return selected;
 }
 function setupPersonalFont() {
+  const select = document.querySelector("#personalFont");
+  const list = document.querySelector("#fontPickerOptions");
+  const picker = document.querySelector("#fontPicker");
+  if (select && list && picker) {
+    for (const child of select.children) {
+      const options = child.tagName === "OPTGROUP" ? Array.from(child.children) : [child];
+      if (child.tagName === "OPTGROUP") {
+        const heading = document.createElement("div");
+        heading.className = "font-picker-group";
+        heading.textContent = child.label;
+        list.append(heading);
+      }
+      for (const option of options) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "font-picker-option";
+        button.dataset.fontChoice = option.value;
+        button.textContent = option.textContent;
+        button.style.setProperty("--font-preview", personalFonts[option.value] || '"DM Sans", sans-serif');
+        button.addEventListener("click", () => {
+          select.value = option.value;
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          picker.open = false;
+          document.querySelector("#fontPickerSummary").focus();
+        });
+        list.append(button);
+      }
+    }
+    picker.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        picker.open = false;
+        document.querySelector("#fontPickerSummary").focus();
+      }
+    });
+  }
   let saved = "default";
   try { saved = localStorage.getItem(personalFontKey) || "default"; } catch {}
   applyPersonalFont(saved);
