@@ -268,9 +268,22 @@
     @keyframes particle-burst { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.6); } 20% { opacity: 1; } to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + var(--fall, 0px))) scale(.3) rotate(var(--rot, 100deg)); } }
     .fx-preview { display: grid; place-items: center; height: 64px; margin: 4px 0 8px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); background: var(--field); font-size: 12px; user-select: none; }
     [hidden] { display: none !important; }
-    html[data-cursor="on"] button, html[data-cursor="on"] a, html[data-cursor="on"] [role="button"] { cursor: var(--custom-cursor, pointer); }
-    html[data-cursor="on"] body { cursor: var(--custom-cursor, pointer); }
+    html[data-cursor="on"] button, html[data-cursor="on"] a, html[data-cursor="on"] [role="button"], html[data-cursor="on"] select { cursor: var(--custom-cursor-link, pointer); }
+    html[data-cursor="on"] body { cursor: var(--custom-cursor, auto); }
     html[data-cursor="on"] input, html[data-cursor="on"] textarea { cursor: text; }
+
+    .cursor-studio{border:1px solid var(--line);background:var(--field);border-radius:13px;padding:12px;margin:8px 0 18px}
+    .cursor-studio .setting-row{margin-bottom:9px}
+    .cursor-live-preview{display:flex;align-items:center;gap:12px;padding:14px;border:1px dashed var(--accent);border-radius:12px;min-height:90px;margin:9px 0;background:color-mix(in srgb,var(--accent) 8%,var(--white));user-select:none}
+    #cursorPreviewIcon{width:50px;height:50px;display:grid;place-items:center;background:var(--field);border:1px solid var(--line);border-radius:10px;flex-shrink:0}
+    #cursorPreviewIcon svg{max-width:42px;max-height:42px}
+    .cursor-live-preview small{display:block;margin-top:5px;color:var(--muted);font-size:11px}
+    .cursor-swatches{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0}
+    .cursor-swatches button{width:28px;height:28px;min-width:28px;padding:0;border-radius:50%;background:var(--swatch);border:2px solid var(--line)}
+    .cursor-swatches button:hover,.cursor-swatches button.selected{outline:2px solid var(--accent);outline-offset:2px;transform:scale(1.08)}
+    .cursor-size-presets{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}
+    .cursor-size-presets button{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink);font:inherit;font-size:11px}
+    .cursor-hint{color:var(--muted);font-size:11px;line-height:1.5}
     .hidden { display: none !important; }
     .gif-toggle { font-size: 11px; font-weight: 800; border: 0; background: transparent; }
     .gif-panel { max-width: 850px; margin: 0 auto 8px; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: var(--white); }
@@ -834,11 +847,24 @@
           <p class="custom-theme-help" id="themeNote">Pick a preset or build your own. Changes preview instantly and save to your account.</p>
         </div>
         <label class="setting-row">Accent color<input id="accentPreference" type="color" value="#245c48" aria-label="Accent color"></label>
-        <div class="theme-section-title">Cursor</div>
-        <label class="setting-row"><span>Custom cursor</span><span class="setting-check"><input id="cursorEnabled" type="checkbox"><select id="cursorPreference" aria-label="Cursor style"><option value="sparkle">Sparkle</option><option value="star">Star</option><option value="heart">Heart</option><option value="diamond">Diamond</option><option value="arrow">Arrow</option><option value="ring">Ring</option><option value="dot">Dot</option><option value="paw">Paw</option></select></span></label>
-        <label class="setting-row" data-cursor-row>Cursor color<select id="cursorColorMode" aria-label="Cursor color"><option value="accent">Match accent</option><option value="custom">Custom</option></select></label>
-        <label class="setting-row" data-cursor-row data-cursor-color-row>Custom cursor color<input id="cursorColor" type="color" value="#f2c94c" aria-label="Custom cursor color"></label>
-        <label class="setting-row" data-cursor-row>Cursor size<span class="setting-check"><input id="cursorSize" type="range" min="20" max="64" step="2" value="32" aria-label="Cursor size"><output id="cursorSizeOut">32px</output></span></label>
+        <div class="theme-section-title">Cursor Studio</div>
+        <div class="cursor-studio">
+          <label class="setting-row"><strong>Enable custom cursor</strong><input id="cursorEnabled" type="checkbox"></label>
+          <div data-cursor-row>
+            <label class="setting-row">Cursor style<select id="cursorPreference" aria-label="Cursor style">
+              <option value="classic">Classic arrow — custom colors</option><option value="system">System cursor</option><option value="arrow">Modern arrow</option><option value="pixel">Pixel arrow</option><option value="crosshair">Crosshair</option><option value="ring">Ring</option><option value="dot">Dot</option><option value="sparkle">Sparkle</option><option value="star">Star</option><option value="heart">Heart</option><option value="diamond">Diamond</option><option value="paw">Paw</option><option value="bolt">Lightning</option><option value="moon">Moon</option>
+            </select></label>
+            <div id="cursorLivePreview" class="cursor-live-preview" role="img" aria-label="Hover here to preview the cursor"><div id="cursorPreviewIcon" aria-hidden="true"></div><div><strong>Try your cursor here</strong><small>Move your mouse into this area</small></div></div>
+            <label class="setting-row">Cursor colors<select id="cursorColorMode"><option value="accent">Match accent</option><option value="custom">Choose any color</option></select></label>
+            <div class="cursor-swatches">
+              <button type="button" data-cursor-preset="#ffffff" style="--swatch:#ffffff" title="White" aria-label="White cursor"></button><button type="button" data-cursor-preset="#141c30" style="--swatch:#141c30" title="Black" aria-label="Black cursor"></button><button type="button" data-cursor-preset="#f43f5e" style="--swatch:#f43f5e" title="Red" aria-label="Red cursor"></button><button type="button" data-cursor-preset="#ff9d33" style="--swatch:#ff9d33" title="Orange" aria-label="Orange cursor"></button><button type="button" data-cursor-preset="#facc15" style="--swatch:#facc15" title="Yellow" aria-label="Yellow cursor"></button><button type="button" data-cursor-preset="#4ade80" style="--swatch:#4ade80" title="Green" aria-label="Green cursor"></button><button type="button" data-cursor-preset="#38bdf8" style="--swatch:#38bdf8" title="Blue" aria-label="Blue cursor"></button><button type="button" data-cursor-preset="#a78bfa" style="--swatch:#a78bfa" title="Purple" aria-label="Purple cursor"></button><button type="button" data-cursor-preset="#f472b6" style="--swatch:#f472b6" title="Pink" aria-label="Pink cursor"></button>
+            </div>
+            <label class="setting-row" data-cursor-color-row>Custom color<input id="cursorColor" type="color" value="#f2c94c"></label>
+            <label class="setting-row">Cursor size<span class="setting-check"><input id="cursorSize" type="range" min="16" max="96" step="2" value="32"><output id="cursorSizeOut">32px</output></span></label>
+            <div class="cursor-size-presets"><button type="button" data-cursor-size="20">Small</button><button type="button" data-cursor-size="32">Normal</button><button type="button" data-cursor-size="52">Large</button><button type="button" data-cursor-size="80">Huge</button></div>
+            <p class="cursor-hint">The classic arrow can be any color. Text fields retain the typing caret. Oversized pointers may be limited by your browser.</p>
+          </div>
+        </div>
         <div class="theme-section-title">Click effects</div>
         <label class="setting-row"><span>Click particles</span><span class="setting-check"><input id="particlesEnabled" type="checkbox"><select id="particlePreference" aria-label="Particle style"><option value="sparkle">Sparkles</option><option value="star">Stars</option><option value="heart">Hearts</option><option value="bubble">Bubbles</option><option value="leaf">Leaves</option><option value="confetti">Confetti</option><option value="snow">Snowflakes</option><option value="music">Music notes</option><option value="flame">Embers</option></select></span></label>
         <label class="setting-row" data-particle-row>Particle color<select id="particleColorMode" aria-label="Particle color"><option value="accent">Match accent</option><option value="rainbow">Rainbow</option><option value="custom">Custom</option></select></label>
