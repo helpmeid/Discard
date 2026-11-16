@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.39";
+const APP_VERSION = "4.8.40";
 const UPDATE_LOG = [
+  { version: "4.8.40", notes: ["Meme Tower Defense: move wave controls below team chat, add seven progression-gated crate tiers and reduced early rewards, enforce shared tower placement caps by rarity, add 12 towers, 10 enemy varieties and 2 maps, rebalance late waves, and show multiplayer placement-limit warnings."] },
   { version: "4.8.39", notes: ["Redesigned Meme Tower Defense layout: large unobstructed center map, dedicated left tower upgrade inspector, fixed right-side match controls and multiplayer chat, responsive Chromebook/mobile layout, and improved full-screen menu spacing."] },
   { version: "4.8.38", notes: ["Meme Tower Defense: live multiplayer team chat with Enter shortcut, safe No Tower selection, instant auto-start between waves, save and resume active solo rounds, automatic round checkpoints, XP and levels with 3-7 equipped tower slots, updated loadout menu, improved main-menu visuals and level progress."] },
   { version: "4.8.37", notes: ["Meme Tower Defense: tower special abilities expanded with area damage, slows, critical hits, chain attacks and income generation; updated map and crate systems. Free Draw's selected tool now highlights correctly."] },
