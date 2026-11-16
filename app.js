@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.27";
+const APP_VERSION = "4.8.28";
 const UPDATE_LOG = [
+  { version: "4.8.28", notes: ["Expanded personal fonts to 48 choices plus the Discard default, grouped into everyday, serif, monospace, display, and handwriting styles. Font choices still affect only your browser. Online fonts fall back to a local font when offline."] },
   { version: "4.8.27", notes: ["Settings: choose a personal display font. Your choice stays in this browser and only changes your view; messages and other people\u2019s fonts are unchanged."] },
   { version: "4.8.26", notes: ["SmartPass cover fills the viewport and more closely matches the reference, without a return button or personal name. Date and time update live. Favicon updates reliably and ignores late unread badge callbacks while disguised. Use your configured disguise keybind to leave the cover."] },
   { version: "4.8.25", notes: ["Matched the SmartPass cover Home and Calendar icons to the reference. Disguise changes only the browser tab branding; the Discard logo and name inside the app stay unchanged."] },
@@ -481,11 +482,54 @@ setupDisguiseKeybind();
 
 const personalFontKey = "discard-personal-font";
 const personalFonts = {
-  system: 'Arial, Helvetica, sans-serif',
-  serif: 'Georgia, "Times New Roman", serif',
-  mono: '"Courier New", Courier, monospace',
-  rounded: '"Trebuchet MS", Arial, sans-serif',
-  playful: '"Comic Sans MS", "Comic Sans", cursive'
+  "system": "Arial, Helvetica, sans-serif",
+  "inter": "\"Inter\", sans-serif",
+  "roboto": "\"Roboto\", sans-serif",
+  "open-sans": "\"Open Sans\", sans-serif",
+  "lato": "\"Lato\", sans-serif",
+  "nunito": "\"Nunito\", sans-serif",
+  "poppins": "\"Poppins\", sans-serif",
+  "montserrat": "\"Montserrat\", sans-serif",
+  "raleway": "\"Raleway\", sans-serif",
+  "ubuntu": "\"Ubuntu\", sans-serif",
+  "verdana": "Verdana, Geneva, sans-serif",
+  "tahoma": "Tahoma, Verdana, sans-serif",
+  "rounded": "\"Trebuchet MS\", Arial, sans-serif",
+  "serif": "Georgia, \"Times New Roman\", serif",
+  "times": "\"Times New Roman\", Times, serif",
+  "merriweather": "\"Merriweather\", serif",
+  "lora": "\"Lora\", serif",
+  "playfair": "\"Playfair Display\", serif",
+  "libre-baskerville": "\"Libre Baskerville\", serif",
+  "bitter": "\"Bitter\", serif",
+  "crimson": "\"Crimson Text\", serif",
+  "mono": "\"Courier New\", Courier, monospace",
+  "consolas": "Consolas, \"Courier New\", monospace",
+  "fira-code": "\"Fira Code\", monospace",
+  "jetbrains": "\"JetBrains Mono\", monospace",
+  "source-code": "\"Source Code Pro\", monospace",
+  "space-mono": "\"Space Mono\", monospace",
+  "ibm-plex-mono": "\"IBM Plex Mono\", monospace",
+  "oswald": "\"Oswald\", sans-serif",
+  "bebas": "\"Bebas Neue\", sans-serif",
+  "anton": "\"Anton\", sans-serif",
+  "righteous": "\"Righteous\", sans-serif",
+  "orbitron": "\"Orbitron\", sans-serif",
+  "audiowide": "\"Audiowide\", sans-serif",
+  "bangers": "\"Bangers\", sans-serif",
+  "press-start": "\"Press Start 2P\", sans-serif",
+  "pixelify": "\"Pixelify Sans\", sans-serif",
+  "playful": "\"Comic Sans MS\", \"Comic Sans\", cursive",
+  "comic-neue": "\"Comic Neue\", cursive",
+  "caveat": "\"Caveat\", cursive",
+  "dancing": "\"Dancing Script\", cursive",
+  "pacifico": "\"Pacifico\", cursive",
+  "patrick": "\"Patrick Hand\", cursive",
+  "indie": "\"Indie Flower\", cursive",
+  "permanent": "\"Permanent Marker\", cursive",
+  "satisfy": "\"Satisfy\", cursive",
+  "lobster": "\"Lobster\", cursive",
+  "amatic": "\"Amatic SC\", cursive"
 };
 function applyPersonalFont(value) {
   const selected = Object.prototype.hasOwnProperty.call(personalFonts, value) ? value : "default";
