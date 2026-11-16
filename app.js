@@ -102,7 +102,7 @@ const defaultPreferences = {
   borderStrength: 0
 };
 
-const cursorStyles = ["sparkle", "heart", "diamond", "star", "arrow", "ring", "dot", "paw"];
+const cursorStyles = ["system", "classic", "arrow", "pixel", "crosshair", "ring", "dot", "sparkle", "star", "heart", "diamond", "paw", "bolt", "moon"];
 const particleStyles = ["sparkle", "heart", "bubble", "leaf", "star", "confetti", "snow", "music", "flame"];
 function sanitizeEffectPreferences(input, base) {
   const hex = (value, fallback) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
@@ -111,7 +111,7 @@ function sanitizeEffectPreferences(input, base) {
     cursorStyle: cursorStyles.includes(input.cursorStyle) ? input.cursorStyle : (cursorStyles.includes(base.cursorStyle) ? base.cursorStyle : "sparkle"),
     cursorColorMode: ["accent", "custom"].includes(input.cursorColorMode) ? input.cursorColorMode : base.cursorColorMode,
     cursorColor: hex(input.cursorColor, base.cursorColor),
-    cursorSize: range(input.cursorSize, 20, 64, base.cursorSize),
+    cursorSize: range(input.cursorSize, 16, 96, base.cursorSize),
     particleStyle: particleStyles.includes(input.particleStyle) ? input.particleStyle : (particleStyles.includes(base.particleStyle) ? base.particleStyle : "sparkle"),
     particleColorMode: ["accent", "rainbow", "custom"].includes(input.particleColorMode) ? input.particleColorMode : base.particleColorMode,
     particleColor: hex(input.particleColor, base.particleColor),
@@ -3553,19 +3553,34 @@ function formatTime(timestamp) {
 
 const themeAccents = { meadow: "#245c48", dark: "#4f9d7f", midnight: "#83c9a3", rose: "#9c506f", ocean: "#277985", contrast: "#111111" };
 function cursorSvg(style, color, size) {
-  const outline = backgroundLuminance(color) > 0.55 ? "#1b1b1b" : "#ffffff";
-  const paint = `fill='${color}' stroke='${outline}' stroke-width='1.6' stroke-linejoin='round'`;
+  const outline = backgroundLuminance(color) > .55 ? "#1a1d2c" : "#f8faff";
+  const paint = "fill='" + color + "' stroke='" + outline + "' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'";
+  const classic = "M3 2v24l6.1-6 4.9 10 4.2-2.2-4.8-10.1 10.5-.4Z";
   const shapes = {
-    sparkle: `<path ${paint} d='M16 1l3.2 10.1L29 8l-6.1 9L32 22l-10.5.2L20 32l-5.7-8.8L5 29l3.2-10L0 14l10.5-.1z'/>`,
-    heart: `<path ${paint} d='M16 29S2 20 2 10a7 7 0 0 1 14-1 7 7 0 0 1 14 1c0 10-14 19-14 19z'/>`,
-    diamond: `<path ${paint} d='M16 1 31 16 16 31 1 16z'/>`,
-    star: `<path ${paint} d='M16 2l4.2 9.6 10.3 1-7.8 6.9 2.3 10.2L16 24.4 7 29.7l2.3-10.2L1.5 12.6l10.3-1z'/>`,
-    arrow: `<path ${paint} d='M4 3v23l6-5.5 4.5 9 4-2-4.5-9H23z'/>`,
-    ring: `<circle cx='16' cy='16' r='10' fill='none' stroke='${outline}' stroke-width='5.5'/><circle cx='16' cy='16' r='10' fill='none' stroke='${color}' stroke-width='3'/><circle cx='16' cy='16' r='2.6' ${paint}/>`,
-    dot: `<circle cx='16' cy='16' r='8' ${paint}/>`,
-    paw: `<g ${paint}><ellipse cx='16' cy='21' rx='7.5' ry='6'/><ellipse cx='6.5' cy='13' rx='3' ry='4'/><ellipse cx='12.5' cy='7' rx='3' ry='4.2'/><ellipse cx='19.5' cy='7' rx='3' ry='4.2'/><ellipse cx='25.5' cy='13' rx='3' ry='4'/></g>`
+    system: "<path " + paint + " d='" + classic + "'/>",
+    classic: "<path " + paint + " d='" + classic + "'/><path d='M5.5 7v14' stroke='#ffffff99' stroke-width='1.4'/>",
+    arrow: "<path " + paint + " d='M3 2 27 15 16 18 20 28 15 30 11 20 4 27Z'/>",
+    pixel: "<path fill='" + color + "' stroke='" + outline + "' stroke-width='1.6' stroke-linejoin='miter' d='M2 1h5v5h5v5h5v5h5v5h-8v9h-5v-9H4v-5H2Z'/>",
+    crosshair: "<g fill='none' stroke='" + outline + "' stroke-width='5'><circle cx='16' cy='16' r='8'/><path d='M16 1v8M16 23v8M1 16h8M23 16h8'/></g><g fill='none' stroke='" + color + "' stroke-width='2.6' stroke-linecap='round'><circle cx='16' cy='16' r='8'/><path d='M16 1v8M16 23v8M1 16h8M23 16h8'/></g>",
+    ring: "<circle cx='16' cy='16' r='10' fill='none' stroke='" + outline + "' stroke-width='5'/><circle cx='16' cy='16' r='10' fill='none' stroke='" + color + "' stroke-width='3'/><circle cx='16' cy='16' r='2.6' " + paint + "/>",
+    dot: "<circle cx='16' cy='16' r='8' " + paint + "/><circle cx='13.5' cy='13' r='2' fill='#ffffff80'/>",
+    sparkle: "<path " + paint + " d='M16 1l3.2 10.1L29 8l-6.1 9L32 22l-10.5.2L20 32l-5.7-8.8L5 29l3.2-10L0 14l10.5-.1z'/>",
+    star: "<path " + paint + " d='M16 2l4.2 9.6 10.3 1-7.8 6.9 2.3 10.2L16 24.4 7 29.7l2.3-10.2L1.5 12.6l10.3-1z'/>",
+    heart: "<path " + paint + " d='M16 29S2 20 2 10a7 7 0 0 1 14-1 7 7 0 0 1 14 1c0 10-14 19-14 19z'/>",
+    diamond: "<path " + paint + " d='M16 1 31 16 16 31 1 16z'/>",
+    paw: "<g " + paint + "><ellipse cx='16' cy='21' rx='7.5' ry='6'/><ellipse cx='6.5' cy='13' rx='3' ry='4'/><ellipse cx='12.5' cy='7' rx='3' ry='4.2'/><ellipse cx='19.5' cy='7' rx='3' ry='4.2'/><ellipse cx='25.5' cy='13' rx='3' ry='4'/></g>",
+    bolt: "<path " + paint + " d='M19 1 6 18h10l-3 13 14-19H17Z'/>",
+    moon: "<path " + paint + " d='M22 2A13 13 0 1 0 30 24 12.7 12.7 0 0 1 22 2Z'/>",
+    hand: "<path " + paint + " d='M10 30 3 19q-2-3 1-5t5 4V5q0-3 3-3t3 3v9-5q0-3 3-3t3 3v7-4q0-3 3-3t3 3v6l1-2q2-3 4-1t0 5l-5 10Z'/>"
   };
-  return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 32 32'>${shapes[style] || shapes.sparkle}</svg>`;
+  return "<svg xmlns='http://www.w3.org/2000/svg' width='" + size + "' height='" + size + "' viewBox='0 0 32 32'>" + (shapes[style] || shapes.sparkle) + "</svg>";
+}
+function cursorCssUrl(style, color, size) {
+  if (style === "system") return "auto";
+  const svg = cursorSvg(style, color, size);
+  const url = "data:image/svg+xml;base64," + btoa(svg);
+  const tip = ["classic", "arrow", "pixel", "hand"].includes(style) ? Math.max(0, Math.round(size * .06)) : Math.floor(size / 2);
+  return 'url("' + url + '") ' + tip + " " + tip + ", " + (style === "hand" ? "pointer" : "auto");
 }
 const particleGlyphs = {
   sparkle: ["✦", "✧", "✳"], heart: ["♥", "♡"], bubble: ["○", "◦", "●"], leaf: ["❧", "✿"],
@@ -3616,9 +3631,14 @@ function applyPreferences(input) {
   rootElement.style.setProperty("--accent", preferences.accent);
   rootElement.style.setProperty("--accent-ink", backgroundLuminance(preferences.accent) > 0.35 ? "#111513" : "#ffffff");
   const cursorColor = preferences.cursorColorMode === "custom" ? preferences.cursorColor : preferences.accent;
-  const cursor = btoa(cursorSvg(preferences.cursorStyle, cursorColor, preferences.cursorSize));
-  const hotspot = preferences.cursorStyle === "arrow" ? Math.round(preferences.cursorSize * 0.12) : Math.round(preferences.cursorSize / 2);
-  rootElement.style.setProperty("--custom-cursor", `url("data:image/svg+xml;base64,${cursor}") ${hotspot} ${hotspot}, pointer`);
+  const cursorValue = cursorCssUrl(preferences.cursorStyle, cursorColor, preferences.cursorSize);
+  rootElement.style.setProperty("--custom-cursor", cursorValue);
+  rootElement.style.setProperty("--custom-cursor-link", preferences.cursorStyle === "system" ? "pointer" : cursorCssUrl(["classic","arrow","pixel"].includes(preferences.cursorStyle) ? "hand" : preferences.cursorStyle, cursorColor, preferences.cursorSize));
+  const preview = document.querySelector("#cursorLivePreview");
+  if (preview) {preview.style.cursor = preferences.cursorEnabled ? cursorValue : "auto";preview.setAttribute("aria-label", "Cursor preview: " + (preferences.cursorEnabled ? preferences.cursorStyle : "System default") + ", " + preferences.cursorSize + " pixels");}
+  const previewIcon = document.querySelector("#cursorPreviewIcon");
+  if (previewIcon) previewIcon.innerHTML = preferences.cursorEnabled && preferences.cursorStyle !== "system" ? cursorSvg(preferences.cursorStyle,cursorColor,48) : cursorSvg("classic","#ffffff",48);
+  document.querySelectorAll("[data-cursor-preset]").forEach(button => {button.classList.toggle("selected",preferences.cursorColorMode === "custom" && button.dataset.cursorPreset.toLowerCase() === cursorColor.toLowerCase());});
   document.querySelectorAll("[data-cursor-row]").forEach(row => { row.hidden = !preferences.cursorEnabled; });
   document.querySelectorAll("[data-particle-row]").forEach(row => { row.hidden = !preferences.particlesEnabled; });
   document.querySelectorAll("[data-cursor-color-row]").forEach(row => { row.hidden = preferences.cursorColorMode !== "custom"; });
@@ -3829,6 +3849,18 @@ document.querySelector("#themePaste").addEventListener("click", () => {
   }
 });
 
+document.querySelectorAll("[data-cursor-preset]").forEach(button => button.addEventListener("click", () => {
+  settingControls.cursorEnabled.checked = true;
+  settingControls.cursorColorMode.value = "custom";
+  settingControls.cursorColor.value = button.dataset.cursorPreset;
+  if (settingControls.cursorStyle.value === "system") settingControls.cursorStyle.value = "classic";
+  savePreferences();
+}));
+document.querySelectorAll("[data-cursor-size]").forEach(button => button.addEventListener("click", () => {
+  settingControls.cursorEnabled.checked = true;
+  settingControls.cursorSize.value = button.dataset.cursorSize;
+  savePreferences();
+}));
 ["backgroundColor", "backgroundEndColor", "backgroundMidColor", "backgroundAngle", "panelOpacity", "panelBlur", "borderStrength", "cursorColor", "cursorSize", "particleColor", "particleCount", "particleSize"].forEach(key => {
   settingControls[key].addEventListener("input", () => savePreferences());
 });
