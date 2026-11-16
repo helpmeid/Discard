@@ -272,7 +272,24 @@
     html[data-cursor="on"] body { cursor: var(--custom-cursor, auto); }
     html[data-cursor="on"] input, html[data-cursor="on"] textarea { cursor: text; }
 
-    .cursor-studio{border:1px solid var(--line);background:var(--field);border-radius:13px;padding:12px;margin:8px 0 18px}
+    
+    .cursor-studio-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:5px 0 8px}
+    .cursor-studio-heading strong{font-size:12px}
+    .cursor-studio-heading small{font-size:10px;color:var(--muted)}
+    .cursor-style-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-height:325px;overflow-y:auto;margin:6px 0 12px;padding:2px;scrollbar-width:thin}
+    .cursor-style-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:79px;padding:8px 3px;border-radius:11px;border:1px solid var(--line);background:var(--white);color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+    .cursor-style-card:hover{background:color-mix(in srgb,var(--accent) 10%,var(--white));transform:translateY(-2px)}
+    .cursor-style-card.selected{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 13%,var(--white));box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 12%,transparent)}
+    .cursor-style-card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+    .cursor-style-art{display:grid;place-items:center;width:42px;height:42px}
+    .cursor-style-art svg{display:block;width:41px;height:41px}
+    .cursor-style-name{font-size:10px;font-weight:750;text-align:center;line-height:1.2}
+    .cursor-legacy-select{display:none}
+    .cursor-finish-select{margin-top:4px}
+    .cursor-size-presets button.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,var(--white));font-weight:800}
+    #cursorLivePreview{min-height:105px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 9%,var(--white)),var(--field));border-style:solid;box-shadow:inset 0 0 22px #00000006}
+    @media(max-width:460px){.cursor-style-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.cursor-studio-heading{flex-direction:column;gap:2px}}
+.cursor-studio{border:1px solid var(--line);background:var(--field);border-radius:13px;padding:12px;margin:8px 0 18px}
     .cursor-studio .setting-row{margin-bottom:9px}
     .cursor-live-preview{display:flex;align-items:center;gap:12px;padding:14px;border:1px dashed var(--accent);border-radius:12px;min-height:90px;margin:9px 0;background:color-mix(in srgb,var(--accent) 8%,var(--white));user-select:none}
     #cursorPreviewIcon{width:50px;height:50px;display:grid;place-items:center;background:var(--field);border:1px solid var(--line);border-radius:10px;flex-shrink:0}
@@ -851,9 +868,12 @@
         <div class="cursor-studio">
           <label class="setting-row"><strong>Enable custom cursor</strong><input id="cursorEnabled" type="checkbox"></label>
           <div data-cursor-row>
-            <label class="setting-row">Cursor style<select id="cursorPreference" aria-label="Cursor style">
-              <option value="classic">Classic arrow — custom colors</option><option value="system">System cursor</option><option value="arrow">Modern arrow</option><option value="pixel">Pixel arrow</option><option value="crosshair">Crosshair</option><option value="ring">Ring</option><option value="dot">Dot</option><option value="sparkle">Sparkle</option><option value="star">Star</option><option value="heart">Heart</option><option value="diamond">Diamond</option><option value="paw">Paw</option><option value="bolt">Lightning</option><option value="moon">Moon</option>
+            <div class="cursor-studio-heading"><strong>Choose your shape</strong><small>Click a design to preview it instantly</small></div>
+            <div class="cursor-style-gallery" id="cursorStyleGallery" role="group" aria-label="Cursor designs"></div>
+            <label class="setting-row cursor-legacy-select">Cursor style<select id="cursorPreference" aria-label="Cursor style">
+              <option value="classic">Classic arrow</option><option value="system">System cursor</option><option value="arrow">Modern arrow</option><option value="pixel">Pixel arrow</option><option value="crosshair">Crosshair</option><option value="ring">Ring</option><option value="dot">Dot</option><option value="sparkle">Sparkle</option><option value="star">Star</option><option value="heart">Heart</option><option value="diamond">Diamond</option><option value="paw">Paw</option><option value="bolt">Lightning</option><option value="moon">Moon</option>
             </select></label>
+            <label class="setting-row cursor-finish-select">Visual finish<select id="cursorFinish" aria-label="Cursor visual finish"><option value="clean">Clean · crisp</option><option value="glossy">Glossy · dimensional</option><option value="neon">Neon · luminous</option></select></label>
             <div id="cursorLivePreview" class="cursor-live-preview" role="img" aria-label="Hover here to preview the cursor"><div id="cursorPreviewIcon" aria-hidden="true"></div><div><strong>Try your cursor here</strong><small>Move your mouse into this area</small></div></div>
             <label class="setting-row">Cursor colors<select id="cursorColorMode"><option value="accent">Match accent</option><option value="custom">Choose any color</option></select></label>
             <div class="cursor-swatches">
