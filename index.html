@@ -733,6 +733,11 @@
     .sp-caught { display:grid; place-items:center; min-height:390px; color:#bac4cf; font-weight:600; }
     @media(max-width:760px) { .sp-tabs { position:static; transform:none; margin-right:auto; gap:8px; } .sp-nav { height:auto; min-height:74px; flex-wrap:wrap; padding:8px 12px; } .sp-content { width:calc(100% - 32px); margin-top:32px; gap:20px; grid-template-columns:1fr; } .sp-requests { min-height:250px; } .sp-caught { min-height:180px; } .sp-going { min-height:300px; } }
 
+  /* Personal font is local display styling; disguise covers retain their original fonts. */
+    html[data-personal-font] :is(#authView, #chatView, #profileModal, #gamesHub),
+    html[data-personal-font] :is(#authView, #chatView, #profileModal, #gamesHub) * {
+      font-family: var(--personal-font) !important;
+    }
   </style>
 </head>
 <body>
@@ -832,6 +837,7 @@
         <div class="fx-preview" data-particle-row>Click here to preview</div>
         <div class="theme-section-title">Look</div>
         <label class="setting-row">Border strength<span class="setting-check"><input id="borderStrength" type="range" min="0" max="100" step="5" value="0" aria-label="Border strength"><output id="borderStrengthOut">0%</output></span></label>
+        <label class="setting-row"><span>Font<br><small style="color:var(--muted)">Only changes your view on this browser</small></span><select id="personalFont" aria-label="Your display font"><option value="default">Discard default</option><option value="system">Arial</option><option value="serif">Georgia</option><option value="mono">Monospace</option><option value="rounded">Trebuchet</option><option value="playful">Comic Sans</option></select></label>
         <label class="setting-row">Message size<select id="fontSizePreference"><option value="small">Small</option><option value="regular">Regular</option><option value="large">Large</option></select></label>
         <label class="setting-row">Bubble shape<select id="bubblePreference"><option value="soft">Soft</option><option value="square">Square</option></select></label>
         <label class="setting-row"><span>Compact chat list</span><span class="setting-check"><input id="compactPreference" type="checkbox"></span></label>
@@ -899,7 +905,7 @@
   <script src="chem.js?v=4.1.2"></script>
   <script src="clicker.js?v=4.1.2a"></script>
   <script src="dead-zone-net.js?v=2.0.2"></script>
-  <script src="app.js?v=4.8.26"></script>
+  <script src="app.js?v=4.8.27"></script>
   <script src="garlic.js?v=4.1.2"></script>
   <script src="party-games.js?v=4.1.2"></script>
   <script src="hangman.js?v=4.1.2"></script>

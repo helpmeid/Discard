@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.26";
+const APP_VERSION = "4.8.27";
 const UPDATE_LOG = [
+  { version: "4.8.27", notes: ["Settings: choose a personal display font. Your choice stays in this browser and only changes your view; messages and other people\u2019s fonts are unchanged."] },
   { version: "4.8.26", notes: ["SmartPass cover fills the viewport and more closely matches the reference, without a return button or personal name. Date and time update live. Favicon updates reliably and ignores late unread badge callbacks while disguised. Use your configured disguise keybind to leave the cover."] },
   { version: "4.8.25", notes: ["Matched the SmartPass cover Home and Calendar icons to the reference. Disguise changes only the browser tab branding; the Discard logo and name inside the app stay unchanged."] },
   { version: "4.8.24", notes: ["SmartPass disguise now uses the supplied logo and matching tab title. Added a SmartPass home cover with Welcome, the current date, and a return button; the cover keybind follows your selected disguise."] },
@@ -477,6 +478,39 @@ function setupDisguiseKeybind() {
   }, true);
 }
 setupDisguiseKeybind();
+
+const personalFontKey = "discard-personal-font";
+const personalFonts = {
+  system: 'Arial, Helvetica, sans-serif',
+  serif: 'Georgia, "Times New Roman", serif',
+  mono: '"Courier New", Courier, monospace',
+  rounded: '"Trebuchet MS", Arial, sans-serif',
+  playful: '"Comic Sans MS", "Comic Sans", cursive'
+};
+function applyPersonalFont(value) {
+  const selected = Object.prototype.hasOwnProperty.call(personalFonts, value) ? value : "default";
+  if (selected === "default") {
+    delete document.documentElement.dataset.personalFont;
+    document.documentElement.style.removeProperty("--personal-font");
+  } else {
+    document.documentElement.dataset.personalFont = selected;
+    document.documentElement.style.setProperty("--personal-font", personalFonts[selected]);
+  }
+  const control = document.querySelector("#personalFont");
+  if (control) control.value = selected;
+  return selected;
+}
+function setupPersonalFont() {
+  let saved = "default";
+  try { saved = localStorage.getItem(personalFontKey) || "default"; } catch {}
+  applyPersonalFont(saved);
+  document.querySelector("#personalFont")?.addEventListener("change", event => {
+    const selected = applyPersonalFont(event.target.value);
+    try { localStorage.setItem(personalFontKey, selected); } catch {}
+  });
+}
+setupPersonalFont();
+
 
 function updateSmartPassDate() {
   const date = document.querySelector("#smartPassDate");
