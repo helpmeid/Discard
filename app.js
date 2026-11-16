@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.44";
+const APP_VERSION = "4.8.45";
 const UPDATE_LOG = [
+  { version: "4.8.45", notes: ["Cursor Studio redesign: redrawn cursor artwork, visually selectable gallery of 14 shapes, Clean/Glossy/Neon finishes, sharper classic and modern arrows, accurate click hotspots and updated instant preview. Existing saved cursor colors and sizes are preserved."] },
   { version: "4.8.44", notes: ["Custom Cursor Studio: colored classic arrow and system pointer options, pixel/crosshair/lightning/moon styles, 16–96px size slider with size presets, nine one-click cursor colors, real-time cursor preview and better clickable-pointer feedback."] },
   { version: "4.8.43", notes: ["Meme Tower Defense: replace emoji-only battlefield characters with original hand-drawn Canvas miniatures, individual tower and enemy silhouettes, drawn portraits in equipped units and collection, and new per-weapon animated projectiles, energy beams, explosive rings, frost bolts and sparkling impacts."] },
   { version: "4.8.42", notes: ["Meme Tower Defense: choose Endless Mode or Finish Run after beating wave 40. Endless continues with steadily stronger enemies, bosses, auto-wave support and solo round saves; revamped animated tower armor, rarity glows, enemy health bars and boss appearances."] },
