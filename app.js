@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.30";
+const APP_VERSION = "4.8.31";
 const UPDATE_LOG = [
+  { version: "4.8.31", notes: ["Added Free Draw: high-resolution canvas, smooth brushes, shapes, colors, layers, undo/redo, PNG export, and a local saved-drawings gallery."] },
   { version: "4.8.30", notes: ["Dead Zone: multiplayer zombie hitboxes now respect walls, doors, and barriers before contact damage is applied."] },
   { version: "4.8.29", notes: ["Font picker now previews every font name in its own typeface, including the selected font. Your font choice remains private to your browser."] },
   { version: "4.8.28", notes: ["Expanded personal fonts to 48 choices plus the Discard default, grouped into everyday, serif, monospace, display, and handwriting styles. Font choices still affect only your browser. Online fonts fall back to a local font when offline."] },
@@ -4279,6 +4280,7 @@ document.querySelector("#gamesToggle").addEventListener("click", () => setGamesH
 document.querySelector("#hubClose").addEventListener("click", () => setGamesHub(false));
 gamesHub.addEventListener("click", event => { if (event.target === gamesHub) setGamesHub(false); });
 document.addEventListener("keydown", event => { if (event.key === "Escape") setGamesHub(false); });
+document.querySelector("#hubPlayFreeDraw").addEventListener("click", () => { setGamesHub(false); window.openFreeDraw?.(); });
 document.querySelector("#hubPlayDeadZone").addEventListener("click", () => { setGamesHub(false); window.openDeadZone?.(); });
 document.querySelector("#hubPlayHorizon").addEventListener("click", () => {
   setGamesHub(false);
