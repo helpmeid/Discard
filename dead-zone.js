@@ -1036,12 +1036,17 @@ function flameCone(p,angle,damage){
   if(z.hp===0){addAshPile(z);w.score+=z.boss?500:10;zombieLoot(z);p.kills++;if(z.boss){for(let reward=0;reward<3;reward++)w.drops.push({id:++w.dropSerial,item:randomLoot(Math.max(10,w.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});w.notice='BOSS DEFEATED · BONUS LOOT!';}}
  }
 }
-// Ash remains after an infected is killed by direct flame or burn damage.
+// Burnt corpses fade after 16 seconds; bound both rendering and network payloads.
+const ASH_LIFETIME=16,ASH_CAP=32;
+function pruneAshPiles(w){if(!w)return;const now=Number(w.time)||0;
+ w.ashPiles=(Array.isArray(w.ashPiles)?w.ashPiles:[]).filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.createdAt)&&now-p.createdAt<ASH_LIFETIME&&now-p.createdAt>=-2).slice(-ASH_CAP);
+}
+ // Ash remains after an infected is killed by direct flame or burn damage.
 function addAshPile(z){
  const w=world;if(!z||z.ashCreated||!w)return;
  z.ashCreated=true;w.ashPiles=w.ashPiles||[];
  w.ashPiles.push({x:Math.round(z.x),y:Math.round(z.y),size:z.boss?38:19,seed:Math.random()*1000,createdAt:w.time||0});
- if(w.ashPiles.length>110)w.ashPiles.splice(0,w.ashPiles.length-110);
+ pruneAshPiles(w);
 }
 function igniteZombie(z,owner){if(!z||z.hp<=0)return;z.burnTime=Math.max(Number(z.burnTime)||0,4.5);z.burnTick=Number.isFinite(z.burnTick)?z.burnTick:0;z.burnOwner=owner;}
 function burnZombies(dt){for(const z of world.zombies){if(z.hp<=0||!(z.burnTime>0))continue;z.burnTime=Math.max(0,z.burnTime-dt);z.burnTick=(z.burnTick||0)+dt;while(z.burnTick>=.25&&z.hp>0){z.burnTick-=.25;const damage=z.boss?8:6;z.hp=Math.max(0,z.hp-damage);z.hit=Math.max(z.hit||0,.06);if(z.hp<=0){addAshPile(z);world.score+=z.boss?500:10;zombieLoot(z);const owner=world.players.find(p=>p.id===z.burnOwner);if(owner)owner.kills++;if(z.boss){for(let reward=0;reward<3;reward++)world.drops.push({id:++world.dropSerial,item:randomLoot(Math.max(10,world.wave)),x:z.x+(reward%2?25:-25),y:z.y+(reward>1?20:-20)});world.notice='BOSS DEFEATED · BONUS LOOT!';}world.effects.push({id:++world.eventSerial,x:z.x,y:z.y,vx:0,vy:0,color:'#ff9a36',life:.4,max:.4,size:12});}}}}
@@ -1184,6 +1189,7 @@ function tick(dt){
  const wasEnded=!!world.ended;
  tickSimulation(dt);
  if(!world)return;
+ pruneAshPiles(world);
  const newlyDead=world.players.some(p=>p.hp<=0&&previousAlive.has(p.id));
  if(newlyDead&&world.players.length&&world.players.every(p=>p.hp<=0)){world.ended=true;world.won=false;}
  if(newlyDead||(!wasEnded&&world.ended&&!world.won)){
@@ -1719,7 +1725,7 @@ function receiveMetadata(d){
   if(Array.isArray(data.players))for(const value of data.players){const p=world.players.find(p=>p.id===value.id);if(p)for(const k of inventoryFields)if(value[k]!==undefined)p[k]=value[k];}
   if(Array.isArray(data.doors)&&data.doors.length===world.houses.length)world.houses.forEach((h,i)=>{[h.doorOpen,h.doorHp,h.boards,h.doorMaxHp]=data.doors[i];});
   if(Array.isArray(data.chests))world.chests.forEach((c,i)=>c.opened=!!data.chests[i]);
-  if(Array.isArray(data.drops))world.drops=data.drops;if(Array.isArray(data.ashPiles))world.ashPiles=data.ashPiles;if(Array.isArray(data.barriers)){world.barriers=data.barriers;world.barrierRevision=(world.barrierRevision||0)+1;}
+  if(Array.isArray(data.drops))world.drops=data.drops;if(Array.isArray(data.ashPiles)){world.ashPiles=data.ashPiles;pruneAshPiles(world);}if(Array.isArray(data.barriers)){world.barriers=data.barriers;world.barrierRevision=(world.barrierRevision||0)+1;}
  }
  if(Array.isArray(d.blood)){const ids=new Set(world.blood.map(b=>b.netId));for(const b of d.blood)if(!ids.has(b.netId)){world.blood.push(b);ids.add(b.netId);}if(world.blood.length>160)world.blood.splice(0,world.blood.length-160);}
  if(shopOpen)showShop();if(rouletteOpen)showRoulette();if(inventoryOpen){const p=world.players.find(p=>p.id===who()),signature=JSON.stringify(p&&inventoryFields.map(k=>p[k]));if(signature!==lastInventorySignature){lastInventorySignature=signature;showInventory();}}if(verityOpen)showVerityInventory();if(cyberOpen)showCyberware();
