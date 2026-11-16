@@ -1,6 +1,30 @@
 (function MemeTowerDefense(){
 "use strict";
-const PATH=[[0,270],[125,270],[125,90],[315,90],[315,430],[515,430],[515,180],[705,180],[705,350],[900,350]];
+const MAPS={
+ city:{name:"Brainrot City",emoji:"🌆",path:[[0,270],[125,270],[125,90],[315,90],[315,430],[515,430],[515,180],[705,180],[705,350],[900,350]],theme:["#294d63","#315b53","#25485a"]},
+ subway:{name:"Subway 67",emoji:"🚇",path:[[0,270],[170,270],[170,95],[450,95],[450,460],[715,460],[715,180],[900,180]],theme:["#38374d","#474257","#253b55"]},
+ desert:{name:"Sahur Desert",emoji:"🏜️",path:[[0,160],[220,160],[220,410],[425,410],[425,150],[630,150],[630,380],[900,380]],theme:["#76543f","#9b7753","#4e5145"]},
+ mall:{name:"Rizz Mall",emoji:"🛍️",path:[[0,360],[160,360],[160,170],[365,170],[365,370],[585,370],[585,125],[785,125],[785,360],[900,360]],theme:["#444272","#435e79","#2d486a"]},
+ void:{name:"Aura Void",emoji:"🌌",path:[[0,270],[145,270],[145,445],[340,445],[340,135],[575,135],[575,405],[760,405],[760,230],[900,230]],theme:["#25264c","#43336e","#1c3a56"]}
+};
+let PATH=MAPS.city.path;
+function applyMap(map){const key=Object.hasOwn(MAPS,map)?map:"city";PATH=MAPS[key].path;mapCache=null;return key}
+const STARTERS=["67","tung","shark"];
+const RARITY={67:"starter",tung:"starter",shark:"starter",coffee:"common",croc:"rare",pat:"rare",banana:"epic",sigma:"epic",verity:"mythic",capy:"common",bomb:"rare",cheese:"common",chill:"rare",frog:"epic",noob:"common",doge:"rare",skibidi:"epic",cat:"common",galaxy:"legendary",ghost:"epic",tral:"legendary",laser:"legendary",npc:"common",sigma2:"mythic",duck:"rare"};
+const RARITY_COLOR={starter:"#9bacbb",common:"#91e8b6",rare:"#7aaaff",epic:"#c999ff",legendary:"#ffca72",mythic:"#ff8fc2"};
+const PROFILE_KEY="discard-mtd-profile-v2";
+let profile=null,menuTab="play",selectedCrate="standard",lastMenuSignature="",lastSelectionId=null;
+function profileData(){if(profile)return profile;try{profile=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null")}catch{};if(!profile||!Array.isArray(profile.unlocked))profile={coins:900,unlocked:[...STARTERS],crates:0,duplicates:0};profile.coins=Math.max(0,Number(profile.coins)||0);profile.unlocked=[...new Set([...STARTERS,...profile.unlocked.filter(x=>typeof x==="string")])];return profile}
+function saveProfile(){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(profileData()))}catch{}}
+function owned(unit){return profileData().unlocked.includes(unit)}
+function grantCoins(amount){const p=profileData();p.coins+=Math.max(0,Math.floor(amount));saveProfile()}
+function allCrates(){return [{id:"standard",name:"Meme Crate",cost:250,weights:{common:64,rare:28,epic:7,legendary:1}},{id:"premium",name:"Legend Crate",cost:950,weights:{rare:45,epic:38,legendary:15,mythic:2}},{id:"mythic",name:"Aura Crate",cost:2500,weights:{epic:52,legendary:37,mythic:11}}]}
+function openCrate(id){const p=profileData(),crate=allCrates().find(x=>x.id===id);if(!crate)return;if(p.coins<crate.cost){notify("Need "+(crate.cost-p.coins)+" more coins!");return}p.coins-=crate.cost;p.crates++;const rarityRoll=Math.random()*100;let rarity="common",cumulative=0;for(const [tier,chance] of Object.entries(crate.weights)){cumulative+=chance;if(rarityRoll<cumulative){rarity=tier;break}}
+let pool=UNITS.filter(u=>RARITY[u[0]]===rarity),unit=pool[Math.floor(Math.random()*pool.length)];if(!unit){unit=UNITS.find(u=>!owned(u[0]));rarity=RARITY[unit?.[0]]||"common"}if(!unit){p.coins+=Math.round(crate.cost*.5);saveProfile();renderMenu(true);return}
+const duplicate=owned(unit[0]);if(duplicate){const refund=Math.floor(crate.cost*.4);p.coins+=refund;p.duplicates++;notify("Duplicate "+unit[1]+" · +"+refund+" coins")}else{p.unlocked.push(unit[0]);notify("UNLOCKED "+unit[1]+"!")}
+saveProfile();$("#mtdCrateResult").textContent=(duplicate?"DUPLICATE · ":"NEW UNIT · ")+unit[2]+" "+unit[1]+" ["+rarity.toUpperCase()+"]";renderMenu(true);renderUnits()}
+function waveReward(w){if(!game)return;const rate={easy:.75,normal:1,hard:1.5,impossible:2}[game.difficulty]||1;const amount=Math.round((42+w*8)*rate);const key="discard-mtd-reward-"+(game.runId||game.code)+"-"+w;try{if(localStorage.getItem(key))return;localStorage.setItem(key,"1")}catch{}grantCoins(amount);notify("WAVE "+w+" CLEARED! +"+amount+" crate coins");renderMenu(true)}
+function setRoomMap(map){if(game&&host())return;applyMap(map)}
 const UNITS=[
 ["67","67 Kid","🙌",160,16,125,.48,"#ffd47b"],
 ["tung","Tung Tung Sahur","🪵",270,50,95,1.1,"#d8ad87"],
@@ -10,8 +34,24 @@ const UNITS=[
 ["pat","Brr Brr Patapim","🌳",920,82,157,.78,"#b8ef83"],
 ["banana","Chimpanzini Bananini","🍌",1100,132,170,1.05,"#fae48d"],
 ["sigma","Sigma Rizz","🗿",1430,85,205,.29,"#7bdce9"],
-["verity","VARITY","🤖",1750,180,260,.6,"#b3a4ff"]];
-const BADS=[["😐",65,54,14],["💈",135,72,20],["🙌",200,97,28],["🌀",370,65,43],["👴",720,50,65],["🍗",1060,70,95],["🗿",1680,42,135],["💀",2400,60,200]];
+["verity","VARITY","🤖",1750,180,260,.6,"#b3a4ff"],
+["capy","Chill Capybara","🦫",220,21,135,.62,"#addeb2"],
+["bomb","Bomboclat Bomber","💣",810,110,180,1.45,"#f2a3a3"],
+["cheese","Cheese Tax","🧀",340,27,120,.5,"#f3da79"],
+["chill","Just a Chill Guy","😎",690,55,180,.72,"#71cba9"],
+["frog","Frog of Wisdom","🐸",1250,92,205,.58,"#8bec95"],
+["noob","Noob Army","🟨",270,25,150,.49,"#f4ec83"],
+["doge","Doge Coin","🐕",780,58,168,.51,"#eeb96c"],
+["skibidi","Skibidi Speaker","🚽",1320,117,205,.95,"#b2dfff"],
+["cat","Oiiaio Cat","🐈",430,24,165,.36,"#ffb8a0"],
+["galaxy","Galaxy Brain","🧠",1950,208,235,.83,"#c9b5ff"],
+["ghost","Hawk Tuah Ghost","👻",1120,87,185,.48,"#b6deff"],
+["tral","Tralalero King","👑",2200,238,245,1.1,"#f5d279"],
+["laser","Aura Laser","🔮",2400,157,285,.39,"#a8a6ff"],
+["npc","NPC Stream","📱",490,40,130,.55,"#b9e0ff"],
+["sigma2","Final Sigma","🗿",2950,310,260,.82,"#ff9ec6"],
+["duck","Giga Duck","🦆",800,75,184,.75,"#fee08d"]];
+const BADS=[["😐",65,54,14],["💈",135,72,20],["🙌",200,97,28],["🌀",370,65,43],["👴",720,50,65],["🍗",1060,70,95],["🗿",1680,42,135],["💀",2400,60,200],["🚽",2950,72,205],["🦆",3250,87,245],["🐸",3850,53,300],["🦫",4200,47,335],["🧀",4850,63,390],["😎",5600,100,430],["🐈",6600,93,485],["📱",7250,75,520],["🪨",8600,42,650],["👑",9500,48,690],["🎭",11200,79,820],["🤖",16000,45,980]];
 let root,canvas,ctx,game=null,offers=new Map(),selected="67",picked=null,raf=0,last=0,networkAt=0,joinTime=0,alertText="",lastUI=0,joinRetryAt=0,hostOfferAt=0,gameClock=0,selectedTarget="first",hover=null,particles=[],screenShake=0,joinRetry=0,localStart=0,playClock=0,backgroundCanvas=null;
 const PLAYTIME_KEY="discard-meme-td-seconds";
 function secondsPlayed(){let stored=0;try{stored=Number(localStorage.getItem(PLAYTIME_KEY))||0}catch{}return stored+(localStart?(Date.now()-localStart)/1000:0)}
