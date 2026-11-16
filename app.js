@@ -213,8 +213,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.42";
+const APP_VERSION = "4.8.43";
 const UPDATE_LOG = [
+  { version: "4.8.43", notes: ["Meme Tower Defense: replace emoji-only battlefield characters with original hand-drawn Canvas miniatures, individual tower and enemy silhouettes, drawn portraits in equipped units and collection, and new per-weapon animated projectiles, energy beams, explosive rings, frost bolts and sparkling impacts."] },
   { version: "4.8.42", notes: ["Meme Tower Defense: choose Endless Mode or Finish Run after beating wave 40. Endless continues with steadily stronger enemies, bosses, auto-wave support and solo round saves; revamped animated tower armor, rarity glows, enemy health bars and boss appearances."] },
   { version: "4.8.41", notes: ["Meme Tower Defense: both Leave and Exit now say Back to Games Menu, and both return directly to the Discard games menu while preserving eligible solo saves."] },
   { version: "4.8.40", notes: ["Meme Tower Defense: move wave controls below team chat, add seven progression-gated crate tiers and reduced early rewards, enforce shared tower placement caps by rarity, add 12 towers, 10 enemy varieties and 2 maps, rebalance late waves, and show multiplayer placement-limit warnings."] },
