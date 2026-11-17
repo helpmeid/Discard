@@ -2118,7 +2118,7 @@
       return [name, button];
     });
     refs.spin = make("div", "vf-spin");
-    const closeButton = make("button", "vf-btn", "← Back to Games");
+    const closeButton = make("button", "vf-btn", "✕ Close Tab");
     closeButton.type = "button";
     closeButton.addEventListener("click", close);
     const makeTransferButton = (label, title, run) => {
