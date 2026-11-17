@@ -11,6 +11,7 @@
   ];
   const byId = Object.fromEntries(games.map(g => [g[0],g]));
   const tabs = ["discard"];
+  let unreadCount=0;
   let active = "discard";
   const storageKey = "discard-browser-workspace-v2";
   const settingsKey = "discard-browser-preferences-v1";
@@ -43,6 +44,9 @@
   #discardBrowser .db-tab-icon{flex:none;width:17px;height:17px;display:grid;place-items:center;font-size:15px}
   #discardBrowser .db-tab-icon img{width:17px;height:17px;object-fit:contain;border-radius:4px}
   #discardBrowser .db-title{overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left;font-size:12px}
+  #discardBrowser .db-unread{display:none;flex:none;min-width:18px;height:18px;line-height:18px;padding:0 5px;border-radius:10px;background:#e32a46;color:#fff;text-align:center;font-size:10px;font-weight:750}
+  #discardBrowser .db-unread[data-show="true"]{display:block}
+  #discardBrowser .db-tab[data-has-unread="true"]{font-weight:700}
   #discardBrowser .db-close{border:0;background:transparent;color:inherit;border-radius:5px;width:22px;height:22px;flex:none;font-size:17px;line-height:1}
   #discardBrowser .db-close:hover{background:#9eb1c54d}
   #discardBrowser .db-new{height:29px;width:29px;align-self:center;margin-bottom:2px;border:0;border-radius:7px;background:transparent;color:#405570;font-size:22px}
@@ -178,6 +182,14 @@
       if(data)icon.textContent=data[2];else{const favicon=document.createElement("img");favicon.src="discard-icon.png";favicon.alt="";icon.append(favicon);}
       const name=document.createElement("span");name.className="db-title";name.textContent=data?data[1]:"Discard";
       tab.append(icon,name);
+      if(id==="discard"){
+        const badge=document.createElement("span");badge.className="db-unread";
+        badge.dataset.show=String(unreadCount>0&&active!=="discard");
+        badge.textContent=unreadCount>99?"99+":String(unreadCount);
+        badge.setAttribute("aria-label",unreadCount+" unread messages");
+        tab.dataset.hasUnread=String(unreadCount>0&&active!=="discard");
+        tab.append(badge);
+      }
       tab.addEventListener("click",()=>activate(id));
       if (id!=="discard") {
         const close=document.createElement("button");
@@ -276,6 +288,15 @@
       e.preventDefault();activate("discard");
     }
   });
+  window.addEventListener("discard:unread-change",event=>{
+    const next=Math.max(0,Math.floor(Number(event.detail?.count)||0));
+    if(next===unreadCount)return;
+    unreadCount=next;
+    render();
+  });
+  bar.addEventListener("keydown",event=>{
+    if(event.target?.matches?.("input,textarea,select") || event.target?.isContentEditable)event.stopPropagation();
+  },true);
   const chat=document.getElementById("chatView");
   if(chat)new MutationObserver(render).observe(chat,{attributes:true,attributeFilter:["class"]});
   for(const game of games){
@@ -288,6 +309,6 @@
     }).observe(el,{attributes:true,attributeFilter:["class","hidden","style"]});
   }
   // A chat invite can open a game without clicking the Games hub.
-  window.discardBrowserTabs={open:openGame,activate,close:closeTab};
+  window.discardBrowserTabs={open:openGame,activate,close:closeTab,activeTab:()=>active};
   render();
 })();
