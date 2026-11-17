@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.66";
+const APP_VERSION = "4.8.67";
 const UPDATE_LOG = [
+  { version: "4.8.67", notes: ["Fixed nested Block Blast viewport clipping so game menus and play screens scroll within their tab, including fake fullscreen, without scrolling the entire Discard browser."] },
   { version: "4.8.66", notes: ["Tab hover previews now use stable cards with real canvas thumbnails where supported instead of broken cloned UI. Message notifications return to the Discard tab when clicked."] },
   { version: "4.8.65", notes: ["Clicking an in-app message notification or desktop notification switches back to the Discard tab; in-app notifications continue opening the relevant conversation."] },
   { version: "4.8.64", notes: ["Keep the outer Discard page fixed while allowing Block Blast and other game tabs to scroll vertically, including in fake fullscreen mode."] },
