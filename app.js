@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.47";
+const APP_VERSION = "4.8.48";
 const UPDATE_LOG = [
+  { version: "4.8.48", notes: ["Block Blast overhaul: drag-and-drop blocks, particle effects, combo celebrations, crown best score, main menu, 1v1 and shared 10x10 multiplayer, host/join flow, optional match chat, and automatic return to menu after losing."] },
   { version: "4.8.47", notes: ["Added Block Blast: solo puzzle mode and 1v1 friend battles with five-letter room codes, live scores, and a two-minute timer."] },
   { version: "4.8.46", notes: ["Dead Zone: mythic copies of the already-active type can now drop or be forged and merge to level 5 without counting higher levels as extra mythics. Fixed Mantis Blades melee strikes being canceled before damage."] },
   { version: "4.8.45", notes: ["Cursor Studio redesign: redrawn cursor artwork, visually selectable gallery of 14 shapes, Clean/Glossy/Neon finishes, sharper classic and modern arrows, accurate click hotspots and updated instant preview. Existing saved cursor colors and sizes are preserved."] },
