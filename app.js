@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.62";
+const APP_VERSION = "4.8.63";
 const UPDATE_LOG = [
+  { version: "4.8.63", notes: ["Hover a Discard or game tab for a visual preview. Fake-browser fullscreen now fills the page with the currently selected tab, including individual games, and displays an exit control above the game."] },
   { version: "4.8.62", notes: ["Lock outer Discard page scrolling while keeping chats internally scrollable, replace real-browser fullscreen with an in-app fullscreen mode, and repair fullscreen settings button text and layout."] },
   { version: "4.8.61", notes: ["Unread message count now appears as a red badge on the permanent Discard tab while gaming. Messages remain unread until Discard is viewed, with better keyboard isolation in the browser address field."] },
   { version: "4.8.60", notes: ["Browser tabs now persist after refresh, reopen the previously selected game, and offer Edge-style Light/Dark/System appearance plus fullscreen settings; removed Back and Forward controls. Game exit buttons now say Close Tab."] },
