@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.50";
+const APP_VERSION = "4.8.51";
 const UPDATE_LOG = [
+  { version: "4.8.51", notes: ["Block Blast drag fix: quick tap toggles selection, holding or dragging never leaves pieces selected after an invalid drop, grid snapping improved, and 1x1 pieces appear more often."] },
   { version: "4.8.50", notes: ["Block Blast: removed the 3-across, 2-down T piece and fitted the full-screen main menu to the viewport to avoid scrolling."] },
   { version: "4.8.49", notes: ["Block Blast: send room codes directly to a friend’s chat, smoother touch/mouse dragging, classic block piece library, upgraded full-screen menus and gameplay layouts. Removed bottom tagline."] },
   { version: "4.8.48", notes: ["Block Blast overhaul: drag-and-drop blocks, particle effects, combo celebrations, crown best score, main menu, 1v1 and shared 10x10 multiplayer, host/join flow, optional match chat, and automatic return to menu after losing."] },
