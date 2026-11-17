@@ -1688,7 +1688,7 @@ function showMessageNotification(chat, from, text, image, file) {
   if (document.hidden && "Notification" in window && Notification.permission === "granted") {
     try {
       const popup = new Notification(title, { body, tag: chat.id, icon: BRAND_IMAGE });
-      popup.onclick = () => { window.focus(); popup.close(); };
+      popup.onclick = () => { window.focus(); window.discardBrowserTabs?.activate?.("discard"); popup.close(); };
     } catch {}
   }
 }
@@ -1720,6 +1720,7 @@ function showToast(title, body, chatId, name, avatarUrl) {
   toast.append(avatar, text);
   const dismiss = () => toast.remove();
   toast.addEventListener("click", async () => {
+    window.discardBrowserTabs?.activate?.("discard");
     dismiss();
     if (!state.chats.some(chat => chat.id === chatId)) return;
     activeChatId = chatId;
