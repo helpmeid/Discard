@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.56";
+const APP_VERSION = "4.8.57";
 const UPDATE_LOG = [
+  { version: "4.8.57", notes: ["Block Blast: endless multiplayer with no timer and shared 8x8 co-op board. Added Tetris with keyboard/touch controls, hold, levels, high scores and saved playtime."] },
   { version: "4.8.56", notes: ["Fixed Block Blast multiplayer matches ending seconds after starting: 1v1 and co-op now receive the full two-minute round timer."] },
   { version: "4.8.55", notes: ["Block Blast: total active playtime now saves by account and shows in the Games hub, Block Blast menu and gameplay."] },
   { version: "4.8.54", notes: ["Block Blast: removed all sounds and added a prominent combo tracker with eight multiplier segments and safe-move reminders."] },
@@ -1665,7 +1666,7 @@ document.addEventListener("visibilitychange", () => sendReadReceipts(state?.chat
 function showMessageNotification(chat, from, text, image, file) {
   if (from === state.me.id || !state.me.preferences?.notifications) return;
   if (isMuted(chat.id) || isMuted(from)) return;
-  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot", "#oakRoot", "#deadZoneRoot"].some(selector => {
+  const gameOpen = ["#gamesHub", "#gameModal", "#partyGameModal", "#unoModal", "#hangModal", "#vfRoot", "#oakRoot", "#deadZoneRoot", "#bbRoot", "#tetRoot"].some(selector => {
     const panel = document.querySelector(selector);
     return panel && !panel.classList.contains("hidden");
   });
@@ -4399,6 +4400,7 @@ window.bbNetwork={
 };
 window.mtdNetwork={get id(){return state?.me?.id||null},get friends(){return Object.keys(state?.friends||{})},send:(to,data)=>{connectTo(to);return sendTo(to,data)}};
 document.querySelector("#hubPlayBlockBlast").addEventListener("click",()=>{setGamesHub(false);window.openBlockBlast?.()});
+document.querySelector("#hubPlayTetris").addEventListener("click",()=>{setGamesHub(false);window.openTetris?.()});
 document.querySelector("#hubPlayMemeTD").addEventListener("click",()=>{setGamesHub(false);window.openMemeTowerDefense?.()});
 document.querySelector("#hubPlayFreeDraw").addEventListener("click", () => { setGamesHub(false); window.openFreeDraw?.(); });
 document.querySelector("#hubPlayDeadZone").addEventListener("click", () => { setGamesHub(false); window.openDeadZone?.(); });
