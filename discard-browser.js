@@ -12,7 +12,22 @@
   const byId = Object.fromEntries(games.map(g => [g[0],g]));
   const tabs = ["discard"];
   let active = "discard";
-  let lastGame = null;
+  const storageKey = "discard-browser-workspace-v2";
+  const settingsKey = "discard-browser-preferences-v1";
+  let browserTheme = "light";
+  try {const saved=JSON.parse(localStorage.getItem(settingsKey)||"{}");if(["light","dark","system"].includes(saved.theme))browserTheme=saved.theme;}catch{}
+  try {
+    const saved=JSON.parse(localStorage.getItem(storageKey)||"{}");
+    if(Array.isArray(saved.tabs)) {
+      for(const id of saved.tabs) if(byId[id]&&!tabs.includes(id))tabs.push(id);
+    }
+    if(saved.active==="discard"||tabs.includes(saved.active))active=saved.active||"discard";
+  } catch {}
+  let restoring = false;
+  let restoreAttempted = false;
+  const saveWorkspace = () => {try{localStorage.setItem(storageKey,JSON.stringify({tabs,active}));}catch{}};
+  const saveSettings = () => {try{localStorage.setItem(settingsKey,JSON.stringify({theme:browserTheme}));}catch{}};
+
   const style = document.createElement("style");
   style.textContent = `
   #discardBrowser{position:fixed;inset:0 0 auto;height:88px;z-index:2147483000;display:flex;flex-direction:column;background:#e7edf5;color:#253246;font:500 12px "Segoe UI",system-ui,sans-serif;box-shadow:0 2px 9px #14233b24;user-select:none;isolation:isolate}
@@ -42,6 +57,29 @@
   #discardBrowser .db-lock{color:#6b8099;font-size:13px;flex:none}
   #discardBrowser .db-address{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#32445b;font:400 12px "Segoe UI",system-ui,sans-serif}
   #discardBrowser .db-more{font-weight:700}
+  #discardBrowser[data-browser-theme="dark"]{background:#21252d;color:#f3f6fb}
+  #discardBrowser[data-browser-theme="dark"] .db-topline{background:#292e38}
+  #discardBrowser[data-browser-theme="dark"] .db-tab{background:#383f4b;color:#d0d8e5}
+  #discardBrowser[data-browser-theme="dark"] .db-tab:hover{background:#454f5c}
+  #discardBrowser[data-browser-theme="dark"] .db-tab[aria-selected=true]{background:#414956;color:#fff}
+  #discardBrowser[data-browser-theme="dark"] .db-toolbar{background:#414956;border-color:#303842}
+  #discardBrowser[data-browser-theme="dark"] :is(.db-tool,.db-new){color:#e3eaf3}
+  #discardBrowser[data-browser-theme="dark"] :is(.db-tool,.db-new):hover{background:#535e70}
+  #discardBrowser[data-browser-theme="dark"] .db-address-wrap{background:#2d3540;border-color:#596779}
+  #discardBrowser[data-browser-theme="dark"] .db-address{color:#e9f1fb}
+  #discardBrowser[data-browser-theme="dark"] .db-lock{color:#c2d2e8}
+  #discardBrowser[data-browser-theme="dark"] .db-window-title{color:#b8c5d6}
+  #discardBrowser .db-settings{position:absolute;z-index:10;right:10px;top:84px;min-width:260px;padding:13px;border:1px solid #d7e0ec;border-radius:12px;background:#fff;color:#26364c;box-shadow:0 16px 42px #0003;font:13px "Segoe UI",system-ui,sans-serif}
+  #discardBrowser .db-settings[hidden]{display:none!important}
+  #discardBrowser .db-settings h3{margin:3px 4px 12px;font-size:15px}
+  #discardBrowser .db-settings label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:9px 4px}
+  #discardBrowser .db-settings select{padding:7px 8px;border:1px solid #cbd6e5;border-radius:7px;background:#f7f9fc;color:#26364c}
+  #discardBrowser .db-settings button{width:100%;margin-top:8px;padding:9px;border:0;border-radius:8px;background:#e8f0fc;color:#174b8c;text-align:left}
+  #discardBrowser .db-settings button:hover{background:#d5e6fa}
+  #discardBrowser[data-browser-theme="dark"] .db-settings{background:#343d49;border-color:#586474;color:#f4f7fa}
+  #discardBrowser[data-browser-theme="dark"] .db-settings select{background:#242b34;color:#f4f7fa;border-color:#6e7a8b}
+  #discardBrowser[data-browser-theme="dark"] .db-settings button{background:#475668;color:#f6f9fc}
+
   body.db-ready #chatView:not(.hidden){height:calc(100dvh - 88px)!important;margin-top:88px}
   body.db-ready #gamesHub:not(.hidden){top:88px!important;height:calc(100dvh - 88px)!important}
   body.db-ready .db-away{display:none!important}
@@ -71,9 +109,6 @@
   const windowTitle=document.createElement("span");windowTitle.className="db-window-title";windowTitle.textContent="Discard";
   topLine.append(strip,newTab,windowTitle);
   const toolbar=document.createElement("div");toolbar.className="db-toolbar";
-  let history=["discard"], historyPosition=0;
-  const back=tool("Back","‹",()=>navigateHistory(-1));
-  const forward=tool("Forward","›",()=>navigateHistory(1));
   const reload=tool("Reload Discard","↻",()=>window.location.reload());
   const home=tool("Games","⌂",openHub);
   const addressWrap=document.createElement("div");addressWrap.className="db-address-wrap";
@@ -82,8 +117,37 @@
   location.className="db-address";location.setAttribute("aria-label","Discard address");
   location.autocomplete="off";location.spellcheck=false;
   location.placeholder="Search tabs or enter Discard location";
-  const more=tool("Return to Discard","⋯",()=>activate("discard"));
+  const more=tool("Browser settings","⋯",()=>{settingsPanel.hidden=!settingsPanel.hidden;});
   more.classList.add("db-more");
+  const settingsPanel=document.createElement("section");settingsPanel.className="db-settings";settingsPanel.hidden=true;
+  settingsPanel.setAttribute("aria-label","Browser settings");
+  const settingsTitle=document.createElement("h3");settingsTitle.textContent="Browser settings";
+  const themeLabel=document.createElement("label");themeLabel.textContent="Appearance";
+  const themeSelect=document.createElement("select");themeSelect.setAttribute("aria-label","Browser appearance");
+  [["system","Use system"],["light","Light"],["dark","Dark"]].forEach(([value,label])=>{
+    const option=document.createElement("option");option.value=value;option.textContent=label;themeSelect.append(option);
+  });
+  themeSelect.value=browserTheme;
+  const updateTheme=()=>{
+    const dark=browserTheme==="dark"||(browserTheme==="system"&&window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+    bar.dataset.browserTheme=dark?"dark":"light";
+  };
+  themeSelect.addEventListener("change",()=>{browserTheme=themeSelect.value;saveSettings();updateTheme();});
+  window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change",updateTheme);
+  themeLabel.append(themeSelect);
+  const fullscreen=tool("Toggle fullscreen","⛶  Enter fullscreen",async()=>{
+    try{
+      if(document.fullscreenElement)await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    }catch{fullscreen.textContent="Fullscreen unavailable in this browser";}
+  });
+  const refreshFullscreen=()=>{fullscreen.textContent=document.fullscreenElement?"⛶  Exit fullscreen":"⛶  Enter fullscreen";};
+  document.addEventListener("fullscreenchange",refreshFullscreen);
+  settingsPanel.append(settingsTitle,themeLabel,fullscreen);
+  updateTheme();
+  document.addEventListener("pointerdown",event=>{
+    if(!settingsPanel.hidden&&!settingsPanel.contains(event.target)&&event.target!==more)settingsPanel.hidden=true;
+  });
   location.addEventListener("keydown",event=>{
     if(event.key==="Escape"){location.blur();render();}
     if(event.key!=="Enter")return;
@@ -98,8 +162,8 @@
     location.blur();
   });
   addressWrap.append(lock,location);
-  toolbar.append(back,forward,reload,home,addressWrap,more);
-  bar.append(topLine,toolbar);
+  toolbar.append(reload,home,addressWrap,more);
+  bar.append(topLine,toolbar,settingsPanel);
   document.body.append(bar);
   function root(game) {return document.getElementById(byId[game]?.[4]);}
   function visible(el) {return !!el && !el.classList.contains("hidden") && !el.hasAttribute("hidden") && el.style.display!=="none";}
@@ -125,26 +189,36 @@
       strip.append(tab);
     }
     location.value=active==="discard"?"discard://chats":"discard://games/"+active;
-    back.disabled=historyPosition<=0;forward.disabled=historyPosition>=history.length-1;
     for (const game of games) root(game[0])?.classList.toggle("db-away",game[0]!==active);
     // The browser bar is above game canvases and available even in full-screen game menus.
     const signedIn = visible(document.getElementById("chatView"));
     bar.hidden=!signedIn;
     document.body.classList.toggle("db-ready",signedIn);
+    if(signedIn && !restoreAttempted){
+      restoreAttempted=true;
+      setTimeout(restoreActiveGame,350);
+    }
   }
-  function navigateHistory(direction){
-    const pos=historyPosition+direction;
-    if(pos<0||pos>=history.length)return;
-    historyPosition=pos;activate(history[pos],false);
-  }
-  function activate(id,record=true) {
+  function activate(id) {
     if (id!=="discard"&&!tabs.includes(id)) return;
     active=id;
-    if(record && history[historyPosition]!==id){history=history.slice(0,historyPosition+1);history.push(id);historyPosition=history.length-1;}
-    if(id!=="discard")lastGame=id;
+    saveWorkspace();
     document.getElementById("gamesHub")?.classList.add("hidden");
     render();
+    if(id!=="discard")setTimeout(restoreActiveGame,0);
     window.dispatchEvent(new Event("resize"));
+  }
+  function restoreActiveGame(){
+    if(restoring||active==="discard"||!tabs.includes(active))return;
+    const game=byId[active];
+    if(!game||visible(root(active)))return;
+    const launcher=document.getElementById(game[3]);
+    if(!launcher){restoreAttempted=false;return;}
+    restoring=true;
+    // Reopen the selected game's screen after refresh; other saved tabs remain
+    // available and are loaded only when selected, avoiding multiple game sessions.
+    launcher.click();
+    setTimeout(()=>{restoring=false;},200);
   }
   function openGame(id) {
     if(!byId[id])return;
@@ -155,9 +229,7 @@
     if(id==="discard")return;
     const i=tabs.indexOf(id);if(i<0)return;
     tabs.splice(i,1);
-    history=history.filter(entry=>entry!==id);
-    if(!history.length)history=["discard"];
-    historyPosition=Math.min(historyPosition,history.length-1);
+    saveWorkspace();
     // Releasing an existing in-app game uses its own Leave/Back action where available.
     // The root is kept mounted until the game handles its own cleanup, so save/session
     // behavior is not silently reset by destroying its DOM.
