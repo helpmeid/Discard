@@ -40,6 +40,15 @@
   #discardBrowser .db-tabstrip::-webkit-scrollbar{display:none}
   #discardBrowser .db-tab{position:relative;display:flex;align-items:center;gap:8px;flex:0 0 176px;max-width:205px;min-width:92px;height:34px;padding:0 9px 0 12px;border:0;border-radius:9px 9px 0 0;background:#d2dce9;color:#485b70;white-space:nowrap;transition:background .14s}
   #discardBrowser .db-tab:hover{background:#eaf0f8}
+  #dbTabPreview{position:fixed;z-index:2147483002;width:320px;padding:8px;border:1px solid #bfd0e1;border-radius:12px;background:#f8fbff;color:#28374b;box-shadow:0 12px 36px #07162b55;font:12px "Segoe UI",system-ui,sans-serif;pointer-events:none}
+  #dbTabPreview[hidden]{display:none!important}
+  #dbTabPreview .db-preview-title{font-weight:700;padding:3px 4px 8px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+  #dbTabPreview .db-preview-window{position:relative;width:302px;height:188px;overflow:hidden;border:1px solid #cbd8e7;border-radius:7px;background:#fff;isolation:isolate}
+  #dbTabPreview .db-preview-stage{position:absolute;left:0;top:0;width:960px;height:600px;transform:scale(.3145833);transform-origin:top left;overflow:hidden;pointer-events:none}
+  #dbTabPreview .db-preview-stage>*{position:relative!important;inset:auto!important;top:0!important;left:0!important;display:block!important;visibility:visible!important;width:960px!important;height:600px!important;max-width:none!important;max-height:none!important;margin:0!important;overflow:hidden!important;transform:none!important;opacity:1!important}
+  #dbTabPreview .db-preview-placeholder{display:grid;place-items:center;width:100%;height:100%;padding:20px;text-align:center;color:#65778d;background:linear-gradient(135deg,#eef4fc,#dfeaf7);font-size:14px}
+  #discardBrowser[data-browser-theme="dark"]~#dbTabPreview{background:#303945;color:#eef4fa;border-color:#64758a}
+
   #discardBrowser .db-tab[aria-selected=true]{background:#fff;color:#192f49;box-shadow:0 -1px 3px #18345811;z-index:1}
   #discardBrowser .db-tab-icon{flex:none;width:17px;height:17px;display:grid;place-items:center;font-size:15px}
   #discardBrowser .db-tab-icon img{width:17px;height:17px;object-fit:contain;border-radius:4px}
@@ -101,6 +110,10 @@
   body.db-ready #gamesHub:not(.hidden){top:88px!important;height:calc(100dvh - 88px)!important}
   body.db-ready .db-away{display:none!important}
   body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:88px!important;bottom:0!important;height:calc(100dvh - 88px)!important;max-height:calc(100dvh - 88px)!important}
+  /* Apply fullscreen overrides after normal browser spacing rules so games really fill the viewport. */
+  body.db-ready.db-app-fullscreen #chatView:not(.hidden){margin-top:0!important;height:100dvh!important;max-height:100dvh!important}
+  body.db-ready.db-app-fullscreen #gamesHub:not(.hidden){top:0!important;height:100dvh!important}
+  body.db-ready.db-app-fullscreen :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:0!important;bottom:0!important;height:100dvh!important;max-height:100dvh!important}
   @media(max-width:700px){#discardBrowser .db-topline{padding-left:5px;padding-right:5px;gap:2px}#discardBrowser .db-tab{flex-basis:125px;padding:0 5px 0 8px;gap:4px}#discardBrowser .db-window-title{display:none}#discardBrowser .db-toolbar{padding-left:6px;padding-right:6px;gap:2px}#discardBrowser .db-address-wrap{padding:0 8px}#discardBrowser .db-tool{width:27px}}
   `;
   document.head.append(style);
@@ -108,6 +121,72 @@
   bar.id = "discardBrowser";
   bar.hidden = true;
   bar.setAttribute("aria-label","Discard browser tabs");
+  // Preview content is cloned only on hover so live games are never moved.
+  const preview=document.createElement("aside");
+  preview.id="dbTabPreview";preview.hidden=true;
+  preview.setAttribute("aria-hidden","true");
+  document.body.append(preview);
+  let previewTimer=null;
+  const hidePreview=()=>{
+    clearTimeout(previewTimer);
+    preview.hidden=true;
+    preview.replaceChildren();
+  };
+  const showPreview=(id,tab)=>{
+    hidePreview();
+    previewTimer=setTimeout(()=>{
+      if(!tab.isConnected||bar.hidden||document.body.classList.contains("db-app-fullscreen"))return;
+      const game=byId[id];
+      const title=document.createElement("div");
+      title.className="db-preview-title";
+      title.textContent=game?game[1]:"Discard — Messages";
+      const windowEl=document.createElement("div");
+      windowEl.className="db-preview-window";
+      const target=id==="discard"?document.getElementById("chatView"):root(id);
+      if(target&&target.isConnected){
+        try{
+          const clone=target.cloneNode(true);
+          clone.removeAttribute("id");
+          clone.removeAttribute("hidden");
+          clone.classList.remove("hidden","db-away");
+          clone.querySelectorAll("[id]").forEach(n=>n.removeAttribute("id"));
+          clone.querySelectorAll("script,iframe,video,audio").forEach(n=>n.remove());
+          clone.querySelectorAll("input,textarea").forEach(n=>{n.value="";n.setAttribute("value","");});
+          const originals=target.querySelectorAll("canvas");
+          const copies=clone.querySelectorAll("canvas");
+          copies.forEach((canvas,i)=>{
+            try{
+              const image=document.createElement("img");
+              image.src=originals[i].toDataURL("image/png");
+              image.style.cssText=canvas.style.cssText;
+              image.width=originals[i].width;image.height=originals[i].height;
+              image.style.width=canvas.getBoundingClientRect().width+"px";
+              image.style.height=canvas.getBoundingClientRect().height+"px";
+              canvas.replaceWith(image);
+            }catch{}
+          });
+          const stage=document.createElement("div");stage.className="db-preview-stage";
+          stage.append(clone);windowEl.append(stage);
+        }catch{
+          const placeholder=document.createElement("div");
+          placeholder.className="db-preview-placeholder";
+          placeholder.textContent=game?game[2]+" "+game[1]:"Discard messages";
+          windowEl.append(placeholder);
+        }
+      }else{
+        const placeholder=document.createElement("div");
+        placeholder.className="db-preview-placeholder";
+        placeholder.textContent=game?game[2]+" "+game[1]+" — open tab to load":"Discard messages";
+        windowEl.append(placeholder);
+      }
+      preview.append(title,windowEl);
+      const rect=tab.getBoundingClientRect();
+      const left=Math.max(8,Math.min(window.innerWidth-328,rect.left));
+      preview.style.left=left+"px";
+      preview.style.top=Math.min(window.innerHeight-225,Math.max(42,rect.bottom+8))+"px";
+      preview.hidden=false;
+    },400);
+  };
   const topLine = document.createElement("div");
   topLine.className="db-topline";
   const strip = document.createElement("div");
@@ -169,12 +248,15 @@
   fullscreenExit.setAttribute("aria-label","Exit Discard fullscreen");
   document.body.append(fullscreenExit);
   const setAppFullscreen=enabled=>{
+    hidePreview();
     appFullscreen=Boolean(enabled);
     document.body.classList.toggle("db-app-fullscreen",appFullscreen);
-    fullscreenText.textContent=appFullscreen?"Exit Discard fullscreen":"Enter Discard fullscreen";
+    const gameTitle=byId[active]?.[1]||"Discard";
+    fullscreenText.textContent=appFullscreen?"Exit "+gameTitle+" fullscreen":"Fullscreen current tab";
     fullscreen.title=fullscreenText.textContent;
     fullscreen.setAttribute("aria-pressed",String(appFullscreen));
     settingsPanel.hidden=true;
+    if(appFullscreen && active!=="discard" && !visible(root(active)))restoreActiveGame();
     window.dispatchEvent(new Event("resize"));
   };
   fullscreen.addEventListener("click",()=>setAppFullscreen(!appFullscreen));
@@ -211,6 +293,7 @@
   function root(game) {return document.getElementById(byId[game]?.[4]);}
   function visible(el) {return !!el && !el.classList.contains("hidden") && !el.hasAttribute("hidden") && el.style.display!=="none";}
   function render() {
+    hidePreview();
     strip.replaceChildren();
     for (const id of tabs) {
       const data = byId[id], tab = document.createElement("button");
@@ -229,6 +312,10 @@
         tab.dataset.hasUnread=String(unreadCount>0&&active!=="discard");
         tab.append(badge);
       }
+      tab.addEventListener("mouseenter",()=>showPreview(id,tab));
+      tab.addEventListener("mouseleave",hidePreview);
+      tab.addEventListener("focus",()=>showPreview(id,tab));
+      tab.addEventListener("blur",hidePreview);
       tab.addEventListener("click",()=>activate(id));
       if (id!=="discard") {
         const close=document.createElement("button");
@@ -253,8 +340,12 @@
   }
   function activate(id) {
     if (id!=="discard"&&!tabs.includes(id)) return;
+    hidePreview();
     active=id;
     saveWorkspace();
+    if(appFullscreen){
+      fullscreenText.textContent="Exit "+(byId[active]?.[1]||"Discard")+" fullscreen";
+    }
     document.getElementById("gamesHub")?.classList.add("hidden");
     render();
     if(id!=="discard")setTimeout(restoreActiveGame,0);
