@@ -109,7 +109,19 @@
 
   body.db-ready #chatView:not(.hidden){height:calc(100dvh - 88px)!important;margin-top:88px}
   body.db-ready #gamesHub:not(.hidden){top:88px!important;height:calc(100dvh - 88px)!important}
-  body.db-ready .db-away{display:none!important}
+  /* Lock only the outer Discard document. Game roots are their own scrollports. */
+  body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){
+    overflow-x:hidden!important;overflow-y:auto!important;
+    overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
+    touch-action:pan-y pinch-zoom;
+  }
+  body.db-ready #bbRoot:has(.bb-menu):not(.hidden):not(.db-away){
+    overflow-y:auto!important;
+  }
+  body.db-ready #bbRoot .bb-shell{height:auto!important;min-height:100%!important}
+  body.db-ready #bbRoot .bb-view{min-height:0}
+  body.db-ready #bbRoot .bb-menu{height:auto;min-height:0}
+    body.db-ready .db-away{display:none!important}
   body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:88px!important;bottom:0!important;height:calc(100dvh - 88px)!important;max-height:calc(100dvh - 88px)!important}
   /* Apply fullscreen overrides after normal browser spacing rules so games really fill the viewport. */
   body.db-ready.db-app-fullscreen #chatView:not(.hidden){margin-top:0!important;height:100dvh!important;max-height:100dvh!important}
