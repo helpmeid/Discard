@@ -82,7 +82,7 @@ if(d.t==='bb-sync'&&!host&&mode==='duo'&&Number(d.seq)>lastSeq&&Array.isArray(d.
 if(d.t==='bb-state'&&mode==='versus'){otherScore=Number(d.score)||0;if(Array.isArray(d.board)&&d.board.length===64)otherBoard=d.board.map(c=>COLORS.includes(c)?c:'');renderGame();return;}
 if(d.t==='bb-chat'&&typeof d.text==='string'){addChat('Friend',d.text.slice(0,180));return;}
 if(d.t==='bb-leave'){if(playing){flash('Your friend left');finish();}else{peer='';waiting=true;render();}return;}
-if(d.t==='bb-end'){if(mode==='versus')otherScore=Number(d.score)||otherScore;if(mode==='duo'&&!over){showLoss('You lost!');}else if(mode==='versus'&&playing){renderGame();}return;}}
+if(d.t==='bb-end'){if(mode==='versus')otherScore=Number(d.score)||otherScore;if(mode==='duo'&&!over){playing=false;over=true;stopTimers();showLoss('No more moves — game over!');}else if(mode==='versus'&&playing){renderGame();}return;}}
 window.bbHandle=handle;
 function tryPlace(i,x,y){if(!playing||over||!Number.isInteger(i)||!Number.isInteger(x)||!Number.isInteger(y))return;if(mode==='duo'&&!host){if(placeOK(hands[1][i],x,y)){send(peer,{t:'bb-place',i,x,y,request:++guestSeq});selected=-1;flash('Placing…');renderHand();}return;}const who=mode==='duo'?0:0;if(applyPiece(who,i,x,y)){if(mode==='duo')sync();else if(mode==='versus')send(peer,{t:'bb-state',score,board,seq:++seq});}}
 function addChat(name,text){chatLines.push({name,text});chatLines=chatLines.slice(-45);renderChat();}
