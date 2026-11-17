@@ -2,7 +2,7 @@
 'use strict';
 const SHAPES=[[[0,0]],[[0,0],[1,0]],[[0,0],[0,1]],[[0,0],[1,0],[2,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,0],[0,1],[1,1]],[[0,0],[1,0],[2,0],[3,0]],[[0,0],[0,1],[0,2],[0,3]],[[0,0],[1,0],[2,0],[1,1]],[[0,0],[0,1],[1,1]],[[0,0],[1,0],[1,1]],[[0,0],[0,1],[1,0]],[[0,0],[1,0],[2,0],[0,1]],[[0,0],[0,1],[0,2],[1,2]],[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],[[0,0],[1,0],[0,2],[1,2]],[[0,0],[1,0],[2,0],[0,1],[0,2]]];
 const COLORS=['#37c4fb','#9878ff','#ffd05b','#ff6b99','#52e6bd','#699bff'];
-const $=id=>document.getElementById('bb'+id), net=()=>window.bbNetwork||{}, chosen=()=>host?hands[0]:hands[1];
+const $=id=>document.getElementById('bb'+id), net=()=>window.bbNetwork||{}, chosen=()=>mode==='solo'||host?hands[0]:hands[1];
 let root,screen='menu',mode='solo',size=8,board=[],hands=[[],[]],score=0,best=0,combo=0,selected=-1,room='',host=false,peer='',session='',deadline=0,tick=null,playing=false,waiting=false,over=false,otherScore=0,otherBoard=[],seq=0,lastSeq=-1,guestSeq=0,drag=null,returnTimer=null,chatOpen=false,chatLines=[],statusText='',resultsShown=false;
 const make=()=>({cells:SHAPES[Math.random()*SHAPES.length|0].map(x=>x.slice()),color:COLORS[Math.random()*COLORS.length|0]});
 const deal=()=>[make(),make(),make()];
@@ -23,9 +23,9 @@ function lose(){if(over)return;over=true;playing=false;stopTimers();if(mode!=='s
 function showLoss(message){screen='game';render();const e=$('Overlay');if(e){e.classList.add('visible');e.innerHTML='<div class="bb-result"><div class="bb-result-icon">💔</div><h2>'+esc(message)+'</h2><p>Going back to main menu…</p><div class="bb-result-score">'+score.toLocaleString()+' points</div></div>';}returnTimer=setTimeout(()=>openMenu(),2600);}
 function finish(){if(!playing||over)return;playing=false;over=true;stopTimers();if(peer)send(peer,{t:'bb-end',score});const msg=mode==='duo'?'Team score: '+score.toLocaleString():score>otherScore?'You won! 🎉':score<otherScore?'You lost!':'It’s a tie!';screen='game';render();const e=$('Overlay');if(e){e.classList.add('visible');e.innerHTML='<div class="bb-result"><h2>'+esc(msg)+'</h2><p>Going back to main menu…</p></div>';}returnTimer=setTimeout(openMenu,2900);}
 function startClock(at){deadline=at||Date.now()+120000;playing=true;waiting=false;over=false;stopTimers();tick=setInterval(()=>{if(!playing)return;let remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));if($('Clock'))$('Clock').textContent=timerText(remaining);if(!remaining)finish();},250);screen='game';render();}
-function openMenu(){stopTimers();if(playing&&peer)send(peer,{t:'bb-leave'});screen='menu';playing=false;waiting=false;over=false;peer='';room='';session='';chatOpen=false;chatLines=[];render();}
+function openMenu(){stopTimers();removeGhost();drag=null;if(playing&&peer)send(peer,{t:'bb-leave'});screen='menu';playing=false;waiting=false;over=false;peer='';room='';session='';chatOpen=false;chatLines=[];render();}
 function selectMode(m){mode=m;size=m==='duo'?10:8;screen='hostjoin';render();}
-function newSolo(){mode='solo';size=8;peer='';room='';session='';stateReset();screen='game';render();}
+function newSolo(){mode='solo';host=true;size=8;peer='';room='';session='';stateReset();screen='game';render();}
 function createRoom(){host=true;peer='';waiting=true;room=Array.from({length:5},()=>String.fromCharCode(65+(Math.random()*26|0))).join('');session=room+'-'+Date.now();stateReset();playing=false;screen='lobby';render();}
 function joinRoom(){let code=$('CodeInput')?.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,5)||'';if(code.length!==5){$('JoinStatus').textContent='Enter the 5-letter room code.';return;}if(!(net().friends||[]).length){$('JoinStatus').textContent='You must have the host added as a Discard friend.';return;}host=false;peer='';room=code;session='';waiting=true;stateReset();playing=false;screen='lobby';render();(net().friends||[]).forEach(id=>net().send?.(id,{t:'bb-join',room,mode}));}
 function sync(){if(mode!=='duo'||!host||!peer)return;send(peer,{t:'bb-sync',seq:++seq,board,score,combo,hands,playing,deadline});}
