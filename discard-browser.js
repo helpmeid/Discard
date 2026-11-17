@@ -91,12 +91,13 @@
   #discardBrowser .db-settings button:hover{background:#d5e6fa}
   #discardBrowser .db-settings .db-settings-action{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;height:auto;min-height:39px;padding:10px 12px;margin:8px 0 0;border:0;border-radius:8px;background:#e8f0fc;color:#174b8c;font-size:13px;font-weight:600;line-height:1.35;white-space:normal;text-align:left}
   #discardBrowser .db-settings .db-settings-action:hover{background:#d5e6fa}
-  #dbFullscreenExit{display:none;position:fixed;top:12px;right:14px;z-index:2147483001;border:1px solid #8599ae;border-radius:10px;background:#1e2d43;color:#fff;padding:10px 14px;box-shadow:0 3px 16px #0005;font:600 13px "Segoe UI",system-ui,sans-serif;cursor:pointer}
+  #dbFullscreenExit{display:none;position:fixed;top:12px;right:14px;z-index:2147483646;border:1px solid #8599ae;border-radius:10px;background:#1e2d43;color:#fff;padding:10px 14px;box-shadow:0 3px 16px #0005;font:600 13px "Segoe UI",system-ui,sans-serif;cursor:pointer}
   body.db-app-fullscreen #dbFullscreenExit{display:block}
   html:has(body.db-ready),body.db-ready{height:100%;max-height:100dvh;overflow:hidden!important;overscroll-behavior:none}
   body.db-ready #chatView:not(.hidden){overflow:hidden!important}
   body.db-ready #gamesHub:not(.hidden){overflow-y:auto}
   body.db-app-fullscreen #discardBrowser{display:none!important}
+  body.db-app-fullscreen #dbTabPreview{display:none!important}
   body.db-app-fullscreen #chatView:not(.hidden){margin-top:0!important;height:100dvh!important}
   body.db-app-fullscreen #gamesHub:not(.hidden){top:0!important;height:100dvh!important}
   body.db-app-fullscreen :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:0!important;height:100dvh!important;max-height:100dvh!important}
