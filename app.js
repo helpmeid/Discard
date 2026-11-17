@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "5.4.4";
+const APP_VERSION = "5.4.5";
 const UPDATE_LOG = [
+  { version: "5.4.5", notes: ["Ctrl+F now toggles in-app fullscreen for the currently selected Discard or game tab without activating browser find."] },
   { version: "5.4.4", notes: ["Version updated to 5.4.4."] },
   { version: "4.8.67", notes: ["Fixed nested Block Blast viewport clipping so game menus and play screens scroll within their tab, including fake fullscreen, without scrolling the entire Discard browser."] },
   { version: "4.8.66", notes: ["Tab hover previews now use stable cards with real canvas thumbnails where supported instead of broken cloned UI. Message notifications return to the Discard tab when clicked."] },
