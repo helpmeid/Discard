@@ -80,6 +80,19 @@
   #discardBrowser .db-settings select{padding:7px 8px;border:1px solid #cbd6e5;border-radius:7px;background:#f7f9fc;color:#26364c}
   #discardBrowser .db-settings button{width:100%;margin-top:8px;padding:9px;border:0;border-radius:8px;background:#e8f0fc;color:#174b8c;text-align:left}
   #discardBrowser .db-settings button:hover{background:#d5e6fa}
+  #discardBrowser .db-settings .db-settings-action{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;height:auto;min-height:39px;padding:10px 12px;margin:8px 0 0;border:0;border-radius:8px;background:#e8f0fc;color:#174b8c;font-size:13px;font-weight:600;line-height:1.35;white-space:normal;text-align:left}
+  #discardBrowser .db-settings .db-settings-action:hover{background:#d5e6fa}
+  #dbFullscreenExit{display:none;position:fixed;top:12px;right:14px;z-index:2147483001;border:1px solid #8599ae;border-radius:10px;background:#1e2d43;color:#fff;padding:10px 14px;box-shadow:0 3px 16px #0005;font:600 13px "Segoe UI",system-ui,sans-serif;cursor:pointer}
+  body.db-app-fullscreen #dbFullscreenExit{display:block}
+  html:has(body.db-ready),body.db-ready{height:100%;max-height:100dvh;overflow:hidden!important;overscroll-behavior:none}
+  body.db-ready #chatView:not(.hidden){overflow:hidden!important}
+  body.db-ready #gamesHub:not(.hidden){overflow-y:auto}
+  body.db-app-fullscreen #discardBrowser{display:none!important}
+  body.db-app-fullscreen #chatView:not(.hidden){margin-top:0!important;height:100dvh!important}
+  body.db-app-fullscreen #gamesHub:not(.hidden){top:0!important;height:100dvh!important}
+  body.db-app-fullscreen :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:0!important;height:100dvh!important;max-height:100dvh!important}
+  body.db-app-fullscreen #dbFullscreenExit:focus-visible{outline:3px solid #7dc6ff}
+
   #discardBrowser[data-browser-theme="dark"] .db-settings{background:#343d49;border-color:#586474;color:#f4f7fa}
   #discardBrowser[data-browser-theme="dark"] .db-settings select{background:#242b34;color:#f4f7fa;border-color:#6e7a8b}
   #discardBrowser[data-browser-theme="dark"] .db-settings button{background:#475668;color:#f6f9fc}
@@ -139,14 +152,40 @@
   themeSelect.addEventListener("change",()=>{browserTheme=themeSelect.value;saveSettings();updateTheme();});
   window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change",updateTheme);
   themeLabel.append(themeSelect);
-  const fullscreen=tool("Toggle fullscreen","⛶  Enter fullscreen",async()=>{
-    try{
-      if(document.fullscreenElement)await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-    }catch{fullscreen.textContent="Fullscreen unavailable in this browser";}
+  // In-app fullscreen fills Discard's own viewport; never request browser or OS fullscreen.
+  let appFullscreen=false;
+  const fullscreen=document.createElement("button");
+  fullscreen.type="button";
+  fullscreen.className="db-settings-action";
+  const fullscreenSymbol=document.createElement("span");
+  fullscreenSymbol.setAttribute("aria-hidden","true");
+  fullscreenSymbol.textContent="⛶";
+  const fullscreenText=document.createElement("span");
+  fullscreen.append(fullscreenSymbol,fullscreenText);
+  const fullscreenExit=document.createElement("button");
+  fullscreenExit.id="dbFullscreenExit";
+  fullscreenExit.type="button";
+  fullscreenExit.textContent="⤢ Exit fullscreen";
+  fullscreenExit.setAttribute("aria-label","Exit Discard fullscreen");
+  document.body.append(fullscreenExit);
+  const setAppFullscreen=enabled=>{
+    appFullscreen=Boolean(enabled);
+    document.body.classList.toggle("db-app-fullscreen",appFullscreen);
+    fullscreenText.textContent=appFullscreen?"Exit Discard fullscreen":"Enter Discard fullscreen";
+    fullscreen.title=fullscreenText.textContent;
+    fullscreen.setAttribute("aria-pressed",String(appFullscreen));
+    settingsPanel.hidden=true;
+    window.dispatchEvent(new Event("resize"));
+  };
+  fullscreen.addEventListener("click",()=>setAppFullscreen(!appFullscreen));
+  fullscreenExit.addEventListener("click",()=>setAppFullscreen(false));
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape"&&appFullscreen&&
+       !event.target?.matches?.("input,textarea,select")){
+      setAppFullscreen(false);
+    }
   });
-  const refreshFullscreen=()=>{fullscreen.textContent=document.fullscreenElement?"⛶  Exit fullscreen":"⛶  Enter fullscreen";};
-  document.addEventListener("fullscreenchange",refreshFullscreen);
+  setAppFullscreen(false);
   settingsPanel.append(settingsTitle,themeLabel,fullscreen);
   updateTheme();
   document.addEventListener("pointerdown",event=>{
@@ -206,6 +245,7 @@
     const signedIn = visible(document.getElementById("chatView"));
     bar.hidden=!signedIn;
     document.body.classList.toggle("db-ready",signedIn);
+    if(!signedIn && appFullscreen)setAppFullscreen(false);
     if(signedIn && !restoreAttempted){
       restoreAttempted=true;
       setTimeout(restoreActiveGame,350);
