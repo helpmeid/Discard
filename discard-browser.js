@@ -15,45 +15,91 @@
   let lastGame = null;
   const style = document.createElement("style");
   style.textContent = `
-  #discardBrowser { position:fixed;top:0;left:0;right:0;height:48px;z-index:2147483000;display:flex;align-items:end;gap:5px;padding:7px 10px 0;background:#18241f;color:#daeae0;font:500 12px system-ui,sans-serif;box-shadow:0 2px 14px #0004;user-select:none }
-  #discardBrowser[hidden] { display:none!important }
-  #discardBrowser .db-tabstrip {display:flex;gap:4px;flex:1;min-width:0;overflow:auto hidden;scrollbar-width:thin}
-  #discardBrowser button {font:inherit;cursor:pointer}
-  #discardBrowser .db-tab {display:flex;align-items:center;gap:7px;flex:0 1 178px;min-width:90px;max-width:190px;height:36px;padding:0 9px;border:1px solid transparent;border-radius:10px 10px 0 0;background:#2b3b34;color:#b4c8ba;white-space:nowrap}
-  #discardBrowser .db-tab[aria-selected=true] {background:var(--white,#fffefa);color:var(--ink,#202b28);border-color:#85968b}
-  #discardBrowser .db-title {overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left}
-  #discardBrowser .db-close {border:0;background:transparent;color:inherit;border-radius:5px;width:22px;height:23px;flex:none;font-size:17px;line-height:1}
-  #discardBrowser .db-close:hover {background:#8885}
-  #discardBrowser .db-tool {border:0;border-radius:7px;background:#31423a;color:#e7f2e9;min-width:32px;height:32px;padding:0 9px;margin-bottom:3px}
-  #discardBrowser .db-tool:hover {background:#4b6556}
-  #discardBrowser .db-location {align-self:center;color:#b1c5b8;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 5px;margin-bottom:7px}
-  body.db-ready #chatView:not(.hidden) {height:calc(100dvh - 48px)!important;margin-top:48px}
-  body.db-ready #gamesHub:not(.hidden) {top:48px!important;height:calc(100dvh - 48px)!important}
-  body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden) {max-height:calc(100dvh - 48px)!important}
-  body.db-ready .db-away {display:none!important}
-  body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.db-away) {top:48px!important;bottom:0!important;height:calc(100dvh - 48px)!important}
-  @media(max-width:700px) {#discardBrowser {padding-left:4px;padding-right:4px;gap:2px}#discardBrowser .db-tab {min-width:75px;flex-basis:124px;padding:0 5px;gap:3px}#discardBrowser .db-location {display:none}#discardBrowser .db-tool {padding:0 6px;min-width:28px}}
+  #discardBrowser{position:fixed;inset:0 0 auto;height:88px;z-index:2147483000;display:flex;flex-direction:column;background:#e7edf5;color:#253246;font:500 12px "Segoe UI",system-ui,sans-serif;box-shadow:0 2px 9px #14233b24;user-select:none;isolation:isolate}
+  #discardBrowser[hidden]{display:none!important}
+  #discardBrowser button{font:inherit;cursor:pointer}
+  #discardBrowser button:focus-visible,#discardBrowser .db-address:focus-visible{outline:2px solid #1478d4;outline-offset:-2px}
+  #discardBrowser .db-topline{display:flex;align-items:end;gap:6px;height:40px;padding:5px 12px 0;min-width:0;background:#dce5f0}
+  #discardBrowser .db-tabstrip{display:flex;align-items:end;gap:3px;flex:0 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  #discardBrowser .db-tabstrip::-webkit-scrollbar{display:none}
+  #discardBrowser .db-tab{position:relative;display:flex;align-items:center;gap:8px;flex:0 0 176px;max-width:205px;min-width:92px;height:34px;padding:0 9px 0 12px;border:0;border-radius:9px 9px 0 0;background:#d2dce9;color:#485b70;white-space:nowrap;transition:background .14s}
+  #discardBrowser .db-tab:hover{background:#eaf0f8}
+  #discardBrowser .db-tab[aria-selected=true]{background:#fff;color:#192f49;box-shadow:0 -1px 3px #18345811;z-index:1}
+  #discardBrowser .db-tab-icon{flex:none;width:17px;height:17px;display:grid;place-items:center;font-size:15px}
+  #discardBrowser .db-tab-icon img{width:17px;height:17px;object-fit:contain;border-radius:4px}
+  #discardBrowser .db-title{overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left;font-size:12px}
+  #discardBrowser .db-close{border:0;background:transparent;color:inherit;border-radius:5px;width:22px;height:22px;flex:none;font-size:17px;line-height:1}
+  #discardBrowser .db-close:hover{background:#9eb1c54d}
+  #discardBrowser .db-new{height:29px;width:29px;align-self:center;margin-bottom:2px;border:0;border-radius:7px;background:transparent;color:#405570;font-size:22px}
+  #discardBrowser .db-new:hover{background:#c4d3e6}
+  #discardBrowser .db-window-title{margin-left:auto;align-self:center;font-size:11px;color:#62758a;padding:0 4px;white-space:nowrap}
+  #discardBrowser .db-toolbar{display:flex;align-items:center;gap:6px;min-width:0;height:48px;padding:6px 12px 7px;background:#fff;border-bottom:1px solid #d5deea}
+  #discardBrowser .db-tool{width:29px;height:29px;flex:none;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:#45566b;font-size:18px}
+  #discardBrowser .db-tool:hover{background:#edf2f9}
+  #discardBrowser .db-tool:disabled{opacity:.3;cursor:default}
+  #discardBrowser .db-address-wrap{display:flex;align-items:center;gap:9px;flex:1;min-width:0;height:32px;padding:0 12px;border:1px solid #e2e8f0;border-radius:18px;background:#f1f4f9;transition:background .15s,border-color .15s}
+  #discardBrowser .db-address-wrap:focus-within{background:#fff;border-color:#2787d5;box-shadow:0 0 0 2px #2681ce20}
+  #discardBrowser .db-lock{color:#6b8099;font-size:13px;flex:none}
+  #discardBrowser .db-address{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#32445b;font:400 12px "Segoe UI",system-ui,sans-serif}
+  #discardBrowser .db-more{font-weight:700}
+  body.db-ready #chatView:not(.hidden){height:calc(100dvh - 88px)!important;margin-top:88px}
+  body.db-ready #gamesHub:not(.hidden){top:88px!important;height:calc(100dvh - 88px)!important}
+  body.db-ready .db-away{display:none!important}
+  body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:88px!important;bottom:0!important;height:calc(100dvh - 88px)!important;max-height:calc(100dvh - 88px)!important}
+  @media(max-width:700px){#discardBrowser .db-topline{padding-left:5px;padding-right:5px;gap:2px}#discardBrowser .db-tab{flex-basis:125px;padding:0 5px 0 8px;gap:4px}#discardBrowser .db-window-title{display:none}#discardBrowser .db-toolbar{padding-left:6px;padding-right:6px;gap:2px}#discardBrowser .db-address-wrap{padding:0 8px}#discardBrowser .db-tool{width:27px}}
   `;
   document.head.append(style);
   const bar = document.createElement("nav");
   bar.id = "discardBrowser";
   bar.hidden = true;
   bar.setAttribute("aria-label","Discard browser tabs");
+  const topLine = document.createElement("div");
+  topLine.className="db-topline";
   const strip = document.createElement("div");
   strip.className = "db-tabstrip";
   strip.setAttribute("role","tablist");
-  const tool = (title,label,action) => {
+  const tool = (title,label,action,className="db-tool") => {
     const b = document.createElement("button");
-    b.type="button";b.className="db-tool";b.title=title;b.setAttribute("aria-label",title);
+    b.type="button";b.className=className;b.title=title;b.setAttribute("aria-label",title);
     b.textContent=label;b.addEventListener("click",action);return b;
   };
-  const openHub = () => {
+  const openHub=()=>{
     activate("discard");
     document.getElementById("gamesToggle")?.click();
   };
-  bar.append(strip,tool("New game tab","+ ",openHub),tool("Games home","⌂",openHub),tool("Return to Discard","↶",()=>activate("discard")));
-  const location = document.createElement("span");
-  location.className="db-location";location.textContent="discard://home";bar.append(location);
+  const newTab=tool("New tab","+ ",openHub,"db-new");
+  const windowTitle=document.createElement("span");windowTitle.className="db-window-title";windowTitle.textContent="Discard";
+  topLine.append(strip,newTab,windowTitle);
+  const toolbar=document.createElement("div");toolbar.className="db-toolbar";
+  let history=["discard"], historyPosition=0;
+  const back=tool("Back","‹",()=>navigateHistory(-1));
+  const forward=tool("Forward","›",()=>navigateHistory(1));
+  const reload=tool("Reload Discard","↻",()=>window.location.reload());
+  const home=tool("Games","⌂",openHub);
+  const addressWrap=document.createElement("div");addressWrap.className="db-address-wrap";
+  const lock=document.createElement("span");lock.className="db-lock";lock.textContent="◇";
+  const location=document.createElement("input");
+  location.className="db-address";location.setAttribute("aria-label","Discard address");
+  location.autocomplete="off";location.spellcheck=false;
+  location.placeholder="Search tabs or enter Discard location";
+  const more=tool("Return to Discard","⋯",()=>activate("discard"));
+  more.classList.add("db-more");
+  location.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){location.blur();render();}
+    if(event.key!=="Enter")return;
+    event.preventDefault();
+    const value=location.value.trim().toLowerCase();
+    const match=games.find(g=>value===g[0]||value===g[1].toLowerCase()||value==="discard://games/"+g[0]);
+    if(value==="discard"||value==="discard://home"||value==="discard://chats")activate("discard");
+    else if(value==="games"||value==="discard://games")openHub();
+    else if(match&&tabs.includes(match[0]))activate(match[0]);
+    else if(match)document.getElementById(match[3])?.click();
+    else{location.setCustomValidity("Use Discard, Games, or an available game name.");location.reportValidity();setTimeout(()=>location.setCustomValidity(""),1800);}
+    location.blur();
+  });
+  addressWrap.append(lock,location);
+  toolbar.append(back,forward,reload,home,addressWrap,more);
+  bar.append(topLine,toolbar);
   document.body.append(bar);
   function root(game) {return document.getElementById(byId[game]?.[4]);}
   function visible(el) {return !!el && !el.classList.contains("hidden") && !el.hasAttribute("hidden") && el.style.display!=="none";}
@@ -64,7 +110,8 @@
       tab.type="button";tab.className="db-tab";tab.setAttribute("role","tab");
       tab.setAttribute("aria-selected",String(id===active));
       tab.title=data?data[1]:"Discard — your chats";
-      const icon=document.createElement("span");icon.textContent=data?data[2]:"◉";
+      const icon=document.createElement("span");icon.className="db-tab-icon";
+      if(data)icon.textContent=data[2];else{const favicon=document.createElement("img");favicon.src="discard-icon.png";favicon.alt="";icon.append(favicon);}
       const name=document.createElement("span");name.className="db-title";name.textContent=data?data[1]:"Discard";
       tab.append(icon,name);
       tab.addEventListener("click",()=>activate(id));
@@ -77,16 +124,23 @@
       }
       strip.append(tab);
     }
-    location.textContent=active==="discard"?"discard://chats":"discard://games/"+active;
+    location.value=active==="discard"?"discard://chats":"discard://games/"+active;
+    back.disabled=historyPosition<=0;forward.disabled=historyPosition>=history.length-1;
     for (const game of games) root(game[0])?.classList.toggle("db-away",game[0]!==active);
     // The browser bar is above game canvases and available even in full-screen game menus.
     const signedIn = visible(document.getElementById("chatView"));
     bar.hidden=!signedIn;
     document.body.classList.toggle("db-ready",signedIn);
   }
-  function activate(id) {
+  function navigateHistory(direction){
+    const pos=historyPosition+direction;
+    if(pos<0||pos>=history.length)return;
+    historyPosition=pos;activate(history[pos],false);
+  }
+  function activate(id,record=true) {
     if (id!=="discard"&&!tabs.includes(id)) return;
     active=id;
+    if(record && history[historyPosition]!==id){history=history.slice(0,historyPosition+1);history.push(id);historyPosition=history.length-1;}
     if(id!=="discard")lastGame=id;
     document.getElementById("gamesHub")?.classList.add("hidden");
     render();
@@ -101,6 +155,9 @@
     if(id==="discard")return;
     const i=tabs.indexOf(id);if(i<0)return;
     tabs.splice(i,1);
+    history=history.filter(entry=>entry!==id);
+    if(!history.length)history=["discard"];
+    historyPosition=Math.min(historyPosition,history.length-1);
     // Releasing an existing in-app game uses its own Leave/Back action where available.
     // The root is kept mounted until the game handles its own cleanup, so save/session
     // behavior is not silently reset by destroying its DOM.
