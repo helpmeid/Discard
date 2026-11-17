@@ -124,6 +124,57 @@
   body.db-ready #bbRoot .bb-shell{height:auto!important;min-height:100%!important}
   body.db-ready #bbRoot .bb-view{min-height:0}
   body.db-ready #bbRoot .bb-menu{height:auto;min-height:0}
+  /* Block Blast used hard viewport heights and overflow:hidden on its
+     shell/view/game. Those nested clippers prevented the root from scrolling. */
+  body.db-ready #bbRoot:not(.hidden):not(.db-away){
+    position:fixed!important;
+    inset-inline:0!important;
+    height:calc(100dvh - 88px)!important;
+    min-height:0!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain!important;
+    touch-action:pan-y!important;
+  }
+  body.db-ready #bbRoot:has(.bb-menu) .bb-shell,
+  body.db-ready #bbRoot:has(.bb-game) .bb-shell{
+    height:auto!important;min-height:100%!important;max-height:none!important;
+    overflow:visible!important;
+  }
+  body.db-ready #bbRoot:has(.bb-menu) .bb-view,
+  body.db-ready #bbRoot:has(.bb-game) .bb-view{
+    flex:0 0 auto!important;height:auto!important;min-height:0!important;
+    overflow:visible!important;justify-content:flex-start!important;
+  }
+  body.db-ready #bbRoot:has(.bb-menu) .bb-menu{
+    height:auto!important;min-height:0!important;max-height:none!important;
+    margin-block:16px!important;
+  }
+  body.db-ready #bbRoot:has(.bb-menu) .bb-hero{
+    min-height:240px!important;
+  }
+  body.db-ready #bbRoot:has(.bb-game) .bb-game{
+    height:auto!important;min-height:0!important;max-height:none!important;
+    align-items:start!important;margin-block:14px!important;
+  }
+  body.db-ready #bbRoot:has(.bb-game) .bb-play-area{
+    height:auto!important;min-height:0!important;
+  }
+  body.db-ready #bbRoot:has(.bb-game) .bb-sidebar{
+    min-height:0!important;max-height:none!important;
+  }
+  body.db-ready.db-app-fullscreen #bbRoot:not(.hidden):not(.db-away){
+    top:0!important;bottom:0!important;height:100dvh!important;
+  }
+  @media (max-width:850px){
+    body.db-ready #bbRoot:has(.bb-game) .bb-game{
+      display:flex!important;flex-direction:column!important;align-items:stretch!important;
+    }
+    body.db-ready #bbRoot:has(.bb-game) .bb-play-area{
+      width:min(100%,560px)!important;margin-inline:auto!important;
+    }
+  }
+
     body.db-ready .db-away{display:none!important}
   body.db-ready :is(#vfRoot,#oakRoot,#deadZoneRoot,#freeDrawRoot,#mtdRoot,#bbRoot,#tetRoot):not(.hidden):not(.db-away){top:88px!important;bottom:0!important;height:calc(100dvh - 88px)!important;max-height:calc(100dvh - 88px)!important}
   /* Apply fullscreen overrides after normal browser spacing rules so games really fill the viewport. */
