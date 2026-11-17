@@ -40,15 +40,18 @@
   #discardBrowser .db-tabstrip::-webkit-scrollbar{display:none}
   #discardBrowser .db-tab{position:relative;display:flex;align-items:center;gap:8px;flex:0 0 176px;max-width:205px;min-width:92px;height:34px;padding:0 9px 0 12px;border:0;border-radius:9px 9px 0 0;background:#d2dce9;color:#485b70;white-space:nowrap;transition:background .14s}
   #discardBrowser .db-tab:hover{background:#eaf0f8}
-  #dbTabPreview{position:fixed;z-index:2147483002;width:320px;padding:8px;border:1px solid #bfd0e1;border-radius:12px;background:#f8fbff;color:#28374b;box-shadow:0 12px 36px #07162b55;font:12px "Segoe UI",system-ui,sans-serif;pointer-events:none}
+  #dbTabPreview{position:fixed;z-index:2147483002;width:290px;max-width:calc(100vw - 16px);padding:10px;border:1px solid #bbccde;border-radius:12px;background:#f8fbff;color:#28374b;box-shadow:0 12px 36px #07162b44;font:12px "Segoe UI",system-ui,sans-serif;pointer-events:none;overflow:hidden}
   #dbTabPreview[hidden]{display:none!important}
-  #dbTabPreview .db-preview-title{font-weight:700;padding:3px 4px 8px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
-  #dbTabPreview .db-preview-window{position:relative;width:302px;height:188px;overflow:hidden;border:1px solid #cbd8e7;border-radius:7px;background:#fff;isolation:isolate}
-  #dbTabPreview .db-preview-stage{position:absolute;left:0;top:0;width:960px;height:600px;transform:scale(.3145833);transform-origin:top left;overflow:hidden;pointer-events:none}
-  #dbTabPreview .db-preview-stage>*{position:relative!important;inset:auto!important;top:0!important;left:0!important;display:block!important;visibility:visible!important;width:960px!important;height:600px!important;max-width:none!important;max-height:none!important;margin:0!important;overflow:hidden!important;transform:none!important;opacity:1!important}
-  #dbTabPreview .db-preview-placeholder{display:grid;place-items:center;width:100%;height:100%;padding:20px;text-align:center;color:#65778d;background:linear-gradient(135deg,#eef4fc,#dfeaf7);font-size:14px}
-  #discardBrowser[data-browser-theme="dark"]~#dbTabPreview{background:#303945;color:#eef4fa;border-color:#64758a}
-
+  #dbTabPreview .db-preview-title{display:flex;align-items:center;gap:8px;font-weight:700;padding:2px 3px 8px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+  #dbTabPreview .db-preview-window{position:relative;width:100%;height:166px;overflow:hidden;border:1px solid #cbd8e7;border-radius:8px;background:#f0f4f9}
+  #dbTabPreview .db-preview-scene{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;padding:12px;text-align:center;background:linear-gradient(135deg,var(--preview-a),var(--preview-b));color:var(--preview-ink)}
+  #dbTabPreview .db-preview-symbol{font-size:36px;line-height:1}
+  #dbTabPreview .db-preview-name{font-size:16px;font-weight:750;letter-spacing:.2px}
+  #dbTabPreview .db-preview-detail{font-size:11px;opacity:.8}
+  #dbTabPreview .db-preview-canvas{width:100%;height:100%;object-fit:contain;background:#101b30}
+  #dbTabPreview .db-preview-footer{padding:8px 3px 1px;font-size:11px;color:#697b90;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #dbTabPreview[data-theme="dark"]{background:#303945;color:#eef4fa;border-color:#64758a}
+  #dbTabPreview[data-theme="dark"] .db-preview-footer{color:#c3d0e1}
   #discardBrowser .db-tab[aria-selected=true]{background:#fff;color:#192f49;box-shadow:0 -1px 3px #18345811;z-index:1}
   #discardBrowser .db-tab-icon{flex:none;width:17px;height:17px;display:grid;place-items:center;font-size:15px}
   #discardBrowser .db-tab-icon img{width:17px;height:17px;object-fit:contain;border-radius:4px}
@@ -134,7 +137,8 @@
   bar.id = "discardBrowser";
   bar.hidden = true;
   bar.setAttribute("aria-label","Discard browser tabs");
-  // Preview content is cloned only on hover so live games are never moved.
+  // Compact, stable tab previews: never clone full application DOM or run a
+  // second copy of a game. Canvas games display their latest drawn frame.
   const preview=document.createElement("aside");
   preview.id="dbTabPreview";preview.hidden=true;
   preview.setAttribute("aria-hidden","true");
@@ -149,56 +153,59 @@
     hidePreview();
     previewTimer=setTimeout(()=>{
       if(!tab.isConnected||bar.hidden||document.body.classList.contains("db-app-fullscreen"))return;
-      const game=byId[id];
+      const data=byId[id];
       const title=document.createElement("div");
       title.className="db-preview-title";
-      title.textContent=game?game[1]:"Discard — Messages";
+      title.textContent=(data?data[2]+"  "+data[1]:"●  Discard")+" — Tab preview";
       const windowEl=document.createElement("div");
       windowEl.className="db-preview-window";
-      const target=id==="discard"?document.getElementById("chatView"):root(id);
-      if(target&&target.isConnected){
+      const rootEl=id==="discard"?document.getElementById("chatView"):root(id);
+      const canvas=rootEl?.querySelector("canvas");
+      let captured=false;
+      if(canvas&&canvas.width>0&&canvas.height>0){
         try{
-          const clone=target.cloneNode(true);
-          clone.removeAttribute("id");
-          clone.removeAttribute("hidden");
-          clone.classList.remove("hidden","db-away");
-          clone.querySelectorAll("[id]").forEach(n=>n.removeAttribute("id"));
-          clone.querySelectorAll("script,iframe,video,audio").forEach(n=>n.remove());
-          clone.querySelectorAll("input,textarea").forEach(n=>{n.value="";n.setAttribute("value","");});
-          const originals=target.querySelectorAll("canvas");
-          const copies=clone.querySelectorAll("canvas");
-          copies.forEach((canvas,i)=>{
-            try{
-              const image=document.createElement("img");
-              image.src=originals[i].toDataURL("image/png");
-              image.style.cssText=canvas.style.cssText;
-              image.width=originals[i].width;image.height=originals[i].height;
-              image.style.width=canvas.getBoundingClientRect().width+"px";
-              image.style.height=canvas.getBoundingClientRect().height+"px";
-              canvas.replaceWith(image);
-            }catch{}
-          });
-          const stage=document.createElement("div");stage.className="db-preview-stage";
-          stage.append(clone);windowEl.append(stage);
-        }catch{
-          const placeholder=document.createElement("div");
-          placeholder.className="db-preview-placeholder";
-          placeholder.textContent=game?game[2]+" "+game[1]:"Discard messages";
-          windowEl.append(placeholder);
-        }
-      }else{
-        const placeholder=document.createElement("div");
-        placeholder.className="db-preview-placeholder";
-        placeholder.textContent=game?game[2]+" "+game[1]+" — open tab to load":"Discard messages";
-        windowEl.append(placeholder);
+          const image=document.createElement("img");
+          image.className="db-preview-canvas";
+          image.alt="";
+          image.src=canvas.toDataURL("image/png");
+          windowEl.append(image);
+          captured=true;
+        }catch{}
       }
-      preview.append(title,windowEl);
-      const rect=tab.getBoundingClientRect();
-      const left=Math.max(8,Math.min(window.innerWidth-328,rect.left));
-      preview.style.left=left+"px";
-      preview.style.top=Math.min(window.innerHeight-225,Math.max(42,rect.bottom+8))+"px";
+      if(!captured){
+        const scene=document.createElement("div");
+        scene.className="db-preview-scene";
+        const palettes={
+          discard:["#ebf4ed","#c9e1cd","#21583d"],
+          horizon:["#111935","#283d74","#e8ecff"],
+          oakhaven:["#202c24","#5c5942","#f1ddaa"],
+          freedraw:["#342365","#a45db1","#fff4ff"],
+          mtd:["#25355f","#5443a4","#f1eaff"],
+          blockblast:["#193a72","#5342aa","#f4eeff"],
+          tetris:["#20325e","#7644ad","#fff0ff"],
+          deadzone:["#172725","#485c41","#e0f3dd"]
+        };
+        const p=palettes[id]||palettes.discard;
+        scene.style.setProperty("--preview-a",p[0]);
+        scene.style.setProperty("--preview-b",p[1]);
+        scene.style.setProperty("--preview-ink",p[2]);
+        const symbol=document.createElement("span");symbol.className="db-preview-symbol";symbol.textContent=data?data[2]:"◉";
+        const name=document.createElement("span");name.className="db-preview-name";name.textContent=data?data[1]:"Discard messages";
+        const detail=document.createElement("span");detail.className="db-preview-detail";
+        detail.textContent=rootEl&&rootEl.isConnected?"Tab overview":"Open tab to load";
+        scene.append(symbol,name,detail);
+        windowEl.append(scene);
+      }
+      const footer=document.createElement("div");
+      footer.className="db-preview-footer";
+      footer.textContent=id==="discard"?"discard://chats":"discard://games/"+id;
+      preview.dataset.theme=bar.dataset.browserTheme||"light";
+      preview.append(title,windowEl,footer);
+      const bounds=tab.getBoundingClientRect();
+      preview.style.left=Math.max(8,Math.min(window.innerWidth-298,bounds.left))+"px";
+      preview.style.top=Math.max(45,Math.min(window.innerHeight-240,bounds.bottom+8))+"px";
       preview.hidden=false;
-    },400);
+    },450);
   };
   const topLine = document.createElement("div");
   topLine.className="db-topline";
