@@ -162,6 +162,7 @@
     // The root is kept mounted until the game handles its own cleanup, so save/session
     // behavior is not silently reset by destroying its DOM.
     root(id)?.classList.add("db-away");
+    document.getElementById("gamesHub")?.classList.add("hidden");
     if(active===id)activate(tabs[i]||tabs[i-1]||"discard");
     else render();
   }
@@ -171,6 +172,26 @@
       setTimeout(()=>{if(visible(root(game[0])))openGame(game[0]);},50);
     });
   }
+  document.addEventListener("click", event => {
+    const btn = event.target?.closest?.("button");
+    if (!btn) return;
+    const found = games.find(game => root(game[0])?.contains(btn));
+    const id = found?.[0];
+    if (!id || !tabs.includes(id)) return;
+    const label = (btn.textContent || "").replace(/\s+/g, " ").trim();
+    if (!/back to games|close tab|return to discard/i.test(label) && !["mtdExit","mtdLeave","tetExit","bbBackGames","bbExit"].includes(btn.id)) return;
+    queueMicrotask(() => {
+      if (tabs.includes(id)) closeTab(id);
+      document.getElementById("gamesHub")?.classList.add("hidden");
+    });
+  }, true);
+  // Native game exits can also hide their roots without a button click.
+  const afterNativeExit = id => {
+    queueMicrotask(() => {
+      if (!visible(root(id)) && tabs.includes(id)) closeTab(id);
+      document.getElementById("gamesHub")?.classList.add("hidden");
+    });
+  };
   document.addEventListener("keydown",e=>{
     if(!visible(document.getElementById("chatView")))return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="w" && active!=="discard"){
@@ -190,7 +211,7 @@
     if(!el)continue;
     new MutationObserver(()=>{
       if(game[0]===active && !visible(el) && !el.classList.contains("db-away")){
-        activate("discard");
+        afterNativeExit(game[0]);
       }
     }).observe(el,{attributes:true,attributeFilter:["class","hidden","style"]});
   }
