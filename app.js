@@ -438,6 +438,7 @@ function drawBadgedIcon(source) {
 function updateUnreadBadge(total) {
   if (total === unreadTotal) return;
   unreadTotal = total;
+  window.dispatchEvent(new CustomEvent("discard:unread-change", { detail: { count: total } }));
   renderDisguise();
 }
 function renderDisguise() {
@@ -1673,7 +1674,7 @@ function showMessageNotification(chat, from, text, image, file) {
     const panel = document.querySelector(selector);
     return panel && !panel.classList.contains("hidden");
   });
-  const viewing = !document.hidden && document.hasFocus() && chat.id === activeChatId && !gameOpen;
+  const viewing = !document.hidden && document.hasFocus() && chat.id === activeChatId && !gameOpen && (!window.discardBrowserTabs?.activeTab || window.discardBrowserTabs.activeTab() === "discard");
   if (viewing) return;
   const sender = viewPerson(from).displayName;
   const body = text.trim() ? text.slice(0, 140) : image ? "Sent a photo" : `Sent ${file?.name || "a file"}`;
@@ -2692,7 +2693,7 @@ async function refreshSnapshot() {
       conversation: JSON.stringify([activeChatId, activeChat && [activeChat.rev, activeChat.name, activeChat.avatar, activeChat.online, activeChat.ownerId, activeChat.members.map(member => [member.id, member.displayName, member.username, member.avatar?.length || 0])]]),
       friends: JSON.stringify([snapshot.friends, snapshot.requests, snapshot.user.id])
     };
-    const viewing = activeChat && !document.hidden && document.hasFocus();
+    const viewing = activeChat && !document.hidden && document.hasFocus() && (!window.discardBrowserTabs?.activeTab || window.discardBrowserTabs.activeTab() === "discard");
     if (viewing && activeChat.unread) {
       await api("/api/read", { method: "POST", body: { chatId: activeChat.id } });
       activeChat.unread = 0;
