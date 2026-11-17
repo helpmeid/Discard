@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.58";
+const APP_VERSION = "4.8.59";
 const UPDATE_LOG = [
+  { version: "4.8.59", notes: ["Edge-inspired browser appearance: two-tier toolbar, rounded tabs, address bar, Back/Forward/Reload/Home controls, responsive layout, and searchable internal locations."] },
   { version: "4.8.58", notes: ["Discard browser redesign: permanent home tab, closable game tabs, one-click game launcher, tab switching, and keyboard shortcuts."] },
   { version: "4.8.57", notes: ["Block Blast: endless multiplayer with no timer and shared 8x8 co-op board. Added Tetris with keyboard/touch controls, hold, levels, high scores and saved playtime."] },
   { version: "4.8.56", notes: ["Fixed Block Blast multiplayer matches ending seconds after starting: 1v1 and co-op now receive the full two-minute round timer."] },
