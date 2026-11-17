@@ -330,6 +330,15 @@
     if(appFullscreen && active!=="discard" && !visible(root(active)))restoreActiveGame();
     window.dispatchEvent(new Event("resize"));
   };
+  // Ctrl+F toggles the fake browser's current-tab fullscreen, not browser find
+  // or the operating system's fullscreen mode.
+  window.addEventListener("keydown",event=>{
+    if(!event.ctrlKey||event.altKey||event.metaKey||event.shiftKey||event.key.toLowerCase()!=="f")return;
+    if(!visible(document.getElementById("chatView"))||event.repeat)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    setAppFullscreen(!appFullscreen);
+  },true);
   fullscreen.addEventListener("click",()=>setAppFullscreen(!appFullscreen));
   fullscreenExit.addEventListener("click",()=>setAppFullscreen(false));
   document.addEventListener("keydown",event=>{
