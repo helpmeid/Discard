@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.46";
+const APP_VERSION = "4.8.47";
 const UPDATE_LOG = [
+  { version: "4.8.47", notes: ["Added Block Blast: solo puzzle mode and 1v1 friend battles with five-letter room codes, live scores, and a two-minute timer."] },
   { version: "4.8.46", notes: ["Dead Zone: mythic copies of the already-active type can now drop or be forged and merge to level 5 without counting higher levels as extra mythics. Fixed Mantis Blades melee strikes being canceled before damage."] },
   { version: "4.8.45", notes: ["Cursor Studio redesign: redrawn cursor artwork, visually selectable gallery of 14 shapes, Clean/Glossy/Neon finishes, sharper classic and modern arrows, accurate click hotspots and updated instant preview. Existing saved cursor colors and sizes are preserved."] },
   { version: "4.8.44", notes: ["Custom Cursor Studio: colored classic arrow and system pointer options, pixel/crosshair/lightning/moon styles, 16–96px size slider with size presets, nine one-click cursor colors, real-time cursor preview and better clickable-pointer feedback."] },
@@ -1341,6 +1342,7 @@ function handleData(from, data) {
     return;
   }
   if (data.t.startsWith("mtd-")) { window.mtdHandle?.(from,data); return; }
+  if (data.t.startsWith("bb-")) { window.bbHandle?.(from,data); return; }
   if (data.t.startsWith("party-")) {
     partyGamesHandle(from, data);
     return;
@@ -4374,7 +4376,9 @@ document.querySelector("#gamesToggle").addEventListener("click", () => setGamesH
 document.querySelector("#hubClose").addEventListener("click", () => setGamesHub(false));
 gamesHub.addEventListener("click", event => { if (event.target === gamesHub) setGamesHub(false); });
 document.addEventListener("keydown", event => { if (event.key === "Escape") setGamesHub(false); });
+window.bbNetwork={get id(){return state?.me?.id||null},get friends(){return Object.keys(state?.friends||{})},send:(to,data)=>{connectTo(to);return sendTo(to,data)}};
 window.mtdNetwork={get id(){return state?.me?.id||null},get friends(){return Object.keys(state?.friends||{})},send:(to,data)=>{connectTo(to);return sendTo(to,data)}};
+document.querySelector("#hubPlayBlockBlast").addEventListener("click",()=>{setGamesHub(false);window.openBlockBlast?.()});
 document.querySelector("#hubPlayMemeTD").addEventListener("click",()=>{setGamesHub(false);window.openMemeTowerDefense?.()});
 document.querySelector("#hubPlayFreeDraw").addEventListener("click", () => { setGamesHub(false); window.openFreeDraw?.(); });
 document.querySelector("#hubPlayDeadZone").addEventListener("click", () => { setGamesHub(false); window.openDeadZone?.(); });
