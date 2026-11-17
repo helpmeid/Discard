@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "4.8.53";
+const APP_VERSION = "4.8.54";
 const UPDATE_LOG = [
+  { version: "4.8.54", notes: ["Block Blast: removed all sounds and added a prominent combo tracker with eight multiplier segments and safe-move reminders."] },
   { version: "4.8.53", notes: ["Block Blast overhaul: exact clear scoring, eight-tier combos with two safe misses, perfect clears, animated celebrations, smooth drag return, saved combo state, sound and reduced motion controls."] },
   { version: "4.8.52", notes: ["Block Blast: saved solo runs with Continue/New Game preview of score and board, board-screen no-scroll layout, larger Main Menu button and removed plus-shaped piece."] },
   { version: "4.8.51", notes: ["Block Blast drag fix: quick tap toggles selection, holding or dragging never leaves pieces selected after an invalid drop, grid snapping improved, and 1x1 pieces appear more often."] },
