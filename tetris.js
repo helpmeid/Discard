@@ -27,7 +27,7 @@ function runTimer(){pauseTimer();interval=setInterval(()=>{if(!playing||paused||
 function step(){if(!playing||paused)return;if(!collides(active,0,1))active.y++;else lock();}
 function move(dx){if(!playing||paused)return;if(!collides(active,dx,0))active.x+=dx;render();}
 function rotate(){if(!playing||paused||active.type==='O')return;const rotated=active.cells.map(([x,y])=>[3-y,x]);for(const dx of [0,-1,1,-2,2]){if(!collides(active,dx,0,rotated)){active.cells=rotated;active.x+=dx;break;}}render();}
-function hardDrop(){if(!playing||paused||dropLocked)return;const now=performance.now();if(now-lastHardDropAt<180)return;dropLocked=true;lastHardDropAt=now;let n=0;while(!collides(active,0,1)){active.y++;n++;}score+=n*2;lock();}
+function hardDrop(){if(!playing||paused||dropLocked)return;const now=performance.now();if(now-lastHardDropAt<320)return;dropLocked=true;lastHardDropAt=now;let n=0;while(!collides(active,0,1)){active.y++;n++;}score+=n*2;lock();}
 function lock(){for(const [cx,cy] of active.cells){const x=active.x+cx,y=active.y+cy;if(y<0){clearControls();playing=false;over=true;pauseTimer();render();return;}board[y][x]=active.type;}
 let removed=0;for(let y=H-1;y>=0;y--){if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(W).fill(''));removed++;y++;}}
 if(removed){score+=[0,100,300,500,800][removed]*level;lines+=removed;level=1+Math.floor(lines/10);}
@@ -83,6 +83,8 @@ root=document.createElement('section');root.id='tetRoot';root.className='hidden'
 </div>`;document.body.appendChild(root);
 $('Exit').onclick=close;$('Pause').onclick=togglePause;$('Restart').onclick=start;
 root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>press(b.dataset.action));
+// Avoid a focused DROP button generating a second click from the same Space key.
+root.querySelector('[data-action="drop"]').addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();}});
 const keyActions={'ArrowLeft':'left','ArrowRight':'right','ArrowDown':'down','ArrowUp':'rotate','a':'left','d':'right','s':'down','w':'rotate',' ':'drop','c':'hold','p':'pause'};
 window.addEventListener('keydown',e=>{
   if(root.classList.contains('hidden')||editableTarget(e.target)||e.ctrlKey||e.metaKey||e.altKey)return;
@@ -103,7 +105,9 @@ window.addEventListener('keyup',e=>{
   oneShotKeys.delete(key);
   if(!heldKeys.delete(key))return;
   syncHeld();
-  if(!heldKeys.size){clearControls();}
+  // Do not clear one-shot keys while Space is still physically held.
+  // Releasing A/D/S must never re-arm a held hard-drop key.
+  if(!heldKeys.size&&repeatTimer){clearInterval(repeatTimer);repeatTimer=null;repeatAction=null;soft=false;}
 });
 window.addEventListener('blur',clearControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing&&!paused){clearControls();paused=true;render();}last=performance.now();});
