@@ -29,7 +29,7 @@ If sign-in says your account is already open in another tab, use **Unlock Accoun
 
 1. Open `index.html`. Choose **Create account** (username + password, optional display name) or **Sign in**. Accounts and passwords live only on your computer, and you can have several on one computer.
 2. Open **Friends** and copy your **friend code**. Send it to a friend, and paste theirs into "Paste a friend code".
-3. They accept the request, then you can message, reply to messages, send files (up to 5 MB), images and GIFs, and make group chats. New accounts get a six-character friend code like `ab12cd` (the old `dsc-` prefix is hidden, and still accepted if pasted).
+3. They accept the request, then you can message, reply to messages, send files (up to 30 MB), images and GIFs, and make group chats. New accounts get a six-character friend code like `ab12cd` (the old `dsc-` prefix is hidden, and still accepted if pasted).
 4. Click anyone's picture or name to set a **nickname** that only you see. Group owners can set a group picture. Every message shows its sender's picture, name and @username.
 5. Settings has **Disguise tab as Minga**, which changes the browser tab's title and icon.
 
