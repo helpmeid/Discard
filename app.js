@@ -669,7 +669,7 @@ const tenorUrlPattern = /^https:\/\/(?:media\d*\.tenor\.com|media\d*\.giphy\.com
 // Public GIPHY browser key shared by everyone using this app.
 const GIPHY_API_KEY = "8tdFAXlnlUWwcCjTd8Njko0kNQozvdc";
 const maxWireImageChars = 4.5 * 1024 * 1024;
-const maxFileBytes = 5 * 1024 * 1024;
+const maxFileBytes = 30 * 1024 * 1024;
 const maxWireFileChars = Math.ceil(maxFileBytes / 3) * 4 + 64;
 const fileDataPattern = /^data:application\/octet-stream;base64,[A-Za-z0-9+/=]*$/;
 
@@ -2117,7 +2117,7 @@ async function api(path, options = {}) {
     let file = null;
     if (body.file !== undefined) {
       if (image) fail("Send a file on its own, without an image.");
-      file = sanitizeFile(body.file) || fail("Files must be under 5 MB.");
+      file = sanitizeFile(body.file) || fail("Files must be 30 MB or smaller.");
     }
     let replyTo = null;
     if (body.replyTo !== undefined && body.replyTo !== null) {
