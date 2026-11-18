@@ -126,8 +126,8 @@ function makeGhost(p,x,y){removeGhost();let e=document.createElement('div');e.id
 function moveGhost(x,y){
  const e=$('DragGhost'),p=drag?.piece,b=$('Board'),first=b?.children[0]?.getBoundingClientRect(),next=b?.children[1]?.getBoundingClientRect();if(!e||!p||!first)return;
  const step=next.left-first.left,w=Number(e.dataset.w),h=Number(e.dataset.h),at=boardCoords(x,y,p),offset=dragPointerType==='touch'?Math.min(92,step*1.6):0;
- e.style.left=(at?first.left+at.x*step:x-(w*step-(step-first.width))/2)+'px';
- e.style.top=(at?first.top+at.y*step:y-offset-(h*step-(step-first.height))/2)+'px';
+ e.style.left=(x-(w*step-(step-first.width))/2)+'px';
+ e.style.top=(y-offset-(h*step-(step-first.height))/2)+'px';
  e.style.setProperty('--ghost-cell',first.width+'px');e.firstElementChild.style.cssText='grid-template-columns:repeat('+w+','+first.width+'px);grid-template-rows:repeat('+h+','+first.height+'px);gap:'+(step-first.width)+'px';drawPreview(x,y,p);
 }
 function returnGhost(index){const ghost=$('DragGhost'),target=$('Hand')?.children[index];clearPreview();if(!ghost||!target||reduced){removeGhost();return;}ghost.id='';const a=ghost.getBoundingClientRect(),b=target.getBoundingClientRect();ghost.animate([{transform:'translate(0,0) scale(1)',opacity:.8},{transform:'translate('+(b.left+b.width/2-a.left-a.width/2)+'px,'+(b.top+b.height/2-a.top-a.height/2)+'px) scale(.42)',opacity:0}],{duration:230,easing:'cubic-bezier(.2,.8,.2,1)'}).finished.then(()=>ghost.remove(),()=>ghost.remove());}
