@@ -8,21 +8,27 @@ const W=10,H=20,SHAPES={
 },COLORS={I:'#40dcff',O:'#ffe36a',T:'#b484ff',S:'#57eea1',Z:'#ff688b',J:'#6595ff',L:'#ffad62'};
 const $=id=>document.getElementById('tet'+id);
 let root,board,active,queue=[],bag=[],held=null,holdUsed=false,score=0,lines=0,level=1,best=0,playing=false,paused=false,over=false,interval=null,last=0,elapsed=0,soft=false;
+const heldKeys=new Set();let repeatTimer=null,repeatAction=null,repeatStart=0,repeatLast=0;
+const REPEAT_DELAY=145,REPEAT_RATE=42;
+function clearControls(){heldKeys.clear();soft=false;repeatAction=null;if(repeatTimer){clearInterval(repeatTimer);repeatTimer=null;}}
+function syncHeld(){soft=heldKeys.has('ArrowDown')||heldKeys.has('s');const direction=heldKeys.has('ArrowLeft')||heldKeys.has('a')?'left':heldKeys.has('ArrowRight')||heldKeys.has('d')?'right':null;if(direction!==repeatAction){repeatAction=direction;repeatStart=performance.now();repeatLast=repeatStart;if(direction)press(direction);}}
+function controlTick(){if(!root||root.classList.contains('hidden')||!playing||paused){clearControls();return;}if(!repeatAction)return;const now=performance.now();if(now-repeatStart>=REPEAT_DELAY&&now-repeatLast>=REPEAT_RATE){press(repeatAction);repeatLast=now;}}
+function editableTarget(t){return t instanceof Element&&!!t.closest('input,textarea,select,[contenteditable=""],[contenteditable="true"],[role="textbox"]');}
 const key='discard-tetris-best-v1';
 const empty=()=>Array.from({length:H},()=>Array(W).fill(''));
 function refill(){if(!bag.length){bag=Object.keys(SHAPES);for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]];}}return bag.pop();}
 function fillQueue(){while(queue.length<5)queue.push(refill());}
 function newPiece(type){return {type,cells:SHAPES[type].map(c=>c.slice()),x:3,y:-1};}
 function collides(p,dx=0,dy=0,cells=p.cells){return cells.some(([cx,cy])=>{const x=p.x+cx+dx,y=p.y+cy+dy;return x<0||x>=W||y>=H||(y>=0&&!!board[y][x]);});}
-function spawn(type){active=newPiece(type||queue.shift());fillQueue();if(collides(active)){playing=false;over=true;pauseTimer();render();}}
-function start(){board=empty();queue=[];bag=[];held=null;holdUsed=false;score=0;lines=0;level=1;elapsed=0;playing=true;paused=false;over=false;fillQueue();spawn();last=performance.now();runTimer();render();}
+function spawn(type){active=newPiece(type||queue.shift());fillQueue();if(collides(active)){clearControls();playing=false;over=true;pauseTimer();render();}}
+function start(){clearControls();board=empty();queue=[];bag=[];held=null;holdUsed=false;score=0;lines=0;level=1;elapsed=0;playing=true;paused=false;over=false;fillQueue();spawn();last=performance.now();runTimer();render();}
 function pauseTimer(){if(interval)clearInterval(interval);interval=null;}
 function runTimer(){pauseTimer();interval=setInterval(()=>{if(!playing||paused||document.hidden)return;const now=performance.now(),dt=Math.min(200,now-last);last=now;elapsed+=dt;const speed=soft?40:Math.max(95,820*Math.pow(.82,level-1));if(elapsed>=speed){elapsed=0;step();}render();},40);}
 function step(){if(!playing||paused)return;if(!collides(active,0,1))active.y++;else lock();}
 function move(dx){if(!playing||paused)return;if(!collides(active,dx,0))active.x+=dx;render();}
 function rotate(){if(!playing||paused||active.type==='O')return;const rotated=active.cells.map(([x,y])=>[3-y,x]);for(const dx of [0,-1,1,-2,2]){if(!collides(active,dx,0,rotated)){active.cells=rotated;active.x+=dx;break;}}render();}
 function hardDrop(){if(!playing||paused)return;let n=0;while(!collides(active,0,1)){active.y++;n++;}score+=n*2;lock();}
-function lock(){for(const [cx,cy] of active.cells){const x=active.x+cx,y=active.y+cy;if(y<0){playing=false;over=true;pauseTimer();render();return;}board[y][x]=active.type;}
+function lock(){for(const [cx,cy] of active.cells){const x=active.x+cx,y=active.y+cy;if(y<0){clearControls();playing=false;over=true;pauseTimer();render();return;}board[y][x]=active.type;}
 let removed=0;for(let y=H-1;y>=0;y--){if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(W).fill(''));removed++;y++;}}
 if(removed){score+=[0,100,300,500,800][removed]*level;lines+=removed;level=1+Math.floor(lines/10);}
 if(score>best){best=score;try{localStorage.setItem(key,String(best));}catch{}}
@@ -43,8 +49,8 @@ $('Overlay').innerHTML=over?'<h2>GAME OVER</h2><p>Final score: '+score.toLocaleS
 $('Again')?.addEventListener('click',start);$('Resume')?.addEventListener('click',togglePause);
 }
 function render(){draw();}
-function togglePause(){if(!playing)return;paused=!paused;last=performance.now();render();}
-function close(){pauseTimer();playing=false;paused=false;root?.classList.add('hidden');window.setDiscardGameActivity?.('');document.querySelector('#gamesHub')?.classList.remove('hidden');}
+function togglePause(){if(!playing)return;clearControls();paused=!paused;last=performance.now();render();}
+function close(){clearControls();pauseTimer();playing=false;paused=false;root?.classList.add('hidden');window.setDiscardGameActivity?.('');document.querySelector('#gamesHub')?.classList.remove('hidden');}
 function press(action){if(action==='left')move(-1);if(action==='right')move(1);if(action==='rotate')rotate();if(action==='down'){if(playing&&!paused){if(!collides(active,0,1)){active.y++;score++;render();}else lock();}}if(action==='drop')hardDrop();if(action==='hold')hold();if(action==='pause')togglePause();}
 function setup(){if(root)return;const style=document.createElement('style');style.textContent=`
 #tetRoot{position:fixed;inset:0;z-index:15000;background:radial-gradient(ellipse at 45% -25%,#253968,#090e22 65%);color:#f0f6ff;overflow:auto;font:500 14px/1.4 system-ui,sans-serif}
@@ -72,13 +78,33 @@ function setup(){if(root)return;const style=document.createElement('style');styl
 root=document.createElement('section');root.id='tetRoot';root.className='hidden';root.innerHTML=`
 <div class="tet-shell"><header class="tet-top"><div><div class="tet-kicker">DISCARD ARCADE</div><h1>TETRIS</h1></div><button id="tetExit" class="tet-btn">✕ Close Tab</button></header>
 <div class="tet-content"><div class="tet-board-frame"><div id="tetBoard" class="tet-board" aria-label="10 by 20 Tetris board"></div><div id="tetOverlay" class="tet-overlay hidden"></div></div>
-<aside class="tet-side"><div class="tet-metrics"><div class="tet-card"><small>SCORE</small><strong id="tetScore">0</strong></div><div class="tet-card"><small>BEST</small><strong id="tetBest">0</strong></div><div class="tet-card"><small>LINES</small><strong id="tetLines">0</strong></div><div class="tet-card"><small>LEVEL</small><strong id="tetLevel">1</strong></div></div><div class="tet-card"><small>NEXT</small><div id="tetNext"></div></div><div class="tet-card"><small>HOLD (C)</small><div id="tetHold"></div></div><div class="tet-actions"><button class="tet-btn" id="tetPause">Ⅱ Pause</button><button class="tet-btn" id="tetRestart">↻ Restart</button></div><div class="tet-help">← → move · ↑ rotate · ↓ soft drop<br>Space hard drop · C hold · P pause</div></aside></div>
+<aside class="tet-side"><div class="tet-metrics"><div class="tet-card"><small>SCORE</small><strong id="tetScore">0</strong></div><div class="tet-card"><small>BEST</small><strong id="tetBest">0</strong></div><div class="tet-card"><small>LINES</small><strong id="tetLines">0</strong></div><div class="tet-card"><small>LEVEL</small><strong id="tetLevel">1</strong></div></div><div class="tet-card"><small>NEXT</small><div id="tetNext"></div></div><div class="tet-card"><small>HOLD (C)</small><div id="tetHold"></div></div><div class="tet-actions"><button class="tet-btn" id="tetPause">Ⅱ Pause</button><button class="tet-btn" id="tetRestart">↻ Restart</button></div><div class="tet-help">← → or A/D move · ↑ or W rotate · ↓ or S soft drop<br>Space hard drop · C hold · P pause</div></aside></div>
 <div class="tet-controls"><button class="tet-btn" data-action="left">◀</button><button class="tet-btn" data-action="rotate">↻</button><button class="tet-btn" data-action="right">▶</button><button class="tet-btn" data-action="down">▼</button><button class="tet-btn primary" data-action="drop">DROP</button><button class="tet-btn" data-action="hold">HOLD</button></div><div class="tet-playtime" data-playtime="tetris">0h 0m played</div>
 </div>`;document.body.appendChild(root);
 $('Exit').onclick=close;$('Pause').onclick=togglePause;$('Restart').onclick=start;
 root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>press(b.dataset.action));
-window.addEventListener('keydown',e=>{if(root.classList.contains('hidden'))return;const action={'ArrowLeft':'left','ArrowRight':'right','ArrowDown':'down','ArrowUp':'rotate',' ':'drop','c':'hold','C':'hold','p':'pause','P':'pause'}[e.key];if(action){e.preventDefault();press(action);}});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing&&!paused){paused=true;render();}last=performance.now();});
+const keyActions={'ArrowLeft':'left','ArrowRight':'right','ArrowDown':'down','ArrowUp':'rotate','a':'left','d':'right','s':'down','w':'rotate',' ':'drop','c':'hold','p':'pause'};
+window.addEventListener('keydown',e=>{
+  if(root.classList.contains('hidden')||editableTarget(e.target)||e.ctrlKey||e.metaKey||e.altKey)return;
+  const key=e.key.length===1?e.key.toLowerCase():e.key,action=keyActions[key];
+  if(!action)return;
+  e.preventDefault();
+  if(e.repeat||heldKeys.has(key))return;
+  if(action==='left'||action==='right'||action==='down'){
+    heldKeys.add(key);
+    if(action==='down'){soft=true;press('down');}
+    else syncHeld();
+    if(!repeatTimer)repeatTimer=setInterval(controlTick,16);
+  }else press(action);
+},{capture:true});
+window.addEventListener('keyup',e=>{
+  const key=e.key.length===1?e.key.toLowerCase():e.key;
+  if(!heldKeys.delete(key))return;
+  syncHeld();
+  if(!heldKeys.size){clearControls();}
+});
+window.addEventListener('blur',clearControls);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing&&!paused){clearControls();paused=true;render();}last=performance.now();});
 try{best=Number(localStorage.getItem(key))||0;}catch{}
 }
 window.tetrisIsPlaying=()=>!!(root&&!root.classList.contains('hidden')&&playing&&!paused&&!over);
