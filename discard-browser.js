@@ -14,6 +14,7 @@
   let unreadCount=0;
   let active = "discard";
   const storageKey = "discard-browser-workspace-v2";
+  const isTypingTarget = target => !!target?.closest?.("input, textarea, select, [contenteditable]:not([contenteditable=\"false\"]), [role=\"textbox\"]") || !!target?.isContentEditable;
   const settingsKey = "discard-browser-preferences-v1";
   let browserTheme = "light";
   try {const saved=JSON.parse(localStorage.getItem(settingsKey)||"{}");if(["light","dark","system"].includes(saved.theme))browserTheme=saved.theme;}catch{}
@@ -334,7 +335,7 @@
   // or the operating system's fullscreen mode.
   window.addEventListener("keydown",event=>{
     if(!event.ctrlKey||event.altKey||event.metaKey||event.shiftKey||event.key.toLowerCase()!=="f")return;
-    if(!visible(document.getElementById("chatView"))||event.repeat)return;
+    if(!visible(document.getElementById("chatView"))||event.repeat||isTypingTarget(event.target))return;
     event.preventDefault();
     event.stopImmediatePropagation();
     setAppFullscreen(!appFullscreen);
@@ -342,8 +343,7 @@
   fullscreen.addEventListener("click",()=>setAppFullscreen(!appFullscreen));
   fullscreenExit.addEventListener("click",()=>setAppFullscreen(false));
   document.addEventListener("keydown",event=>{
-    if(event.key==="Escape"&&appFullscreen&&
-       !event.target?.matches?.("input,textarea,select")){
+    if(event.key==="Escape"&&appFullscreen&&!isTypingTarget(event.target)){
       setAppFullscreen(false);
     }
   });
@@ -406,7 +406,8 @@
       }
       strip.append(tab);
     }
-    location.value=active==="discard"?"discard://chats":"discard://games/"+active;
+    // Never overwrite in-progress address-bar input during notifications or rerenders.
+    if(document.activeElement!==location)location.value=active==="discard"?"discard://chats":"discard://games/"+active;
     for (const game of games) root(game[0])?.classList.toggle("db-away",game[0]!==active);
     // The browser bar is above game canvases and available even in full-screen game menus.
     const signedIn = visible(document.getElementById("chatView"));
@@ -489,6 +490,7 @@
   };
   document.addEventListener("keydown",e=>{
     if(!visible(document.getElementById("chatView")))return;
+    if(isTypingTarget(e.target))return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="w" && active!=="discard"){
       e.preventDefault();closeTab(active);
     } else if((e.ctrlKey||e.metaKey)&&e.key==="Tab"){
@@ -503,10 +505,16 @@
     const next=Math.max(0,Math.floor(Number(event.detail?.count)||0));
     if(next===unreadCount)return;
     unreadCount=next;
-    render();
+    // Updating badges in place prevents losing focused tabs or text input.
+    for(const tab of strip.querySelectorAll(".db-tab")){
+      if(tab.title!=="Discard — your chats")continue;
+      const badge=tab.querySelector(".db-unread");
+      if(badge){badge.dataset.show=String(unreadCount>0&&active!=="discard");badge.textContent=unreadCount>99?"99+":String(unreadCount);badge.setAttribute("aria-label",unreadCount+" unread messages");}
+      tab.dataset.hasUnread=String(unreadCount>0&&active!=="discard");
+    }
   });
   bar.addEventListener("keydown",event=>{
-    if(event.target?.matches?.("input,textarea,select") || event.target?.isContentEditable)event.stopPropagation();
+    if(isTypingTarget(event.target))event.stopPropagation();
   },true);
   const chat=document.getElementById("chatView");
   if(chat)new MutationObserver(render).observe(chat,{attributes:true,attributeFilter:["class"]});
