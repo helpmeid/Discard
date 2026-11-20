@@ -216,8 +216,9 @@ let renderedKeys = {};
 let renderedChatId = null;
 let preferenceSaveTimer = null;
 
-const APP_VERSION = "5.4.6";
+const APP_VERSION = "5.4.7";
 const UPDATE_LOG = [
+  { version: "5.4.7", notes: ["Fixed player two’s piece placement in Block Blast 1v1, kept rival updates from interrupting drags, and synchronized match results."] },
   { version: "5.4.6", notes: ["Block Blast pieces now move smoothly with the pointer instead of snapping between cells while dragging."] },
   { version: "5.4.5", notes: ["Ctrl+F now toggles in-app fullscreen for the currently selected Discard or game tab without activating browser find."] },
   { version: "5.4.4", notes: ["Version updated to 5.4.4."] },
