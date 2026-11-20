@@ -11,6 +11,25 @@
   ];
   const byId = Object.fromEntries(games.map(g => [g[0],g]));
   const tabs = ["discard"];
+  const webTabs = {};
+  const isWeb = id => id.startsWith("web:");
+  let webEnabled = false;
+  const passKey="discard-web-mode-password-v1";
+  const webName=id=>{try{return webTabs[id]?.url?new URL(webTabs[id].url).hostname:"New tab"}catch{return "Website"}};
+  function toURL(value){
+    value=String(value).trim();if(!value)return "";
+    try {
+      if(!/^https?:\/\//i.test(value)){
+        if(/^[\w-]+(?:\.[\w-]+)+(?:[:/]|$)/i.test(value))value="https://"+value;
+        else value="https://www.google.com/search?q="+encodeURIComponent(value);
+      }
+      const u=new URL(value);return ["https:","http:"].includes(u.protocol)?u.href:"";
+    }catch{return ""}
+  }
+  async function digest(password,salt){
+    const a=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+":"+password));
+    return Array.from(new Uint8Array(a),x=>x.toString(16).padStart(2,"0")).join("");
+  }
   let unreadCount=0;
   let active = "discard";
   const storageKey = "discard-browser-workspace-v2";
@@ -21,19 +40,37 @@
   try {
     const saved=JSON.parse(localStorage.getItem(storageKey)||"{}");
     if(Array.isArray(saved.tabs)) {
-      for(const id of saved.tabs) if(byId[id]&&!tabs.includes(id))tabs.push(id);
+      for(const id of saved.tabs){
+        if(byId[id]&&!tabs.includes(id))tabs.push(id);
+        else if(isWeb(id)&&saved.webTabs?.[id]&&tabs.length<40){
+          const old=saved.webTabs[id],history=Array.isArray(old.history)?old.history.filter(x=>typeof x==="string"&&/^https?:\/\//.test(x)).slice(-50):[];
+          const pos=Math.max(-1,Math.min(history.length-1,Number(old.pos)||0));
+          webTabs[id]={url:history[pos]||"",history,pos};tabs.push(id);
+        }
+      }
     }
     if(saved.active==="discard"||tabs.includes(saved.active))active=saved.active||"discard";
   } catch {}
+  if(isWeb(active))active="discard";
   let restoring = false;
   let restoreAttempted = false;
-  const saveWorkspace = () => {try{localStorage.setItem(storageKey,JSON.stringify({tabs,active}));}catch{}};
+  const saveWorkspace = () => {try{localStorage.setItem(storageKey,JSON.stringify({tabs,active,webTabs}));}catch{}};
   const saveSettings = () => {try{localStorage.setItem(settingsKey,JSON.stringify({theme:browserTheme}));}catch{}};
 
   const style = document.createElement("style");
   style.textContent = `
   #discardBrowser{position:fixed;inset:0 0 auto;height:88px;z-index:2147483000;display:flex;flex-direction:column;background:#e7edf5;color:#253246;font:500 12px "Segoe UI",system-ui,sans-serif;box-shadow:0 2px 9px #14233b24;user-select:none;isolation:isolate}
   #discardBrowser[hidden]{display:none!important}
+  #dbWebPages{position:fixed;inset:88px 0 0;z-index:2147482000;background:white}
+  #dbWebPages[hidden],#dbWebPages [hidden]{display:none!important}
+  #dbWebPages section{position:absolute;inset:0;display:flex;flex-direction:column}
+  #dbWebPages iframe{width:100%;flex:1;border:0}
+  #dbWebPages .db-web-notice{padding:8px 12px;background:#eaf2fc;font:12px system-ui;color:#345}
+  #dbWebPages .db-web-notice a{margin-left:12px;color:#146db6}
+  #dbWebPages .db-web-empty{flex:1;display:grid;place-content:center;text-align:center;background:#f2f5fb;font:16px system-ui;color:#345}
+  #discardBrowser .db-mode-input{box-sizing:border-box;width:100%;margin:8px 0;padding:9px;border:1px solid #acbdd1;border-radius:8px;background:transparent;color:inherit}
+  #discardBrowser .db-mode-message{font-size:11px;line-height:1.4;margin:8px 4px}
+  body.db-app-fullscreen #dbWebPages{inset:0}
   #discardBrowser button{font:inherit;cursor:pointer}
   #discardBrowser button:focus-visible,#discardBrowser .db-address:focus-visible{outline:2px solid #1478d4;outline-offset:-2px}
   #discardBrowser .db-topline{display:flex;align-items:end;gap:6px;height:40px;padding:5px 12px 0;min-width:0;background:#dce5f0}
@@ -206,6 +243,14 @@
     previewTimer=setTimeout(()=>{
       if(!tab.isConnected||bar.hidden||document.body.classList.contains("db-app-fullscreen"))return;
       const data=byId[id];
+      if(isWeb(id)){
+        const h=document.createElement("div");h.className="db-preview-title";h.textContent="🌐 "+webName(id);
+        const a=document.createElement("div");a.className="db-preview-window";a.style.cssText="display:grid;place-items:center;color:#456";a.textContent="Website preview unavailable";
+        const f=document.createElement("div");f.className="db-preview-footer";f.textContent=webTabs[id]?.url||"New tab";
+        preview.append(h,a,f);
+        const b=tab.getBoundingClientRect();preview.style.left=Math.max(8,Math.min(window.innerWidth-298,b.left))+"px";
+        preview.style.top=Math.max(45,Math.min(window.innerHeight-240,b.bottom+8))+"px";preview.hidden=false;return;
+      }
       const title=document.createElement("div");
       title.className="db-preview-title";
       title.textContent=(data?data[2]+"  "+data[1]:"●  Discard")+" — Tab preview";
@@ -273,18 +318,30 @@
     activate("discard");
     document.getElementById("gamesToggle")?.click();
   };
-  const newTab=tool("New tab","+ ",openHub,"db-new");
+  function newWebTab(url=""){
+    if(!webEnabled){settingsPanel.hidden=false;modeMessage.textContent="Unlock Website Mode first.";modeInput.focus();return;}
+    const id="web:"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    webTabs[id]={url:"",history:[],pos:-1};tabs.push(id);activate(id);
+    if(url)navigateWeb(id,url);
+  }
+  const newTab=tool("New tab","+ ",()=>webEnabled?newWebTab():openHub(),"db-new");
   const windowTitle=document.createElement("span");windowTitle.className="db-window-title";windowTitle.textContent="Discard";
   topLine.append(strip,newTab,windowTitle);
   const toolbar=document.createElement("div");toolbar.className="db-toolbar";
-  const reload=tool("Reload Discard","↻",()=>window.location.reload());
-  const home=tool("Games","⌂",openHub);
+  const back=tool("Back","←",()=>goHistory(-1));
+  const forward=tool("Forward","→",()=>goHistory(1));
+  const reload=tool("Reload current tab","↻",()=>{
+    if(!isWeb(active)){window.location.reload();return;}
+    const frame=[...webPages.children].find(x=>x.dataset.id===active)?.querySelector("iframe");
+    if(frame&&webTabs[active]?.url)frame.src=webTabs[active].url;
+  });
+  const home=tool("Discard home","⌂",()=>activate("discard"));
   const addressWrap=document.createElement("div");addressWrap.className="db-address-wrap";
   const lock=document.createElement("span");lock.className="db-lock";lock.textContent="◇";
   const location=document.createElement("input");
   location.className="db-address";location.setAttribute("aria-label","Discard address");
   location.autocomplete="off";location.spellcheck=false;
-  location.placeholder="Search tabs or enter Discard location";
+  location.placeholder="Search or enter website URL";
   const more=tool("Browser settings","⋯",()=>{settingsPanel.hidden=!settingsPanel.hidden;});
   more.classList.add("db-more");
   const settingsPanel=document.createElement("section");settingsPanel.className="db-settings";settingsPanel.hidden=true;
@@ -328,7 +385,7 @@
     fullscreen.title=fullscreenText.textContent;
     fullscreen.setAttribute("aria-pressed",String(appFullscreen));
     settingsPanel.hidden=true;
-    if(appFullscreen && active!=="discard" && !visible(root(active)))restoreActiveGame();
+    if(appFullscreen && active!=="discard" && !isWeb(active) && !visible(root(active)))restoreActiveGame();
     window.dispatchEvent(new Event("resize"));
   };
   // Ctrl+F toggles the fake browser's current-tab fullscreen, not browser find
@@ -348,7 +405,30 @@
     }
   });
   setAppFullscreen(false);
-  settingsPanel.append(settingsTitle,themeLabel,fullscreen);
+  const modeLabel=document.createElement("label");modeLabel.textContent="Website Mode password";
+  const modeInput=document.createElement("input");modeInput.type="password";modeInput.className="db-mode-input";modeInput.placeholder="Enter password";modeInput.autocomplete="off";
+  const modeButton=document.createElement("button");modeButton.type="button";
+  const modeMessage=document.createElement("p");modeMessage.className="db-mode-message";
+  const modeRefresh=()=>{
+    modeButton.textContent=webEnabled?"Lock Website Mode":localStorage.getItem(passKey)?"Unlock Website Mode":"Create password and enable Website Mode";
+    modeMessage.textContent=webEnabled?"Enabled. Only embeddable websites can load; no proxy is provided.":localStorage.getItem(passKey)?"Enter your saved password.":"Create a password (4+ characters) for this device.";
+  };
+  modeButton.onclick=async()=>{
+    if(webEnabled){webEnabled=false;modeInput.value="";activate("discard");modeRefresh();return;}
+    const value=modeInput.value;if(value.length<4){modeMessage.textContent="Use at least 4 characters.";return;}
+    modeButton.disabled=true;
+    try{
+      const saved=localStorage.getItem(passKey);
+      if(saved){const p=JSON.parse(saved);if(await digest(value,p.salt)!==p.hash){modeMessage.textContent="Incorrect password.";return;}}
+      else{const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,"0")).join("");
+        localStorage.setItem(passKey,JSON.stringify({salt,hash:await digest(value,salt)}));}
+      webEnabled=true;modeInput.value="";modeRefresh();render();
+    }catch{modeMessage.textContent="Password storage unavailable.";}
+    finally{modeButton.disabled=false;}
+  };
+  modeInput.onkeydown=e=>{if(e.key==="Enter")modeButton.click()};
+  settingsPanel.append(settingsTitle,themeLabel,fullscreen,modeLabel,modeInput,modeButton,modeMessage);
+  modeRefresh();
   updateTheme();
   document.addEventListener("pointerdown",event=>{
     if(!settingsPanel.hidden&&!settingsPanel.contains(event.target)&&event.target!==more)settingsPanel.hidden=true;
@@ -363,11 +443,48 @@
     else if(value==="games"||value==="discard://games")openHub();
     else if(match&&tabs.includes(match[0]))activate(match[0]);
     else if(match)document.getElementById(match[3])?.click();
-    else{location.setCustomValidity("Use Discard, Games, or an available game name.");location.reportValidity();setTimeout(()=>location.setCustomValidity(""),1800);}
+    else if(webEnabled){if(isWeb(active))navigateWeb(active,location.value);else newWebTab(location.value);}
+    else{settingsPanel.hidden=false;modeMessage.textContent="Unlock Website Mode to open websites.";modeInput.focus();}
     location.blur();
   });
   addressWrap.append(lock,location);
-  toolbar.append(reload,home,addressWrap,more);
+  toolbar.append(back,forward,reload,home,addressWrap,more);
+  const webPages=document.createElement("main");webPages.id="dbWebPages";webPages.hidden=true;document.body.append(webPages);
+  function navigateWeb(id,raw,backward=false){
+    const w=webTabs[id],url=toURL(raw);if(!w||!url||!webEnabled)return;
+    if(!backward){w.history=w.history.slice(0,w.pos+1);w.history.push(url);w.history=w.history.slice(-50);w.pos=w.history.length-1;}
+    w.url=url;saveWorkspace();syncWeb();updateLocation();
+  }
+  function goHistory(delta){
+    const w=isWeb(active)?webTabs[active]:null;if(!w||!webEnabled)return;
+    const pos=w.pos+delta;if(pos<0||pos>=w.history.length)return;w.pos=pos;navigateWeb(active,w.history[pos],true);
+  }
+  function updateLocation(){
+    const w=isWeb(active)?webTabs[active]:null;
+    back.disabled=!webEnabled||!w||w.pos<=0;forward.disabled=!webEnabled||!w||w.pos>=w.history.length-1;
+    if(document.activeElement!==location)location.value=w?(w.url||""):active==="discard"?"discard://chats":"discard://games/"+active;
+  }
+  function syncWeb(){
+    for(const el of [...webPages.children])if(!webTabs[el.dataset.id])el.remove();
+    for(const id of tabs.filter(isWeb)){
+      const w=webTabs[id];if(!w)continue;
+      let page=[...webPages.children].find(x=>x.dataset.id===id);
+      if(!page){
+        page=document.createElement("section");page.dataset.id=id;
+        const empty=document.createElement("div");empty.className="db-web-empty";empty.textContent="Search or enter a website above";
+        const note=document.createElement("div");note.className="db-web-notice";note.textContent="Some websites do not allow embedding. This is not a proxy.";
+        const link=document.createElement("a");link.textContent="Open externally";link.target="_blank";link.rel="noopener noreferrer";note.append(link);
+        const iframe=document.createElement("iframe");iframe.title="Website";iframe.referrerPolicy="strict-origin-when-cross-origin";
+        page.append(empty,note,iframe);webPages.append(page);
+      }
+      page.hidden=id!==active||!webEnabled;
+      const iframe=page.querySelector("iframe"),empty=page.querySelector(".db-web-empty"),note=page.querySelector(".db-web-notice");
+      empty.hidden=!!w.url;note.hidden=!w.url;iframe.hidden=!w.url;
+      if(webEnabled&&w.url){note.querySelector("a").href=w.url;if(iframe.dataset.url!==w.url){iframe.src=w.url;iframe.dataset.url=w.url;}}
+      else if(!webEnabled){iframe.removeAttribute("src");delete iframe.dataset.url;}
+    }
+    webPages.hidden=!webEnabled||!isWeb(active)||bar.hidden;
+  }
   bar.append(topLine,toolbar,settingsPanel);
   document.body.append(bar);
   function root(game) {return document.getElementById(byId[game]?.[4]);}
@@ -379,10 +496,10 @@
       const data = byId[id], tab = document.createElement("button");
       tab.type="button";tab.className="db-tab";tab.setAttribute("role","tab");
       tab.setAttribute("aria-selected",String(id===active));
-      tab.title=data?data[1]:"Discard — your chats";
+      tab.title=data?data[1]:isWeb(id)?webName(id):"Discard — your chats";
       const icon=document.createElement("span");icon.className="db-tab-icon";
-      if(data)icon.textContent=data[2];else{const favicon=document.createElement("img");favicon.src="discard-icon.png";favicon.alt="";icon.append(favicon);}
-      const name=document.createElement("span");name.className="db-title";name.textContent=data?data[1]:"Discard";
+      if(data)icon.textContent=data[2];else if(isWeb(id))icon.textContent="🌐";else{const favicon=document.createElement("img");favicon.src="discard-icon.png";favicon.alt="";icon.append(favicon);}
+      const name=document.createElement("span");name.className="db-title";name.textContent=data?data[1]:isWeb(id)?webName(id):"Discard";
       tab.append(icon,name);
       if(id==="discard"){
         const badge=document.createElement("span");badge.className="db-unread";
@@ -399,20 +516,21 @@
       tab.addEventListener("click",()=>activate(id));
       if (id!=="discard") {
         const close=document.createElement("button");
-        close.type="button";close.className="db-close";close.textContent="×";close.title="Close "+data[1];
-        close.setAttribute("aria-label","Close "+data[1]+" tab");
+        close.type="button";close.className="db-close";close.textContent="×";close.title="Close "+(data?.[1]||webName(id));
+        close.setAttribute("aria-label","Close "+(data?.[1]||webName(id))+" tab");
         close.addEventListener("click",e=>{e.stopPropagation();closeTab(id);});
         tab.append(close);
       }
       strip.append(tab);
     }
     // Never overwrite in-progress address-bar input during notifications or rerenders.
-    if(document.activeElement!==location)location.value=active==="discard"?"discard://chats":"discard://games/"+active;
+    updateLocation();
     for (const game of games) root(game[0])?.classList.toggle("db-away",game[0]!==active);
     // The browser bar is above game canvases and available even in full-screen game menus.
     const signedIn = visible(document.getElementById("chatView"));
     bar.hidden=!signedIn;
     document.body.classList.toggle("db-ready",signedIn);
+    syncWeb();
     if(!signedIn && appFullscreen)setAppFullscreen(false);
     if(signedIn && !restoreAttempted){
       restoreAttempted=true;
@@ -429,11 +547,11 @@
     }
     document.getElementById("gamesHub")?.classList.add("hidden");
     render();
-    if(id!=="discard")setTimeout(restoreActiveGame,0);
+    if(id!=="discard"&&!isWeb(id))setTimeout(restoreActiveGame,0);
     window.dispatchEvent(new Event("resize"));
   }
   function restoreActiveGame(){
-    if(restoring||active==="discard"||!tabs.includes(active))return;
+    if(restoring||active==="discard"||isWeb(active)||!tabs.includes(active))return;
     const game=byId[active];
     if(!game||visible(root(active)))return;
     const launcher=document.getElementById(game[3]);
@@ -457,7 +575,8 @@
     // Releasing an existing in-app game uses its own Leave/Back action where available.
     // The root is kept mounted until the game handles its own cleanup, so save/session
     // behavior is not silently reset by destroying its DOM.
-    root(id)?.classList.add("db-away");
+    if(isWeb(id))delete webTabs[id];else root(id)?.classList.add("db-away");
+    saveWorkspace();
     document.getElementById("gamesHub")?.classList.add("hidden");
     if(active===id)activate(tabs[i]||tabs[i-1]||"discard");
     else render();
@@ -497,6 +616,10 @@
       e.preventDefault();
       const i=tabs.indexOf(active);
       activate(tabs[(i+(e.shiftKey?-1:1)+tabs.length)%tabs.length]);
+    } else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="t"&&webEnabled){
+      e.preventDefault();newWebTab();
+    } else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="l"){
+      e.preventDefault();location.focus();location.select();
     } else if((e.ctrlKey||e.metaKey)&&e.key==="1"){
       e.preventDefault();activate("discard");
     }
@@ -528,6 +651,6 @@
     }).observe(el,{attributes:true,attributeFilter:["class","hidden","style"]});
   }
   // A chat invite can open a game without clicking the Games hub.
-  window.discardBrowserTabs={open:openGame,activate,close:closeTab,activeTab:()=>active};
+  window.discardBrowserTabs={open:openGame,openWebsite:newWebTab,activate,close:closeTab,activeTab:()=>active};
   render();
 })();
