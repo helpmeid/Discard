@@ -14,7 +14,7 @@
   const webTabs = {};
   const isWeb = id => id.startsWith("web:");
   let webEnabled = false;
-  const passKey="discard-web-mode-password-v1";
+  const WEB_MODE_PASSWORD="0912";
   const webName=id=>{try{return webTabs[id]?.url?new URL(webTabs[id].url).hostname:"New tab"}catch{return "Website"}};
   function toURL(value){
     value=String(value).trim();if(!value)return "";
@@ -25,10 +25,6 @@
       }
       const u=new URL(value);return ["https:","http:"].includes(u.protocol)?u.href:"";
     }catch{return ""}
-  }
-  async function digest(password,salt){
-    const a=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+":"+password));
-    return Array.from(new Uint8Array(a),x=>x.toString(16).padStart(2,"0")).join("");
   }
   let unreadCount=0;
   let active = "discard";
@@ -68,6 +64,7 @@
   #dbWebPages .db-web-notice{padding:8px 12px;background:#eaf2fc;font:12px system-ui;color:#345}
   #dbWebPages .db-web-notice a{margin-left:12px;color:#146db6}
   #dbWebPages .db-web-empty{flex:1;display:grid;place-content:center;text-align:center;background:#f2f5fb;font:16px system-ui;color:#345}
+  #discardBrowser .db-mode-input[hidden]{display:none!important}
   #discardBrowser .db-mode-input{box-sizing:border-box;width:100%;margin:8px 0;padding:9px;border:1px solid #acbdd1;border-radius:8px;background:transparent;color:inherit}
   #discardBrowser .db-mode-message{font-size:11px;line-height:1.4;margin:8px 4px}
   body.db-app-fullscreen #dbWebPages{inset:0}
@@ -410,22 +407,27 @@
   const modeButton=document.createElement("button");modeButton.type="button";
   const modeMessage=document.createElement("p");modeMessage.className="db-mode-message";
   const modeRefresh=()=>{
-    modeButton.textContent=webEnabled?"Lock Website Mode":localStorage.getItem(passKey)?"Unlock Website Mode":"Create password and enable Website Mode";
-    modeMessage.textContent=webEnabled?"Enabled. Only embeddable websites can load; no proxy is provided.":localStorage.getItem(passKey)?"Enter your saved password.":"Create a password (4+ characters) for this device.";
+    modeButton.textContent=webEnabled?"Lock Website Mode":"Unlock Website Mode";
+    modeMessage.textContent=webEnabled
+      ?"Website Mode enabled. Open website tabs with +. Some websites cannot be embedded."
+      :"Enter the Website Mode password to unlock website tabs.";
+    modeInput.hidden=webEnabled;
   };
-  modeButton.onclick=async()=>{
-    if(webEnabled){webEnabled=false;modeInput.value="";activate("discard");modeRefresh();return;}
-    const value=modeInput.value;if(value.length<4){modeMessage.textContent="Use at least 4 characters.";return;}
-    modeButton.disabled=true;
-    try{
-      const saved=localStorage.getItem(passKey);
-      if(saved){const p=JSON.parse(saved);if(await digest(value,p.salt)!==p.hash){modeMessage.textContent="Incorrect password.";return;}}
-      else{const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,"0")).join("");
-        localStorage.setItem(passKey,JSON.stringify({salt,hash:await digest(value,salt)}));}
-      webEnabled=true;modeInput.value="";modeRefresh();render();
-    }catch{modeMessage.textContent="Password storage unavailable.";}
-    finally{modeButton.disabled=false;}
-  };
+  modeButton.addEventListener("click",()=>{
+    if(webEnabled){
+      webEnabled=false;modeInput.value="";
+      activate("discard");
+      modeRefresh();return;
+    }
+    if(modeInput.value!==WEB_MODE_PASSWORD){
+      modeMessage.textContent="Incorrect password.";
+      modeInput.select();modeInput.focus();return;
+    }
+    webEnabled=true;modeInput.value="";
+    modeRefresh();render();
+    settingsPanel.hidden=true;
+    newWebTab();
+  });
   modeInput.onkeydown=e=>{if(e.key==="Enter")modeButton.click()};
   settingsPanel.append(settingsTitle,themeLabel,fullscreen,modeLabel,modeInput,modeButton,modeMessage);
   modeRefresh();
